@@ -1,0 +1,1 @@
+-- Intentionally empty: no real or medical data is seeded during initialization.
