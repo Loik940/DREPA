@@ -1,0 +1,44 @@
+﻿# Dépendances
+node_modules/
+
+# Expo et builds
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# Variables d'environnement
+.env
+.env.*
+!.env.example
+
+# Secrets et certificats
+*.key
+*.pem
+*.p12
+secrets/
+credentials/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Couverture et fichiers temporaires
+coverage/
+.tmp/
+.cache/
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Éditeurs
+.vscode/settings.json
+.idea/
+
+# Configuration locale éventuelle
+.continue/
+.cline/
+.codex/
