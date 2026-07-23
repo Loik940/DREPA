@@ -1,43 +1,131 @@
-import type { Session } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
+import { AppState } from 'react-native';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 
+import {
+  requestPasswordReset,
+  signIn,
+  signOut,
+  signUp,
+  updatePassword,
+} from '@/features/auth/auth-service';
+import { queryClient } from '@/lib/query-client';
 import { supabase } from '../lib/supabase';
+
+export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
 
 type AuthContextValue = {
   session: Session | null;
-  isLoading: boolean;
+  user: User | null;
+  status: AuthStatus;
+  isInitializing: boolean;
+  isPasswordRecovery: boolean;
+  error: string | null;
+  signUp: typeof signUp;
+  signIn: typeof signIn;
+  signOut: () => Promise<void>;
+  requestPasswordReset: typeof requestPasswordReset;
+  updatePassword: typeof updatePassword;
+  clearPasswordRecovery: () => void;
+  clearError: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState<AuthStatus>(supabase ? 'loading' : 'error');
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [error, setError] = useState<string | null>(
+    supabase ? null : 'La configuration de l’authentification est indisponible.',
+  );
 
   useEffect(() => {
+    const client = supabase;
+
+    if (!client) {
+      return;
+    }
+
     let mounted = true;
 
-    void supabase.auth.getSession().then(({ data }) => {
-      if (mounted) {
-        setSession(data.session);
-        setIsLoading(false);
+    const { data } = client.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted) {
+        return;
+      }
+
+      setSession(nextSession);
+      setStatus(nextSession ? 'authenticated' : 'unauthenticated');
+      setError(null);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setIsPasswordRecovery(false);
+        queryClient.clear();
       }
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (mounted) {
-        setSession(nextSession);
-        setIsLoading(false);
+    void client.auth.getSession().then(({ data: sessionData, error: sessionError }) => {
+      if (!mounted) {
+        return;
+      }
+
+      if (sessionError) {
+        setSession(null);
+        setStatus('error');
+        setError('La session ne peut pas être restaurée.');
+        return;
+      }
+
+      if (sessionData.session) {
+        setSession(sessionData.session);
+        setStatus('authenticated');
+      } else {
+        setSession(null);
+        setStatus('unauthenticated');
+      }
+    });
+
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void client.auth.startAutoRefresh();
+      } else {
+        void client.auth.stopAutoRefresh();
       }
     });
 
     return () => {
       mounted = false;
       data.subscription.unsubscribe();
+      appStateSubscription.remove();
     };
   }, []);
 
-  return <AuthContext.Provider value={{ session, isLoading }}>{children}</AuthContext.Provider>;
+  const handleSignOut = async () => {
+    await signOut();
+    queryClient.clear();
+  };
+
+  const value: AuthContextValue = {
+    session,
+    user: session?.user ?? null,
+    status,
+    isInitializing: status === 'loading',
+    isPasswordRecovery,
+    error,
+    signUp,
+    signIn,
+    signOut: handleSignOut,
+    requestPasswordReset,
+    updatePassword,
+    clearPasswordRecovery: () => setIsPasswordRecovery(false),
+    clearError: () => setError(null),
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

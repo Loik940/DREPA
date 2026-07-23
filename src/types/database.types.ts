@@ -46,6 +46,24 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['emergency_contacts']['Insert']>;
         Relationships: [];
       };
+      user_consents: {
+        Row: {
+          id: string;
+          user_id: string;
+          terms_version: string;
+          privacy_version: string;
+          community_guidelines_version: string;
+          accepted_at: string;
+          revoked_at: string | null;
+        };
+        Insert: Omit<Database['public']['Tables']['user_consents']['Row'], 'id' | 'accepted_at' | 'revoked_at'> & {
+          id?: string;
+          accepted_at?: string;
+          revoked_at?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['user_consents']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

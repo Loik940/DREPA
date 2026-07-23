@@ -1,50 +1,52 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
-import { signInSchema, type SignInValues } from '@/features/auth/schemas';
+import { updatePasswordSchema, type UpdatePasswordValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
 
-export default function LoginScreen() {
+export default function ResetPasswordScreen() {
   const router = useRouter();
   const auth = useAuth();
-  const { control, handleSubmit, setError, formState } = useForm<SignInValues>({
-    resolver: zodResolver(signInSchema),
-    defaultValues: { email: '', password: '' },
+  const { control, handleSubmit, setError, formState } = useForm<UpdatePasswordValues>({
+    resolver: zodResolver(updatePasswordSchema),
+    defaultValues: { password: '', passwordConfirmation: '' },
   });
 
-  if (auth.status === 'error') {
-    return <ScreenPlaceholder title="Configuration indisponible" description="La connexion sécurisée ne peut pas être initialisée." />;
+  if (auth.status === 'loading') {
+    return <Text style={styles.message}>Vérification du lien...</Text>;
   }
 
-  const onSubmit = async (values: SignInValues) => {
-    auth.clearError();
+  if (!auth.isPasswordRecovery) {
+    return <Redirect href="/(auth)/forgot-password" />;
+  }
 
+  const onSubmit = async ({ password }: UpdatePasswordValues) => {
     try {
-      await auth.signIn(values.email, values.password);
-      router.replace('/');
+      await auth.updatePassword(password);
+      await auth.signOut();
+      auth.clearPasswordRecovery();
+      router.replace('/(auth)/login');
     } catch (error) {
-      setError('root', { message: error instanceof Error ? error.message : 'Connexion impossible.' });
+      setError('root', { message: error instanceof Error ? error.message : 'Modification impossible.' });
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Connexion</Text>
+      <Text style={styles.title}>Nouveau mot de passe</Text>
       <Controller
         control={control}
-        name="email"
+        name="password"
         render={({ field, fieldState }) => (
           <View>
             <TextInput
               autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
               onBlur={field.onBlur}
               onChangeText={field.onChange}
-              placeholder="E-mail"
+              placeholder="Nouveau mot de passe"
+              secureTextEntry
               style={styles.input}
               value={field.value}
             />
@@ -54,15 +56,14 @@ export default function LoginScreen() {
       />
       <Controller
         control={control}
-        name="password"
+        name="passwordConfirmation"
         render={({ field, fieldState }) => (
           <View>
             <TextInput
               autoCapitalize="none"
-              autoComplete="password"
               onBlur={field.onBlur}
               onChangeText={field.onChange}
-              placeholder="Mot de passe"
+              placeholder="Confirmer le mot de passe"
               secureTextEntry
               style={styles.input}
               value={field.value}
@@ -73,10 +74,8 @@ export default function LoginScreen() {
       />
       {formState.errors.root?.message && <Text style={styles.error}>{formState.errors.root.message}</Text>}
       <Pressable disabled={formState.isSubmitting} onPress={handleSubmit(onSubmit)} style={styles.button}>
-        <Text style={styles.buttonText}>{formState.isSubmitting ? 'Connexion...' : 'Se connecter'}</Text>
+        <Text style={styles.buttonText}>{formState.isSubmitting ? 'Modification...' : 'Modifier le mot de passe'}</Text>
       </Pressable>
-      <Link href="/(auth)/register" style={styles.link}>Créer un compte</Link>
-      <Link href="/(auth)/forgot-password" style={styles.link}>Mot de passe oublié</Link>
     </View>
   );
 }
@@ -88,5 +87,5 @@ const styles = StyleSheet.create({
   button: { alignItems: 'center', backgroundColor: '#208AEF', borderRadius: 8, padding: 14 },
   buttonText: { color: '#FFFFFF', fontWeight: '700' },
   error: { color: '#B00020' },
-  link: { color: '#1769AA', textAlign: 'center' },
+  message: { flex: 1, padding: 24, textAlign: 'center' },
 });

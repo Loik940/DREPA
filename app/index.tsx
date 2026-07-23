@@ -1,12 +1,17 @@
 import { Redirect } from 'expo-router';
 
+import { ScreenPlaceholder } from '@/components/screen-placeholder';
 import { useAuth } from '@/providers/auth-provider';
 
 export default function HomeScreen() {
-  const { session, isLoading } = useAuth();
+  const { session, status } = useAuth();
 
-  if (isLoading) {
-    return null;
+  if (status === 'loading') {
+    return <ScreenPlaceholder title="Chargement" description="Restauration de la session." />;
+  }
+
+  if (status === 'error') {
+    return <ScreenPlaceholder title="Configuration indisponible" description="La connexion sécurisée ne peut pas être initialisée." />;
   }
 
   return session ? <Redirect href="/(app)/(tabs)" /> : <Redirect href="/(auth)/login" />;
