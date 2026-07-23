@@ -1,4 +1,4 @@
-﻿# 🩸 DRÉPA
+﻿#  DRÉPA
 
 ## Ma santé, ma force, ma communauté.
 
