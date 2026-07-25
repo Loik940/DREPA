@@ -1,6 +1,4 @@
-import type { ExpoConfig } from 'expo/config';
-
-const config: ExpoConfig = {
+module.exports = {
   name: 'DREPA',
   slug: 'drepa',
   version: '0.1.0',
@@ -36,6 +34,9 @@ const config: ExpoConfig = {
     typedRoutes: true,
     reactCompiler: true,
   },
+  extra: {
+    eas: {
+      projectId: 'af1bd3cb-75b4-4e7e-8b7a-b660026dabc7',
+    },
+  },
 };
-
-export default config;

@@ -1,5 +1,5 @@
 import { legalVersions } from '../../constants/legal-versions';
-import type { UserConsent } from './queries';
+import type { ProfileDataError, UserConsent } from './queries';
 
 export type OnboardingStatus =
   | 'loading'
@@ -26,7 +26,7 @@ type OnboardingInputs = {
   hasCurrentConsent: boolean;
   isLoading: boolean;
   isError: boolean;
-  error: unknown;
+  error: ProfileDataError | null;
 };
 
 export function getOnboardingStatus({

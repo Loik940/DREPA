@@ -18,6 +18,11 @@ export default function ConsentScreen() {
   });
 
   const onSubmit = async (values: ConsentValues) => {
+    if (!user?.id) {
+      setError('root', { message: 'La session utilisateur est indisponible.' });
+      return;
+    }
+
     try {
       await mutation.mutateAsync(values);
       router.replace('/(app)/complete-profile');

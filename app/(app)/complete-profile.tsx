@@ -6,7 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import { profileSchema, type ProfileValues } from '@/features/profile/schemas';
 import { useUpsertProfileMutation } from '@/features/profile/mutations';
-import { useProfileQuery } from '@/features/profile/queries';
+import { ProfileDataError, useProfileQuery } from '@/features/profile/queries';
 import { useAuth } from '@/providers/auth-provider';
 
 export default function CompleteProfileScreen() {
@@ -38,6 +38,11 @@ export default function CompleteProfileScreen() {
   }, [profileQuery.data, reset]);
 
   const onSubmit = async (values: ProfileValues) => {
+    if (!user?.id) {
+      setError('root', { message: 'La session utilisateur est indisponible.' });
+      return;
+    }
+
     try {
       await mutation.mutateAsync(values);
       router.replace('/(app)/(tabs)');
@@ -48,6 +53,22 @@ export default function CompleteProfileScreen() {
 
   if (profileQuery.isPending) {
     return <Text style={styles.message}>Chargement du profil...</Text>;
+  }
+
+  if (profileQuery.isError) {
+    const error = profileQuery.error instanceof ProfileDataError
+      ? profileQuery.error
+      : new ProfileDataError('unknown', 'Le profil ne peut pas être chargé.');
+
+    return (
+      <View style={styles.messageContainer}>
+        <Text style={styles.title}>Profil indisponible</Text>
+        <Text style={styles.message}>{error.message}</Text>
+        <Pressable onPress={() => void profileQuery.refetch()} style={styles.button}>
+          <Text style={styles.buttonText}>Réessayer</Text>
+        </Pressable>
+      </View>
+    );
   }
 
   return (
@@ -91,4 +112,5 @@ const styles = StyleSheet.create({
   buttonText: { color: '#FFFFFF', fontWeight: '700' },
   error: { color: '#B00020' },
   message: { flex: 1, padding: 24, textAlign: 'center' },
+  messageContainer: { flex: 1, gap: 14, justifyContent: 'center', padding: 24 },
 });
