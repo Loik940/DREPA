@@ -9,7 +9,7 @@ import {
   signUp,
   updatePassword,
 } from '@/features/auth/auth-service';
-import { queryClient } from '@/lib/query-client';
+import { invalidatePrivateQueries, removePrivateQueries } from '@/lib/query-client';
 import { supabase } from '../lib/supabase';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
@@ -19,6 +19,7 @@ type AuthContextValue = {
   user: User | null;
   status: AuthStatus;
   isInitializing: boolean;
+  sessionReady: boolean;
   isPasswordRecovery: boolean;
   error: string | null;
   signUp: typeof signUp;
@@ -35,6 +36,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [status, setStatus] = useState<AuthStatus>(supabase ? 'loading' : 'error');
+  const [sessionReady, setSessionReady] = useState(!supabase);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [error, setError] = useState<string | null>(
     supabase ? null : 'La configuration de l’authentification est indisponible.',
@@ -48,15 +50,39 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     let mounted = true;
+    let initializationComplete = false;
+    let authEventReceived = false;
+    let latestSession: Session | null = null;
+    let activeUserId: string | null = null;
+
+    const applySession = (nextSession: Session | null) => {
+      const nextUserId = nextSession?.user.id ?? null;
+
+      if (activeUserId && activeUserId !== nextUserId) {
+        removePrivateQueries(activeUserId);
+      }
+
+      activeUserId = nextUserId;
+      setSession(nextSession);
+      setStatus(nextSession ? 'authenticated' : 'unauthenticated');
+      setError(null);
+    };
 
     const { data } = client.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) {
         return;
       }
 
-      setSession(nextSession);
-      setStatus(nextSession ? 'authenticated' : 'unauthenticated');
-      setError(null);
+      authEventReceived = true;
+      latestSession = nextSession;
+
+      if (initializationComplete) {
+        applySession(nextSession);
+      }
+
+      if (event === 'SIGNED_IN' && nextSession) {
+        void invalidatePrivateQueries(nextSession.user.id);
+      }
 
       if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordRecovery(true);
@@ -64,7 +90,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (event === 'SIGNED_OUT') {
         setIsPasswordRecovery(false);
-        queryClient.clear();
+        removePrivateQueries();
       }
     });
 
@@ -73,19 +99,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      if (sessionError) {
+      initializationComplete = true;
+
+      if (sessionError && !authEventReceived) {
         setSession(null);
         setStatus('error');
         setError('La session ne peut pas être restaurée.');
+        setSessionReady(true);
         return;
       }
 
-      if (sessionData.session) {
-        setSession(sessionData.session);
-        setStatus('authenticated');
-      } else {
-        setSession(null);
-        setStatus('unauthenticated');
+      const restoredSession = authEventReceived ? latestSession : sessionData.session;
+      applySession(restoredSession);
+      setSessionReady(true);
+
+      if (restoredSession) {
+        void invalidatePrivateQueries(restoredSession.user.id);
       }
     });
 
@@ -106,14 +135,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const handleSignOut = async () => {
     await signOut();
-    queryClient.clear();
+    removePrivateQueries();
   };
 
   const value: AuthContextValue = {
     session,
     user: session?.user ?? null,
     status,
-    isInitializing: status === 'loading',
+    isInitializing: !sessionReady,
+    sessionReady,
     isPasswordRecovery,
     error,
     signUp,

@@ -58,7 +58,7 @@ export default function CompleteProfileScreen() {
   if (profileQuery.isError) {
     const error = profileQuery.error instanceof ProfileDataError
       ? profileQuery.error
-      : new ProfileDataError('unknown', 'Le profil ne peut pas être chargé.');
+      : new ProfileDataError('profiles', 'unknown', 'Le profil ne peut pas être chargé.');
 
     return (
       <View style={styles.messageContainer}>

@@ -5,9 +5,9 @@ import { useAuth } from '@/providers/auth-provider';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { session, status } = useAuth();
+  const { session, sessionReady, status } = useAuth();
 
-  if (status === 'loading') {
+  if (!sessionReady || status === 'loading') {
     return <ScreenPlaceholder title="Chargement" description="Restauration de la session." />;
   }
 

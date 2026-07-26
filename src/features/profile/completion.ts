@@ -1,5 +1,69 @@
 import { legalVersions } from '../../constants/legal-versions';
-import type { ProfileDataError, UserConsent } from './queries';
+
+export type ProfileQuerySource = 'profiles' | 'user_consents';
+export type ProfileDataErrorKind = 'session' | 'configuration' | 'network' | 'rls' | 'supabase' | 'unknown';
+
+export type ProfileTechnicalDetails = {
+  code?: string;
+  status?: number;
+  message?: string;
+};
+
+export class ProfileDataError extends Error {
+  constructor(
+    public readonly source: ProfileQuerySource,
+    public readonly kind: ProfileDataErrorKind,
+    message: string,
+    public readonly technical: ProfileTechnicalDetails = {},
+  ) {
+    super(message);
+    this.name = 'ProfileDataError';
+  }
+}
+
+function sanitizeTechnicalMessage(message: string | undefined) {
+  if (!message) {
+    return undefined;
+  }
+
+  return message
+    .replace(/Bearer\s+\S+/gi, 'Bearer [redacted]')
+    .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '[redacted-jwt]')
+    .replace(/(access_token|refresh_token|api[_-]?key|password|authorization)(\s*[:=]\s*)[^\s&,]+/gi, '$1$2[redacted]')
+    .slice(0, 500);
+}
+
+export function classifyProfileError(error: unknown, source: ProfileQuerySource) {
+  if (error instanceof ProfileDataError) {
+    return error;
+  }
+
+  const candidate = error as { code?: string; message?: string; status?: number } | null;
+  const message = candidate?.message?.toLowerCase() ?? '';
+  const technical = {
+    code: candidate?.code,
+    status: candidate?.status,
+    message: sanitizeTechnicalMessage(candidate?.message),
+  };
+
+  if (candidate?.status === 401) {
+    return new ProfileDataError(source, 'session', 'La session doit être renouvelée.', technical);
+  }
+
+  if (candidate?.status === 403 || candidate?.code === '42501') {
+    return new ProfileDataError(source, 'rls', 'Accès aux données du compte refusé.', technical);
+  }
+
+  if (message.includes('network') || message.includes('fetch') || message.includes('offline')) {
+    return new ProfileDataError(source, 'network', 'La connexion réseau est indisponible.', technical);
+  }
+
+  if (candidate?.code?.startsWith('PGRST')) {
+    return new ProfileDataError(source, 'supabase', 'Les données du compte ne peuvent pas être chargées.', technical);
+  }
+
+  return new ProfileDataError(source, 'unknown', 'Les données du compte ne peuvent pas être chargées.', technical);
+}
 
 export type OnboardingStatus =
   | 'loading'
@@ -8,7 +72,14 @@ export type OnboardingStatus =
   | 'needs-profile'
   | 'complete';
 
-export function hasCurrentConsent(consents: UserConsent[] | undefined) {
+type ConsentVersions = {
+  terms_version: string;
+  privacy_version: string;
+  community_guidelines_version: string;
+  revoked_at: string | null;
+};
+
+export function hasCurrentConsent(consents: ConsentVersions[] | undefined) {
   return Boolean(
     consents?.some(
       (consent) =>
@@ -21,28 +92,40 @@ export function hasCurrentConsent(consents: UserConsent[] | undefined) {
 }
 
 type OnboardingInputs = {
+  sessionReady: boolean;
   hasUser: boolean;
   profile: { first_name: string | null; country: string | null } | null | undefined;
   hasCurrentConsent: boolean;
   isLoading: boolean;
-  isError: boolean;
-  error: ProfileDataError | null;
+  profileError: ProfileDataError | null;
+  consentError: ProfileDataError | null;
 };
 
 export function getOnboardingStatus({
+  sessionReady,
   hasUser,
   profile,
   hasCurrentConsent: currentConsent,
   isLoading,
-  isError,
-  error,
+  profileError,
+  consentError,
 }: OnboardingInputs) {
-  if (!hasUser || isLoading) {
+  if (!sessionReady || isLoading) {
     return { status: 'loading' as const, profile: null, error: null };
   }
 
-  if (isError) {
-    return { status: 'error' as const, profile: profile ?? null, error };
+  if (!hasUser) {
+    return { status: 'unauthenticated' as const, profile: null, error: null };
+  }
+
+  if (profileError || consentError) {
+    return {
+      status: 'error' as const,
+      profile: profile ?? null,
+      error: profileError ?? consentError,
+      profileError,
+      consentError,
+    };
   }
 
   if (!currentConsent) {
