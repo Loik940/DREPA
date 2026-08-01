@@ -1,14 +1,22 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useRouter } from 'expo-router';
-import { Controller, useForm, type ControllerFieldState, type ControllerRenderProps, type FieldPath } from 'react-hook-form';
-import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { Controller, useForm } from 'react-hook-form';
+import { StyleSheet, View } from 'react-native';
 
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
+import { PasswordField } from '@/components/ui/PasswordField';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { TextField } from '@/components/ui/TextField';
 import { signUpSchema, type SignUpValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
+import { useAppTheme } from '@/theme/use-app-theme';
+import { spacing } from '@/theme/spacing';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const auth = useAuth();
+  const { colors } = useAppTheme();
   const { control, handleSubmit, setError, formState } = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
     defaultValues: { email: '', password: '', passwordConfirmation: '' },
@@ -21,7 +29,7 @@ export default function RegisterScreen() {
       if (session) {
         router.replace('/');
       } else {
-        setError('root', { message: 'Consultez votre messagerie pour confirmer votre adresse e-mail.' });
+        setError('root', { message: 'Consulte ta messagerie pour confirmer ton adresse e-mail.' });
       }
     } catch (error) {
       setError('root', { message: error instanceof Error ? error.message : 'Inscription impossible.' });
@@ -29,68 +37,78 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Créer un compte</Text>
-      <Controller
-        control={control}
-        name="email"
-        render={({ field, fieldState }) => <Field field={field} fieldState={fieldState} placeholder="E-mail" keyboardType="email-address" />}
-      />
-      <Controller
-        control={control}
-        name="password"
-        render={({ field, fieldState }) => <Field field={field} fieldState={fieldState} placeholder="Mot de passe" secureTextEntry />}
-      />
-      <Controller
-        control={control}
-        name="passwordConfirmation"
-        render={({ field, fieldState }) => <Field field={field} fieldState={fieldState} placeholder="Confirmer le mot de passe" secureTextEntry />}
-      />
-      {formState.errors.root?.message && <Text style={styles.error}>{formState.errors.root.message}</Text>}
-      <Pressable disabled={formState.isSubmitting} onPress={handleSubmit(onSubmit)} style={styles.button}>
-        <Text style={styles.buttonText}>{formState.isSubmitting ? 'Création...' : 'Créer le compte'}</Text>
-      </Pressable>
-      <Link href="/(auth)/login" style={styles.link}>Retour à la connexion</Link>
-    </View>
-  );
-}
+    <ScreenContainer scroll contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <AppText variant="label" color="brand" align="center">DRÉPA</AppText>
+        <AppText variant="title" align="center">Créer mon compte</AppText>
+        <AppText color="textSecondary" align="center">C’est gratuit et confidentiel.</AppText>
+      </View>
 
-function Field({
-  field,
-  fieldState,
-  placeholder,
-  secureTextEntry,
-  keyboardType,
-}: {
-  field: ControllerRenderProps<SignUpValues, FieldPath<SignUpValues>>;
-  fieldState: ControllerFieldState;
-  placeholder: string;
-  secureTextEntry?: boolean;
-  keyboardType?: TextInputProps['keyboardType'];
-}) {
-  return (
-    <View>
-      <TextInput
-        autoCapitalize="none"
-        keyboardType={keyboardType}
-        onBlur={field.onBlur}
-        onChangeText={field.onChange}
-        placeholder={placeholder}
-        secureTextEntry={secureTextEntry}
-        style={styles.input}
-        value={field.value}
-      />
-      {fieldState.error && <Text style={styles.error}>{fieldState.error.message}</Text>}
-    </View>
+      <View style={styles.form}>
+        <Controller
+          control={control}
+          name="email"
+          render={({ field, fieldState }) => (
+            <TextField
+              label="E-mail"
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              onBlur={field.onBlur}
+              onChangeText={field.onChange}
+              placeholder="ton@email.com"
+              value={field.value}
+              error={fieldState.error?.message}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="password"
+          render={({ field, fieldState }) => (
+            <PasswordField
+              label="Mot de passe"
+              autoComplete="new-password"
+              onBlur={field.onBlur}
+              onChangeText={field.onChange}
+              placeholder="Au moins 8 caractères"
+              value={field.value}
+              error={fieldState.error?.message}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="passwordConfirmation"
+          render={({ field, fieldState }) => (
+            <PasswordField
+              label="Confirmer le mot de passe"
+              autoComplete="new-password"
+              onBlur={field.onBlur}
+              onChangeText={field.onChange}
+              placeholder="Répète ton mot de passe"
+              value={field.value}
+              error={fieldState.error?.message}
+            />
+          )}
+        />
+        {formState.errors.root?.message && <AppText color="sos" align="center">{formState.errors.root.message}</AppText>}
+        <Button label="Créer mon compte" loading={formState.isSubmitting} onPress={handleSubmit(onSubmit)} />
+      </View>
+
+      <View style={styles.footer}>
+        <AppText color="textSecondary" align="center">Tu as déjà un compte ?</AppText>
+        <Link href="/(auth)/login" style={[styles.link, { color: colors.brand }]}>Se connecter</Link>
+        <AppText variant="caption" color="textSecondary" align="center">DRÉPA ne remplace pas un professionnel de santé.</AppText>
+      </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', gap: 12, padding: 24 },
-  title: { fontSize: 28, fontWeight: '700', marginBottom: 12 },
-  input: { borderColor: '#A0A0A0', borderRadius: 8, borderWidth: 1, padding: 12 },
-  button: { alignItems: 'center', backgroundColor: '#208AEF', borderRadius: 8, padding: 14 },
-  buttonText: { color: '#FFFFFF', fontWeight: '700' },
-  error: { color: '#B00020' },
-  link: { color: '#1769AA', textAlign: 'center' },
+  content: { justifyContent: 'center', minHeight: '100%', paddingVertical: spacing.xxxl },
+  header: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxxl },
+  form: { gap: spacing.lg },
+  footer: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxxl },
+  link: { fontFamily: 'Inter', fontSize: 14, fontWeight: '600', textAlign: 'center' },
 });

@@ -1,5 +1,10 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
 
 export default function JournalScreen() {
-  return <ScreenPlaceholder title="Journal" description="Fonctionnalité prévue dans une prochaine étape." />;
+  return (
+    <ScreenContainer>
+      <EmptyState title="Ton journal est prêt" description="La saisie de santé sera disponible dans une prochaine étape." />
+    </ScreenContainer>
+  );
 }

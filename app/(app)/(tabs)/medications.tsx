@@ -1,5 +1,10 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
 
 export default function MedicationsScreen() {
-  return <ScreenPlaceholder title="Médicaments" description="Fonctionnalité prévue dans une prochaine étape." />;
+  return (
+    <ScreenContainer>
+      <EmptyState title="Tes rappels arriveront bientôt" description="La gestion des traitements prescrits sera disponible dans une prochaine étape." />
+    </ScreenContainer>
+  );
 }

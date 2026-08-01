@@ -97,6 +97,7 @@ DREPA/
 │   ├── lib/
 │   ├── providers/
 │   ├── services/
+│   ├── theme/
 │   └── types/
 └── supabase/
     ├── .gitignore
@@ -113,7 +114,7 @@ DREPA/
 |---|---|---|---|
 | `README.md` | Présentation du produit, objectifs, fonctionnalités prévues, stack, état du projet et avertissement médical. | Développeurs, contributeurs et lecteurs du dépôt. | Ne pas y ajouter de clé, donnée patient ou promesse médicale non validée. Le texte décrit aussi des fonctionnalités futures qui ne sont pas toutes implémentées. |
 | `DREPA-Cahier.md` | Cahier des charges fonctionnel et technique de référence : public cible, MVP, limites médicales, sécurité, navigation et exigences métier. | Documentation, décisions d’architecture et futures implémentations. | Document de référence à préserver. Toute évolution fonctionnelle doit rester compatible avec ce cahier ou être documentée avant mise en œuvre. |
-| `package.json` | Manifeste Node : point d’entrée Expo Router, dépendances Expo/React Native/Supabase, scripts de développement, lint, tests, typecheck et builds EAS. | npm, Expo CLI, Jest, ESLint et EAS CLI. | Les versions Expo doivent rester alignées sur SDK 57. Les packages Expo doivent être installés avec `npx expo install`. Ne pas supprimer le script Android ou ajouter une plateforme non prévue. |
+| `package.json` | Manifeste Node : point d’entrée Expo Router, dépendances Expo/React Native/Supabase, AsyncStorage pour la préférence de bienvenue, scripts de développement, lint, tests, typecheck et builds EAS. | npm, Expo CLI, Jest, ESLint et EAS CLI. | Les versions Expo doivent rester alignées sur SDK 57. Les packages Expo doivent être installés avec `npx expo install`. L’override npm `uuid: 11.1.1` corrige la vulnérabilité transitive de `xcode` sans rétrograder Expo. |
 | `package-lock.json` | Verrouille l’arbre exact des dépendances npm. | npm install et les environnements CI/build. | Ne pas modifier manuellement. Une modification de `package.json` doit être suivie d’une régénération contrôlée du lockfile. |
 | `app.config.js` | Configuration Expo CommonJS : identité DRÉPA, plateforme Android, schéma de deep link, icône, Android, plugins, splash screen, expériences et identifiant EAS. | Expo CLI, EAS CLI et les builds Android. | Conserver `name: DREPA`, `slug: drepa`, `scheme: drepa`, `platforms: ['android']`, `bj.drepa.app`, les plugins et `extra.eas.projectId`. Ne jamais y placer de secret. |
 | `eas.json` | Profils EAS `development`, `preview` et `production`, tous configurés pour Android. | EAS Build. | Le profil development utilise `expo-dev-client` et produit un APK interne. Aucun secret ou identifiant Supabase ne doit être ajouté ici. |
@@ -133,6 +134,7 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/index.tsx` | `/` | Observe l’état Auth et redirige vers la connexion ou les onglets protégés. | Affiche chargement ou erreur de configuration avec `Réessayer`. La complétude du profil est ensuite décidée par `(app)/_layout.tsx`. |
 | `app/+not-found.tsx` | Absent actuellement | Route de fallback prévue dans la documentation mais non créée dans le code actuel. | À créer avant d’exposer des routes supplémentaires ; toute page inconnue devrait proposer un retour sûr. |
 | `app/(auth)/_layout.tsx` | Groupe public `(auth)` | Protège les écrans publics contre une session déjà authentifiée et autorise le mode récupération. | Utilise `useAuth`, `Redirect`, `Stack` et `ScreenPlaceholder`. États de session `loading`, `error`, `authenticated` et récupération de mot de passe. |
+| `app/(auth)/welcome.tsx` | `/welcome` | Onboarding visuel local en trois étapes avant l’authentification. | Utilise AsyncStorage uniquement pour la préférence non sensible d’accueil déjà vu. Ne collecte aucune donnée médicale et ne crée aucune session. |
 | `app/(auth)/login.tsx` | `/login` | Formulaire de connexion par e-mail et mot de passe. | React Hook Form, Zod, `useAuth`, `signIn` et redirection vers `/`. Erreurs d’authentification affichées sans token ni détail sensible. |
 | `app/(auth)/register.tsx` | `/register` | Formulaire d’inscription et confirmation du mot de passe. | React Hook Form, Zod, `useAuth.signUp`. Si Supabase exige une confirmation e-mail, l’écran affiche une instruction et n’ouvre pas les routes protégées sans session. |
 | `app/(auth)/forgot-password.tsx` | `/forgot-password` | Demande de récupération par e-mail. | Utilise `requestPasswordReset`, `expo-linking` via le service Auth et une réponse neutre pour ne pas révéler l’existence d’un compte. |
@@ -158,6 +160,22 @@ Les routes documentées mais absentes actuellement incluent également `welcome.
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
 | `src/components/screen-placeholder.tsx` | Composant d’état neutre pour les écrans de chargement, erreur ou fonctionnalité différée. Il accepte une action optionnelle comme `Réessayer`. | React Native uniquement. Conserver l’absence de données métier et ne pas y afficher de secret ou de diagnostic médical. |
+
+### `src/components/ui/`
+
+| Fichier | Rôle | Dépendances et précautions |
+|---|---|---|
+| `src/components/ui/AppText.tsx` | Texte typé avec variantes de typographie et couleur du thème actif. | `useAppTheme`, tokens typography. Ne pas utiliser de taille ou couleur locale sans justification. |
+| `src/components/ui/ScreenContainer.tsx` | Conteneur Safe Area avec variantes scroll et fond de thème. | `react-native-safe-area-context`, `useAppTheme`. Conserver le support du clavier et des petits écrans. |
+| `src/components/ui/Button.tsx` | Boutons primaire, brand, secondaire, ghost et danger avec chargement et accessibilité. | Tokens couleurs, tailles et rayons. Ne pas utiliser `danger` pour une action ordinaire. |
+| `src/components/ui/TextField.tsx` | Champ texte partagé avec label, erreur, aide et élément à droite. | React Native, thème. Ne jamais afficher de valeur sensible dans les erreurs ou logs. |
+| `src/components/ui/PasswordField.tsx` | Champ mot de passe avec affichage/masquage local et accessibilité. | `TextField`, React state. Ne pas persister ni loguer la valeur. |
+| `src/components/ui/CheckboxRow.tsx` | Case à cocher accessible avec label et erreur. | Thème et React Native. Utilisé pour les consentements ; ne doit pas accepter silencieusement un consentement non visible. |
+| `src/components/ui/Card.tsx` | Surface standard pour regrouper des informations. | Thème et ombres légères. Ne pas y placer des données fictives présentées comme réelles. |
+| `src/components/ui/StatusBanner.tsx` | Bandeau d’information, succès, avertissement ou erreur. | Tokens sémantiques. Ne pas transmettre un diagnostic par la couleur seule. |
+| `src/components/ui/LoadingState.tsx` | État de chargement léger et commun. | ActivityIndicator et thème. Éviter les animations coûteuses. |
+| `src/components/ui/EmptyState.tsx` | État vide avec titre, description et action facultative. | Button et AppText. Une absence de donnée doit rester un état normal. |
+| `src/components/ui/ErrorState.tsx` | Erreur neutre avec action Réessayer. | Button et AppText. Les détails techniques sont réservés aux panneaux de développement contrôlés. |
 
 ### `src/constants/`
 
@@ -206,6 +224,20 @@ Les routes documentées mais absentes actuellement incluent également `welcome.
 |---|---|---|
 | `src/services/secure-storage.ts` | Adapte `getItemAsync`, `setItemAsync` et `deleteItemAsync` d’Expo SecureStore au stockage de session Supabase. | `expo-secure-store`. Réservé aux sessions et secrets de session ; ne pas y stocker les données métier ou médicales. |
 
+### `src/theme/`
+
+| Fichier | Rôle | Dépendances et précautions |
+|---|---|---|
+| `src/theme/colors.ts` | Tokens de couleurs Terre et Sang pour les modes clair et sombre. | Aucun service externe. Les composants doivent utiliser ces tokens plutôt que des hexadécimaux locaux. |
+| `src/theme/spacing.ts` | Grille d’espacement, gouttière d’écran, padding de carte et zones tactiles. | Aucun service externe. Respecter les minimums d’accessibilité Android. |
+| `src/theme/typography.ts` | Familles, poids et styles typographiques du premier lot, avec Inter comme police déclarée. | Aucun service externe dans ce lot. Bricolage Grotesque reste différée jusqu’à validation des performances et du chargement de police. |
+| `src/theme/radii.ts` | Rayons partagés des champs, boutons, cartes et badges. | Aucun service externe. Éviter de recréer des rayons locaux incohérents. |
+| `src/theme/sizes.ts` | Hauteurs de champs/boutons, tailles d’icônes, avatars et bouton SOS. | Aucun service externe. Les tailles tactiles ne doivent pas être réduites sous les seuils validés. |
+| `src/theme/shadows.ts` | Ombres Android nulles ou très légères pour conserver une interface performante. | Aucun service externe. Ne pas compenser un mauvais contraste par une ombre forte. |
+| `src/theme/use-app-theme.ts` | Sélectionne automatiquement la palette claire ou sombre selon `useColorScheme`. | React Native et `colors.ts`. Un choix manuel clair/sombre pourra être ajouté plus tard sans modifier les composants consommateurs. |
+| `src/theme/index.ts` | Export central de tous les tokens et du type `Theme`. | Consommé par les composants UI. Garder les exports stables pour éviter des imports dispersés. |
+| `src/theme/index.ts` | Export central et type `Theme` regroupant tous les tokens. | Consommé par les futurs composants UI. Toute extension doit rester compatible avec les deux modes. |
+
 ### `src/types/`
 
 | Fichier | Rôle | Dépendances et précautions |
@@ -215,7 +247,6 @@ Les routes documentées mais absentes actuellement incluent également `welcome.
 
 ### Dossiers actuellement absents
 
-- `src/theme/` n’existe pas actuellement ; les écrans utilisent encore des styles locaux.
 - `src/utils/` n’existe pas actuellement ; aucun utilitaire partagé n’y est exposé.
 
 ## 8. Dossier `supabase/`
@@ -404,7 +435,7 @@ Le callback de confirmation e-mail dédié n’existe pas encore dans `app/`. Il
 | `app.config.js` | Expo et assets principaux | Expo CLI et EAS Build. |
 | `eas.json` | EAS CLI | Profiles development, preview et production Android. |
 
-Les dépendances externes importantes sont centralisées dans `package.json` : Expo/React Native, Expo Router, modules SecureStore/Notifications/Location/Linking, Supabase JS, TanStack Query, React Hook Form, Zod, ESLint, TypeScript et les outils de tests. Les fichiers de `node_modules/` ne sont pas documentés individuellement.
+Les dépendances externes importantes sont centralisées dans `package.json` : Expo/React Native, Expo Router, AsyncStorage, modules SecureStore/Notifications/Location/Linking, Supabase JS, TanStack Query, React Hook Form, Zod, ESLint, TypeScript et les outils de tests. Les fichiers de `node_modules/` ne sont pas documentés individuellement. `npm audit` doit rester à zéro vulnérabilité ; aucun correctif `--force` ne doit être utilisé s’il modifie la version majeure d’Expo.
 
 ## 13. Règles de modification
 

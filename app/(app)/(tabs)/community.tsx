@@ -1,5 +1,10 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
 
 export default function CommunityScreen() {
-  return <ScreenPlaceholder title="Communauté" description="Fonctionnalité prévue dans une prochaine étape." />;
+  return (
+    <ScreenContainer>
+      <EmptyState title="La communauté se prépare" description="Les échanges et la modération seront ajoutés après validation du socle." />
+    </ScreenContainer>
+  );
 }

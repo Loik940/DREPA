@@ -1,23 +1,26 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
+import { PasswordField } from '@/components/ui/PasswordField';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { TextField } from '@/components/ui/TextField';
 import { signInSchema, type SignInValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
+import { useAppTheme } from '@/theme/use-app-theme';
+import { spacing } from '@/theme/spacing';
 
 export default function LoginScreen() {
   const router = useRouter();
   const auth = useAuth();
+  const { colors } = useAppTheme();
   const { control, handleSubmit, setError, formState } = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: { email: '', password: '' },
   });
-
-  if (auth.status === 'error') {
-    return <ScreenPlaceholder title="Configuration indisponible" description="La connexion sécurisée ne peut pas être initialisée." />;
-  }
 
   const onSubmit = async (values: SignInValues) => {
     auth.clearError();
@@ -31,62 +34,64 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Connexion</Text>
-      <Controller
-        control={control}
-        name="email"
-        render={({ field, fieldState }) => (
-          <View>
-            <TextInput
+    <ScreenContainer scroll contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <AppText variant="label" color="brand" align="center">DRÉPA</AppText>
+        <AppText variant="title" align="center">Connexion</AppText>
+        <AppText color="textSecondary" align="center">Bon retour parmi nous.</AppText>
+      </View>
+
+      <View style={styles.form}>
+        <Controller
+          control={control}
+          name="email"
+          render={({ field, fieldState }) => (
+            <TextField
+              label="E-mail"
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
               onBlur={field.onBlur}
               onChangeText={field.onChange}
-              placeholder="E-mail"
-              style={styles.input}
+              placeholder="ton@email.com"
               value={field.value}
+              error={fieldState.error?.message}
             />
-            {fieldState.error && <Text style={styles.error}>{fieldState.error.message}</Text>}
-          </View>
-        )}
-      />
-      <Controller
-        control={control}
-        name="password"
-        render={({ field, fieldState }) => (
-          <View>
-            <TextInput
-              autoCapitalize="none"
+          )}
+        />
+        <Controller
+          control={control}
+          name="password"
+          render={({ field, fieldState }) => (
+            <PasswordField
+              label="Mot de passe"
               autoComplete="password"
               onBlur={field.onBlur}
               onChangeText={field.onChange}
-              placeholder="Mot de passe"
-              secureTextEntry
-              style={styles.input}
+              placeholder="Saisis ton mot de passe"
               value={field.value}
+              error={fieldState.error?.message}
             />
-            {fieldState.error && <Text style={styles.error}>{fieldState.error.message}</Text>}
-          </View>
-        )}
-      />
-      {formState.errors.root?.message && <Text style={styles.error}>{formState.errors.root.message}</Text>}
-      <Pressable disabled={formState.isSubmitting} onPress={handleSubmit(onSubmit)} style={styles.button}>
-        <Text style={styles.buttonText}>{formState.isSubmitting ? 'Connexion...' : 'Se connecter'}</Text>
-      </Pressable>
-      <Link href="/(auth)/register" style={styles.link}>Créer un compte</Link>
-      <Link href="/(auth)/forgot-password" style={styles.link}>Mot de passe oublié</Link>
-    </View>
+          )}
+        />
+        <Link href="/(auth)/forgot-password" style={[styles.link, { color: colors.brand }]}>Mot de passe oublié ?</Link>
+        {formState.errors.root?.message && <AppText color="sos" align="center">{formState.errors.root.message}</AppText>}
+        <Button label="Se connecter" loading={formState.isSubmitting} onPress={handleSubmit(onSubmit)} />
+      </View>
+
+      <View style={styles.footer}>
+        <AppText color="textSecondary" align="center">Tu n’as pas encore de compte ?</AppText>
+        <Link href="/(auth)/register" style={[styles.link, { color: colors.brand }]}>Créer un compte</Link>
+        <AppText variant="caption" color="textSecondary" align="center">DRÉPA ne remplace pas un professionnel de santé.</AppText>
+      </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', gap: 12, padding: 24 },
-  title: { fontSize: 28, fontWeight: '700', marginBottom: 12 },
-  input: { borderColor: '#A0A0A0', borderRadius: 8, borderWidth: 1, padding: 12 },
-  button: { alignItems: 'center', backgroundColor: '#208AEF', borderRadius: 8, padding: 14 },
-  buttonText: { color: '#FFFFFF', fontWeight: '700' },
-  error: { color: '#B00020' },
-  link: { color: '#1769AA', textAlign: 'center' },
+  content: { justifyContent: 'center', minHeight: '100%', paddingVertical: spacing.xxxl },
+  header: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxxl },
+  form: { gap: spacing.lg },
+  footer: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxxl },
+  link: { fontFamily: 'Inter', fontSize: 14, fontWeight: '600', textAlign: 'center' },
 });

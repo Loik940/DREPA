@@ -2,12 +2,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Controller, useForm, type Control, type FieldPath } from 'react-hook-form';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { profileSchema, type ProfileValues } from '@/features/profile/schemas';
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { LoadingState } from '@/components/ui/LoadingState';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { TextField } from '@/components/ui/TextField';
 import { useUpsertProfileMutation } from '@/features/profile/mutations';
 import { ProfileDataError, useProfileQuery } from '@/features/profile/queries';
+import { profileSchema, type ProfileValues } from '@/features/profile/schemas';
 import { useAuth } from '@/providers/auth-provider';
+import { spacing } from '@/theme/spacing';
 
 export default function CompleteProfileScreen() {
   const router = useRouter();
@@ -52,7 +59,7 @@ export default function CompleteProfileScreen() {
   };
 
   if (profileQuery.isPending) {
-    return <Text style={styles.message}>Chargement du profil...</Text>;
+    return <LoadingState message="Chargement du profil..." />;
   }
 
   if (profileQuery.isError) {
@@ -60,30 +67,25 @@ export default function CompleteProfileScreen() {
       ? profileQuery.error
       : new ProfileDataError('profiles', 'unknown', 'Le profil ne peut pas être chargé.');
 
-    return (
-      <View style={styles.messageContainer}>
-        <Text style={styles.title}>Profil indisponible</Text>
-        <Text style={styles.message}>{error.message}</Text>
-        <Pressable onPress={() => void profileQuery.refetch()} style={styles.button}>
-          <Text style={styles.buttonText}>Réessayer</Text>
-        </Pressable>
-      </View>
-    );
+    return <ErrorState description={error.message} onRetry={() => void profileQuery.refetch()} />;
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Compléter le profil</Text>
-      <Text>{"Les informations médicales facultatives ne bloquent pas l'utilisation de l'application."}</Text>
-      <ProfileInput control={control} name="first_name" label="Prénom ou pseudonyme" />
-      <ProfileInput control={control} name="country" label="Pays" />
-      <ProfileInput control={control} name="full_name" label="Nom complet (facultatif)" />
-      <ProfileInput control={control} name="city" label="Ville (facultatif)" />
-      {formState.errors.root?.message && <Text style={styles.error}>{formState.errors.root.message}</Text>}
-      <Pressable disabled={formState.isSubmitting || mutation.isPending} onPress={handleSubmit(onSubmit)} style={styles.button}>
-        <Text style={styles.buttonText}>{mutation.isPending ? 'Enregistrement...' : 'Enregistrer le profil'}</Text>
-      </Pressable>
-    </ScrollView>
+    <ScreenContainer scroll contentContainerStyle={styles.container}>
+      <View style={styles.header}>
+        <AppText variant="title">Compléter mon profil</AppText>
+        <AppText color="textSecondary">Ces informations restent privées et servent à personnaliser ton espace.</AppText>
+      </View>
+      <View style={styles.form}>
+        <ProfileInput control={control} name="first_name" label="Prénom ou pseudonyme" />
+        <ProfileInput control={control} name="country" label="Pays" />
+        <ProfileInput control={control} name="full_name" label="Nom complet (facultatif)" />
+        <ProfileInput control={control} name="city" label="Ville (facultatif)" />
+      </View>
+      {formState.errors.root?.message && <AppText color="sos">{formState.errors.root.message}</AppText>}
+      <Button label="Enregistrer le profil" loading={formState.isSubmitting || mutation.isPending} onPress={handleSubmit(onSubmit)} />
+      <AppText variant="caption" color="textSecondary" align="center">Les informations médicales facultatives sont déclarées par toi et ne constituent pas un document médical officiel.</AppText>
+    </ScreenContainer>
   );
 }
 
@@ -93,24 +95,18 @@ function ProfileInput({ control, name, label }: { control: Control<ProfileValues
       control={control}
       name={name}
       render={({ field, fieldState }) => (
-        <View style={styles.field}>
-          <Text>{label}</Text>
-          <TextInput onBlur={field.onBlur} onChangeText={field.onChange} style={styles.input} value={field.value ?? ''} />
-          {fieldState.error && <Text style={styles.error}>{fieldState.error.message}</Text>}
-        </View>
+        <TextFieldAdapter label={label} value={field.value ?? ''} onBlur={field.onBlur} onChangeText={field.onChange} error={fieldState.error?.message} />
       )}
     />
   );
 }
 
+function TextFieldAdapter({ label, value, onBlur, onChangeText, error }: { label: string; value: string; onBlur: () => void; onChangeText: (value: string) => void; error?: string }) {
+  return <TextField label={label} value={value} onBlur={onBlur} onChangeText={onChangeText} error={error} />;
+}
+
 const styles = StyleSheet.create({
-  container: { gap: 14, padding: 24 },
-  title: { fontSize: 28, fontWeight: '700' },
-  field: { gap: 6 },
-  input: { borderColor: '#A0A0A0', borderRadius: 8, borderWidth: 1, padding: 12 },
-  button: { alignItems: 'center', backgroundColor: '#208AEF', borderRadius: 8, padding: 14 },
-  buttonText: { color: '#FFFFFF', fontWeight: '700' },
-  error: { color: '#B00020' },
-  message: { flex: 1, padding: 24, textAlign: 'center' },
-  messageContainer: { flex: 1, gap: 14, justifyContent: 'center', padding: 24 },
+  container: { gap: spacing.lg },
+  header: { gap: spacing.sm, marginBottom: spacing.sm },
+  form: { gap: spacing.lg },
 });
