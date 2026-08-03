@@ -145,9 +145,12 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/(app)/_layout.tsx` | Groupe protégé `(app)` | Vérifie la session puis le statut d’onboarding. | Utilise `useAuth`, `useOnboardingStatus`, `useSegments` et `ScreenPlaceholder`. Priorité : consentements, profil, onglets. Les erreurs de données proposent `Réessayer`. |
 | `app/(app)/consent.tsx` | `/consent` | Enregistre l’acceptation des versions courantes des CGU, de la politique de confidentialité et de la charte communautaire. | Protégé par session. Utilise React Hook Form, Zod, `legalVersions` et `useAcceptConsentMutation`. Après succès, la requête est invalidée et l’utilisateur va vers `complete-profile`. |
 | `app/(app)/complete-profile.tsx` | `/complete-profile` | Crée ou met à jour le profil minimal et lit une ligne existante. | Protégé par session. Utilise `useProfileQuery`, `useUpsertProfileMutation`, `profileSchema` et `auth.users.id`. `null` signifie profil absent normal ; une vraie erreur affiche `Réessayer`. |
+| `app/(app)/health-entry.tsx` | `/health-entry` | Formulaire de nouvelle entrée du journal avec champs facultatifs et brouillon mémoire. | Protégé par session. Utilise React Hook Form, Zod et `useCreateHealthLogMutation`. Ne persiste aucune donnée médicale localement et conserve les valeurs en cas d’erreur réseau. |
+| `app/(app)/health-log/[id].tsx` | `/health-log/:id` | Détail privé d’une entrée avec modification et suppression confirmée. | Charge avec `id + user_id`, affiche uniquement des données déclaratives et utilise des mutations filtrées par propriétaire. |
+| `app/(app)/health-statistics.tsx` | `/health-statistics` | Statistiques descriptives des 30 derniers jours. | Charge uniquement les colonnes nécessaires, limite à 500 lignes et n’affiche aucun diagnostic, prédiction ou niveau de danger. |
 | `app/(app)/(tabs)/_layout.tsx` | Groupe protégé `(app)/(tabs)` | Déclare les onglets principaux. | Accessible après session, consentements et profil complet. |
 | `app/(app)/(tabs)/index.tsx` | Onglet accueil | Écran placeholder du socle Android. | Aucun flux médical implémenté. |
-| `app/(app)/(tabs)/journal.tsx` | Onglet journal | Placeholder de la fonctionnalité journal. | Ne pas ajouter de données médicales ou de logique de journal dans cette étape. |
+| `app/(app)/(tabs)/journal.tsx` | Onglet journal | Affiche l’état vide ou les 50 entrées récentes et ouvre le formulaire de saisie. | Utilise `useHealthLogsQuery`, les états UI partagés et des données privées filtrées par `session.user.id`. Les informations restent descriptives. |
 | `app/(app)/(tabs)/medications.tsx` | Onglet médicaments | Placeholder des médicaments et rappels. | Ne pas ajouter de prescription, d’ordonnance ou de traitement automatique. |
 | `app/(app)/(tabs)/community.tsx` | Onglet communauté | Placeholder de la communauté. | Ne pas ajouter de publications, commentaires ou modération dans le socle actuel. |
 | `app/(app)/(tabs)/profile.tsx` | Onglet profil | Lit le profil courant et propose la déconnexion. | Utilise `useProfileQuery`, `useAuth` et purge le cache via le provider lors de la déconnexion. |
@@ -203,6 +206,24 @@ Les routes documentées mais absentes actuellement incluent les écrans métier 
 | `src/features/profile/use-onboarding-status.ts` | Combine l’utilisateur Auth, les requêtes profil/consentements, l’état de chargement, l’erreur structurée et le `refetch`. | Utilisé par `app/(app)/_layout.tsx`. La priorité est toujours `needs-consent → needs-profile → complete`. |
 | `src/features/profile/schemas.ts` | Valide les champs de profil et les trois consentements obligatoires. | React Hook Form et Zod. Les champs facultatifs restent bornés avant envoi à PostgreSQL. |
 | `src/features/profile/profile-flow.test.ts` | Vérifie les consentements courants, les consentements révoqués et les transitions d’onboarding. | Jest/Babel ; ne se connecte pas à Supabase. |
+
+### `src/features/health-log/`
+
+| Fichier | Rôle | Dépendances, données et risques |
+|---|---|---|
+| `src/features/health-log/schemas.ts` | Schéma Zod et valeurs par défaut d’une entrée partielle du journal. | Zod. Borne douleur/fatigue de 0 à 10, limite les textes et refuse les dates futures sans interprétation médicale. |
+| `src/features/health-log/schemas.test.ts` | Tests unitaires du contrat du journal. | Jest/Babel. Utilise uniquement des valeurs fictives et vérifie entrée partielle, bornes, date et longueur. |
+| `src/features/health-log/errors.ts` | Erreurs structurées du journal : session, réseau, RLS, absence, Supabase et configuration. | Nettoie JWT, tokens et secrets avant tout diagnostic de développement. |
+| `src/features/health-log/errors.test.ts` | Tests de classification et de nettoyage des erreurs. | Vérifie 401, 403, 42501, réseau, absence et masquage de secrets. |
+| `src/features/health-log/queries.ts` | Historique paginé, détail propriétaire et source statistique limitée. | Supabase, TanStack Query, AuthProvider. Attend une session prête, inclut `user.id` dans les query keys et filtre par `user_id`. |
+| `src/features/health-log/mutations.ts` | Crée, modifie et supprime une entrée avec invalidation ciblée du cache. | Supabase et TanStack Query. Injecte `session.user.id` et filtre update/delete par `id + user_id`. |
+| `src/features/health-log/options.ts` | Libellés stables des symptômes, facteurs, hydratation et prise déclarée. | Utilisé par le formulaire, le détail et les statistiques. N’ajoute aucune interprétation médicale. |
+| `src/features/health-log/payload.ts` | Normalisation pure du payload Supabase. | Convertit champs vides en `null`, température décimale et préserve `false`. |
+| `src/features/health-log/payload.test.ts` | Tests de normalisation du payload. | Vérifie valeurs vides, décimales, booléens et date explicite. |
+| `src/features/health-log/statistics.ts` | Calcule moyennes descriptives, jours suivis et fréquences. | Fonction pure sans accès réseau ni conclusion médicale. |
+| `src/features/health-log/statistics.test.ts` | Tests des statistiques descriptives. | Vérifie moyennes, fréquences, jours uniques et historique vide. |
+| `src/features/health-log/components/ScoreSelector.tsx` | Sélecteur accessible de score facultatif de 0 à 10. | Composants UI et thème clair. La valeur ne constitue pas un niveau de danger médical. |
+| `src/features/health-log/components/ChoiceChips.tsx` | Chips accessibles pour choix multiples ou unique. | Composants UI et thème clair. Les options sont déclaratives et ne produisent aucune conclusion médicale. |
 
 ### `src/lib/`
 
@@ -267,6 +288,8 @@ Les routes documentées mais absentes actuellement incluent les écrans métier 
 | `supabase/migrations/20260723200000_create_profiles.sql` | Crée `public.profiles` avec `id`, identité, pays, informations facultatives et timestamps. | `id` référence `auth.users(id)` avec cascade. Trigger `set_updated_at`. RLS et policies select/insert/update/delete limitées à `auth.uid() = id`. | 1 |
 | `supabase/migrations/20260723200100_create_emergency_contacts.sql` | Crée `public.emergency_contacts` avec `id`, `user_id`, nom, téléphone, relation, contact principal, consentement confirmé et date de création. | `user_id` référence `auth.users(id)` avec cascade. Index utilisateur, unicité du contact principal, RLS CRUD limitée à `auth.uid() = user_id`. | 2 dans le dépôt actuel |
 | `supabase/migrations/20260723200200_create_user_consents.sql` | Crée `public.user_consents` avec versions CGU, confidentialité, charte, `accepted_at` et `revoked_at`. | `user_id` référence `auth.users(id)` avec cascade. RLS select/insert/update propriétaire. Trigger d’historique empêchant la modification des versions et la réactivation d’un consentement révoqué. | 3 dans le dépôt actuel |
+| `supabase/migrations/20260726021000_grant_authenticated_table_privileges.sql` | Accorde les privilèges SQL nécessaires aux tables initiales. | Aucun accès `anon`; `user_consents` ne reçoit pas de privilège DELETE. | 4 dans le dépôt actuel |
+| `supabase/migrations/20260803153000_create_health_logs.sql` | Crée `public.health_logs` avec mesures et observations facultatives, timestamps et `recorded_at`. | `user_id` référence `auth.users(id)`, contraintes 0–10, rejet des dates futures, index utilisateur/date, privilèges SQL et RLS CRUD propriétaire. | 5 dans le dépôt actuel |
 
 Le schéma documentaire prévoit également `user_roles` entre `profiles` et `user_consents`, mais aucune migration `user_roles` n’est présente dans le dépôt actuel. Cette différence doit rester visible avant toute implémentation d’administration ou de ressources éducatives. Les migrations déjà appliquées ne doivent jamais être modifiées : toute évolution passe par une nouvelle migration versionnée.
 

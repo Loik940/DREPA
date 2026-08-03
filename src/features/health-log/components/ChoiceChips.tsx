@@ -1,0 +1,63 @@
+import { Pressable, StyleSheet, View } from 'react-native';
+
+import { AppText } from '@/components/ui/AppText';
+import { useAppTheme } from '@/theme/use-app-theme';
+import { radii } from '@/theme/radii';
+import { sizes } from '@/theme/sizes';
+import { spacing } from '@/theme/spacing';
+
+type Choice = { label: string; value: string };
+
+type ChoiceChipsProps = {
+  choices: readonly Choice[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+};
+
+type SingleChoiceChipsProps = {
+  choices: readonly Choice[];
+  selected: string | null;
+  onChange: (selected: string | null) => void;
+};
+
+export function ChoiceChips({ choices, selected, onChange }: ChoiceChipsProps) {
+  const { colors } = useAppTheme();
+
+  const toggle = (value: string) => {
+    onChange(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
+  };
+
+  return (
+    <View style={styles.container}>
+      {choices.map((choice) => {
+        const active = selected.includes(choice.value);
+        return (
+          <Pressable
+            key={choice.value}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: active }}
+            onPress={() => toggle(choice.value)}
+            style={[styles.chip, { backgroundColor: active ? colors.backgroundMuted : colors.backgroundSurface, borderColor: active ? colors.brand : colors.border }]}
+          >
+            <AppText variant="label" color={active ? 'brand' : 'textPrimary'}>{choice.label}</AppText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+export function SingleChoiceChips({ choices, selected, onChange }: SingleChoiceChipsProps) {
+  return (
+    <ChoiceChips
+      choices={choices}
+      selected={selected ? [selected] : []}
+      onChange={(values) => onChange(values.at(-1) ?? null)}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chip: { borderRadius: radii.full, borderWidth: 1, justifyContent: 'center', minHeight: sizes.touchTarget, paddingHorizontal: spacing.lg },
+});

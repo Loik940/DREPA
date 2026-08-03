@@ -64,6 +64,32 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['user_consents']['Insert']>;
         Relationships: [];
       };
+      health_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          pain_level: number | null;
+          pain_location: string | null;
+          temperature: number | null;
+          hydration_level: string | null;
+          fatigue_level: number | null;
+          symptoms: string[] | null;
+          possible_triggers: string[] | null;
+          medication_taken: boolean | null;
+          notes: string | null;
+          recorded_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['health_logs']['Row'], 'id' | 'created_at' | 'updated_at' | 'recorded_at'> & {
+          id?: string;
+          created_at?: string;
+          recorded_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['health_logs']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
