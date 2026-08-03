@@ -70,6 +70,7 @@ DREPA/
 │   ├── index.tsx
 │   ├── (auth)/
 │   │   ├── _layout.tsx
+│   │   ├── welcome.tsx
 │   │   ├── forgot-password.tsx
 │   │   ├── legal.tsx
 │   │   ├── login.tsx
@@ -134,7 +135,7 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/index.tsx` | `/` | Observe l’état Auth et redirige vers la connexion ou les onglets protégés. | Affiche chargement ou erreur de configuration avec `Réessayer`. La complétude du profil est ensuite décidée par `(app)/_layout.tsx`. |
 | `app/+not-found.tsx` | Absent actuellement | Route de fallback prévue dans la documentation mais non créée dans le code actuel. | À créer avant d’exposer des routes supplémentaires ; toute page inconnue devrait proposer un retour sûr. |
 | `app/(auth)/_layout.tsx` | Groupe public `(auth)` | Protège les écrans publics contre une session déjà authentifiée et autorise le mode récupération. | Utilise `useAuth`, `Redirect`, `Stack` et `ScreenPlaceholder`. États de session `loading`, `error`, `authenticated` et récupération de mot de passe. |
-| `app/(auth)/welcome.tsx` | `/welcome` | Onboarding visuel local en trois étapes avant l’authentification. | Utilise AsyncStorage uniquement pour la préférence non sensible d’accueil déjà vu. Ne collecte aucune donnée médicale et ne crée aucune session. |
+| `app/(auth)/welcome.tsx` | `/welcome` | Onboarding visuel local en trois étapes avant l’authentification. | Utilise AsyncStorage uniquement pour la préférence non sensible d’accueil déjà vu. Ne collecte aucune donnée médicale et ne crée aucune session. Le périmètre actif est en mode clair uniquement. |
 | `app/(auth)/login.tsx` | `/login` | Formulaire de connexion par e-mail et mot de passe. | React Hook Form, Zod, `useAuth`, `signIn` et redirection vers `/`. Erreurs d’authentification affichées sans token ni détail sensible. |
 | `app/(auth)/register.tsx` | `/register` | Formulaire d’inscription et confirmation du mot de passe. | React Hook Form, Zod, `useAuth.signUp`. Si Supabase exige une confirmation e-mail, l’écran affiche une instruction et n’ouvre pas les routes protégées sans session. |
 | `app/(auth)/forgot-password.tsx` | `/forgot-password` | Demande de récupération par e-mail. | Utilise `requestPasswordReset`, `expo-linking` via le service Auth et une réponse neutre pour ne pas révéler l’existence d’un compte. |
@@ -151,7 +152,7 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/(app)/(tabs)/community.tsx` | Onglet communauté | Placeholder de la communauté. | Ne pas ajouter de publications, commentaires ou modération dans le socle actuel. |
 | `app/(app)/(tabs)/profile.tsx` | Onglet profil | Lit le profil courant et propose la déconnexion. | Utilise `useProfileQuery`, `useAuth` et purge le cache via le provider lors de la déconnexion. |
 
-Les routes documentées mais absentes actuellement incluent également `welcome.tsx`, les écrans métier détaillés du journal, des médicaments, du SOS, des ressources, de la communauté et de la modération. Leur absence est volontaire tant que le périmètre correspondant n’est pas implémenté.
+Les routes documentées mais absentes actuellement incluent les écrans métier détaillés du journal, des médicaments, du SOS, des ressources, de la communauté et de la modération. Leur absence est volontaire tant que le périmètre correspondant n’est pas implémenté.
 
 ## 7. Dossier `src/`
 
@@ -166,6 +167,7 @@ Les routes documentées mais absentes actuellement incluent également `welcome.
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
 | `src/components/ui/AppText.tsx` | Texte typé avec variantes de typographie et couleur du thème actif. | `useAppTheme`, tokens typography. Ne pas utiliser de taille ou couleur locale sans justification. |
+| `src/components/ui/OnboardingIllustration.tsx` | Illustrations locales légères en formes React Native pour les trois slides de bienvenue. | `useAppTheme`, tokens de rayons. Aucun asset distant ou contenu médical réel ; conserver un rendu performant hors ligne. |
 | `src/components/ui/ScreenContainer.tsx` | Conteneur Safe Area avec variantes scroll et fond de thème. | `react-native-safe-area-context`, `useAppTheme`. Conserver le support du clavier et des petits écrans. |
 | `src/components/ui/Button.tsx` | Boutons primaire, brand, secondaire, ghost et danger avec chargement et accessibilité. | Tokens couleurs, tailles et rayons. Ne pas utiliser `danger` pour une action ordinaire. |
 | `src/components/ui/TextField.tsx` | Champ texte partagé avec label, erreur, aide et élément à droite. | React Native, thème. Ne jamais afficher de valeur sensible dans les erreurs ou logs. |
@@ -228,15 +230,14 @@ Les routes documentées mais absentes actuellement incluent également `welcome.
 
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
-| `src/theme/colors.ts` | Tokens de couleurs Terre et Sang pour les modes clair et sombre. | Aucun service externe. Les composants doivent utiliser ces tokens plutôt que des hexadécimaux locaux. |
+| `src/theme/colors.ts` | Tokens de couleurs Terre et Sang pour le mode clair unique du MVP. | Aucun service externe. Les composants doivent utiliser ces tokens plutôt que des hexadécimaux locaux. |
 | `src/theme/spacing.ts` | Grille d’espacement, gouttière d’écran, padding de carte et zones tactiles. | Aucun service externe. Respecter les minimums d’accessibilité Android. |
 | `src/theme/typography.ts` | Familles, poids et styles typographiques du premier lot, avec Inter comme police déclarée. | Aucun service externe dans ce lot. Bricolage Grotesque reste différée jusqu’à validation des performances et du chargement de police. |
 | `src/theme/radii.ts` | Rayons partagés des champs, boutons, cartes et badges. | Aucun service externe. Éviter de recréer des rayons locaux incohérents. |
 | `src/theme/sizes.ts` | Hauteurs de champs/boutons, tailles d’icônes, avatars et bouton SOS. | Aucun service externe. Les tailles tactiles ne doivent pas être réduites sous les seuils validés. |
 | `src/theme/shadows.ts` | Ombres Android nulles ou très légères pour conserver une interface performante. | Aucun service externe. Ne pas compenser un mauvais contraste par une ombre forte. |
-| `src/theme/use-app-theme.ts` | Sélectionne automatiquement la palette claire ou sombre selon `useColorScheme`. | React Native et `colors.ts`. Un choix manuel clair/sombre pourra être ajouté plus tard sans modifier les composants consommateurs. |
-| `src/theme/index.ts` | Export central de tous les tokens et du type `Theme`. | Consommé par les composants UI. Garder les exports stables pour éviter des imports dispersés. |
-| `src/theme/index.ts` | Export central et type `Theme` regroupant tous les tokens. | Consommé par les futurs composants UI. Toute extension doit rester compatible avec les deux modes. |
+| `src/theme/use-app-theme.ts` | Retourne la palette claire unique du MVP. | `colors.ts`. Aucun mode sombre actif n’est exposé aux composants. |
+| `src/theme/index.ts` | Export central et type `Theme` regroupant tous les tokens. | Consommé par les composants UI. Les extensions futures doivent préserver le mode clair du MVP. |
 
 ### `src/types/`
 

@@ -1,5 +1,4 @@
 export const colors = {
-  light: {
     brand: '#7B1E1E',
     onBrand: '#FFFFFF',
     sos: '#C0392B',
@@ -20,30 +19,7 @@ export const colors = {
     disabledBg: '#E8D5C4',
     disabledText: '#8A716F',
     overlay: 'rgba(43, 27, 23, 0.5)',
-  },
-  dark: {
-    brand: '#A94B48',
-    onBrand: '#FFFFFF',
-    sos: '#C0392B',
-    onSos: '#FFFFFF',
-    success: '#6EAD89',
-    onSuccess: '#10261A',
-    warning: '#E8A849',
-    onWarning: '#1C1410',
-    actionBg: '#E8A87C',
-    actionText: '#1C1410',
-    backgroundPrimary: '#1C1410',
-    backgroundSurface: '#2A1F1A',
-    backgroundMuted: '#3D2E26',
-    textPrimary: '#F5F0E8',
-    textSecondary: '#C1AEA0',
-    border: '#3D2E26',
-    focus: '#E8A87C',
-    disabledBg: '#493830',
-    disabledText: '#A08B7E',
-    overlay: 'rgba(0, 0, 0, 0.65)',
-  },
 } as const;
 
-export type ColorScheme = keyof typeof colors;
-export type ThemeColors = (typeof colors)[ColorScheme];
+export type ColorScheme = 'light';
+export type ThemeColors = typeof colors;

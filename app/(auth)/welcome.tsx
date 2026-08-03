@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
+import { OnboardingIllustration } from '@/components/ui/OnboardingIllustration';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { radii } from '@/theme/radii';
 import { spacing } from '@/theme/spacing';
@@ -62,11 +63,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.hero}>
-        <View style={[styles.orbit, { backgroundColor: colors.backgroundMuted }]}>
-          <View style={[styles.core, { backgroundColor: colors.brand }]} />
-          <View style={[styles.accentShape, { backgroundColor: colors.actionBg }]} />
-          <View style={[styles.smallShape, { backgroundColor: colors.success }]} />
-        </View>
+        <OnboardingIllustration variant={slide.shape} />
       </View>
 
       <View style={styles.copy}>
@@ -101,10 +98,6 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   skip: { minHeight: spacing.touchTarget, justifyContent: 'center', paddingHorizontal: spacing.sm },
   hero: { alignItems: 'center', justifyContent: 'center', minHeight: 280, paddingVertical: spacing.xxl },
-  orbit: { alignItems: 'center', borderRadius: radii.full, height: 220, justifyContent: 'center', position: 'relative', width: 220 },
-  core: { borderRadius: radii.full, height: 116, width: 116 },
-  accentShape: { borderRadius: radii.full, height: 54, position: 'absolute', right: 20, top: 32, width: 54 },
-  smallShape: { borderRadius: radii.full, bottom: 28, height: 34, left: 28, position: 'absolute', width: 34 },
   copy: { gap: spacing.md },
   description: { alignSelf: 'center', maxWidth: 320 },
   footer: { gap: spacing.lg, paddingTop: spacing.xxxl },

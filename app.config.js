@@ -5,7 +5,7 @@ module.exports = {
   platforms: ['android'],
   orientation: 'portrait',
   scheme: 'drepa',
-  userInterfaceStyle: 'automatic',
+  userInterfaceStyle: 'light',
   icon: './assets/images/icon.png',
   android: {
     package: 'bj.drepa.app',

@@ -8,7 +8,7 @@ description: Direction visuelle et accessibilité du design system mobile DRÉPA
 ## Direction
 
 - Identité « Terre et Sang » : chaleureuse, humaine, africaine et rassurante.
-- Mode clair par défaut, mode sombre complet et mode système.
+- Mode clair uniquement dans le périmètre actif du MVP.
 - Inter pour le corps, les formulaires et les composants UI.
 - Bricolage Grotesque uniquement pour les grands titres validés.
 - Aucun style clinique froid ou motif culturel caricatural.
@@ -17,16 +17,14 @@ description: Direction visuelle et accessibilité du design system mobile DRÉPA
 
 Communes : `brand #7B1E1E`, `sos #C0392B`, `success #2D6A4F`, `warning #D4860A`.
 
-Clair : `backgroundPrimary #FFF8F1`, `backgroundSurface #FFFFFF`, `textPrimary #2B1B17`, `textSecondary #5C4A3D`, `actionBg #C87835`, `actionText #2B1B17`, `border #E8D5C4`.
-
-Sombre : `backgroundPrimary #1C1410`, `backgroundSurface #2A1F1A`, `textPrimary #F5F0E8`, `textSecondary #C1AEA0`, `actionBg #E8A87C`, `actionText #1C1410`, `border #3D2E26`.
+Mode clair : `backgroundPrimary #FFF8F1`, `backgroundSurface #FFFFFF`, `textPrimary #2B1B17`, `textSecondary #5C4A3D`, `actionBg #C87835`, `actionText #2B1B17`, `border #E8D5C4`.
 
 ## Accessibilité
 
 - Corps : 15 à 16 px ; labels : 13 px minimum ; aucun texte sous 12 px.
 - Zones tactiles générales : 44 minimum ; boutons : 52 minimum ; SOS : 56 minimum.
 - Ne jamais transmettre une information uniquement par la couleur.
-- Vérifier contrastes clair/sombre, tailles Android augmentées, clavier et petits écrans.
+- Vérifier le contraste du mode clair, les tailles Android augmentées, le clavier et les petits écrans.
 - Aucun bouton SOS avec pulsation permanente.
 - Les composants utilisent les tokens, jamais des hexadécimaux répétés.
 
