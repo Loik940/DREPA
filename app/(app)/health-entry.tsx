@@ -21,6 +21,17 @@ import { healthLogDefaults, healthLogSchema, type HealthLogValues } from '@/feat
 import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
 
+const painLocationChoices = [
+  { label: 'Dos', value: 'back' },
+  { label: 'Jambes', value: 'legs' },
+  { label: 'Ventre', value: 'abdomen' },
+  { label: 'Bras', value: 'arms' },
+  { label: 'Poitrine', value: 'chest' },
+  { label: 'Tête', value: 'head' },
+  { label: 'Partout', value: 'everywhere' },
+  { label: 'Autre', value: 'other' },
+] as const;
+
 export default function HealthEntryScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -82,9 +93,16 @@ export default function HealthEntryScreen() {
 
       <Card>
         <View style={styles.section}>
-          <AppText variant="sectionTitle">Douleur</AppText>
+          <AppText variant="sectionTitle">Niveau de douleur</AppText>
           <Controller control={control} name="pain_level" render={({ field }) => <ScoreSelector label="Niveau de douleur" value={field.value} onChange={field.onChange} />} />
-          <Controller control={control} name="pain_location" render={({ field, fieldState }) => <TextField label="Localisation (facultatif)" placeholder="Ex. dos, jambes, ventre" value={field.value ?? ''} onBlur={field.onBlur} onChangeText={field.onChange} error={fieldState.error?.message} />} />
+          <AppText variant="label" color="textSecondary">Localisation (facultatif)</AppText>
+          <Controller
+            control={control}
+            name="pain_location"
+            render={({ field }) => (
+              <SingleChoiceChips choices={painLocationChoices} selected={field.value || null} onChange={field.onChange} />
+            )}
+          />
         </View>
       </Card>
 
@@ -92,13 +110,16 @@ export default function HealthEntryScreen() {
         <View style={styles.section}>
           <AppText variant="sectionTitle">Fatigue et hydratation</AppText>
           <Controller control={control} name="fatigue_level" render={({ field }) => <ScoreSelector label="Niveau de fatigue" value={field.value} onChange={field.onChange} />} />
-          <Controller control={control} name="hydration_level" render={({ field }) => <SingleChoiceChips choices={hydrationChoices} selected={field.value} onChange={field.onChange} />} />
+          <View style={styles.subsection}>
+            <AppText variant="label" color="textSecondary">Hydratation déclarée</AppText>
+            <Controller control={control} name="hydration_level" render={({ field }) => <SingleChoiceChips choices={hydrationChoices} selected={field.value} onChange={field.onChange} />} />
+          </View>
         </View>
       </Card>
 
       <Card>
         <View style={styles.section}>
-          <AppText variant="sectionTitle">Symptômes déclarés</AppText>
+          <AppText variant="sectionTitle">Symptômes</AppText>
           <Controller control={control} name="symptoms" render={({ field }) => <ChoiceChips choices={symptomChoices} selected={field.value} onChange={field.onChange} />} />
         </View>
       </Card>
@@ -133,7 +154,7 @@ export default function HealthEntryScreen() {
       <Controller control={control} name="notes" render={({ field, fieldState }) => <TextField label="Notes personnelles (facultatif)" multiline numberOfLines={5} placeholder="Ajoute une note si tu le souhaites" value={field.value ?? ''} onBlur={field.onBlur} onChangeText={field.onChange} error={fieldState.error?.message} style={styles.notes} />} />
 
       {formState.errors.root?.message && <AppText color="sos">{formState.errors.root.message}</AppText>}
-      <Button label={isEditing ? 'Enregistrer les modifications' : 'Enregistrer'} loading={formState.isSubmitting || mutationPending} onPress={handleSubmit(onSubmit)} />
+      <Button label={isEditing ? 'Enregistrer les modifications' : 'Enregistrer mon état'} loading={formState.isSubmitting || mutationPending} onPress={handleSubmit(onSubmit)} />
       <Button label="Annuler" variant="ghost" onPress={() => router.back()} />
     </ScreenContainer>
   );
@@ -143,5 +164,6 @@ const styles = StyleSheet.create({
   container: { gap: spacing.lg, paddingBottom: spacing.huge },
   header: { gap: spacing.sm },
   section: { gap: spacing.lg },
+  subsection: { gap: spacing.sm },
   notes: { minHeight: 120, textAlignVertical: 'top' },
 });

@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -76,12 +77,27 @@ export default function CompleteProfileScreen() {
         <AppText variant="title">Compléter mon profil</AppText>
         <AppText color="textSecondary">Ces informations restent privées et servent à personnaliser ton espace.</AppText>
       </View>
-      <View style={styles.form}>
-        <ProfileInput control={control} name="first_name" label="Prénom ou pseudonyme" />
-        <ProfileInput control={control} name="country" label="Pays" />
-        <ProfileInput control={control} name="full_name" label="Nom complet (facultatif)" />
-        <ProfileInput control={control} name="city" label="Ville (facultatif)" />
-      </View>
+      <Card>
+        <View style={styles.section}>
+          <AppText variant="sectionTitle">Identité</AppText>
+          <ProfileInput control={control} name="first_name" label="Prénom ou pseudonyme" />
+          <ProfileInput control={control} name="full_name" label="Nom complet (facultatif)" />
+          <ProfileInput control={control} name="country" label="Pays" />
+          <ProfileInput control={control} name="city" label="Ville (facultatif)" />
+          <ProfileInput control={control} name="date_of_birth" label="Date de naissance (facultatif)" placeholder="AAAA-MM-JJ" />
+        </View>
+      </Card>
+      <Card>
+        <View style={styles.section}>
+          <AppText variant="sectionTitle">Informations de suivi</AppText>
+          <ProfileInput control={control} name="drepanocytosis_type" label="Type de drépanocytose (facultatif)" />
+          <ProfileInput control={control} name="blood_group" label="Groupe sanguin (facultatif)" helperText="Déclaré par toi, non validé médicalement." />
+          <ProfileInput control={control} name="allergies" label="Allergies connues (facultatif)" multiline />
+          <ProfileInput control={control} name="care_center" label="Centre de suivi (facultatif)" />
+          <ProfileInput control={control} name="doctor_name" label="Médecin référent (facultatif)" />
+          <ProfileInput control={control} name="doctor_phone" label="Téléphone du médecin (facultatif)" keyboardType="phone-pad" />
+        </View>
+      </Card>
       {formState.errors.root?.message && <AppText color="sos">{formState.errors.root.message}</AppText>}
       <Button label="Enregistrer le profil" loading={formState.isSubmitting || mutation.isPending} onPress={handleSubmit(onSubmit)} />
       <AppText variant="caption" color="textSecondary" align="center">Les informations médicales facultatives sont déclarées par toi et ne constituent pas un document médical officiel.</AppText>
@@ -89,24 +105,50 @@ export default function CompleteProfileScreen() {
   );
 }
 
-function ProfileInput({ control, name, label }: { control: Control<ProfileValues>; name: FieldPath<ProfileValues>; label: string }) {
+function ProfileInput({
+  control,
+  name,
+  label,
+  helperText,
+  keyboardType,
+  multiline,
+  placeholder,
+}: {
+  control: Control<ProfileValues>;
+  name: FieldPath<ProfileValues>;
+  label: string;
+  helperText?: string;
+  keyboardType?: React.ComponentProps<typeof TextField>['keyboardType'];
+  multiline?: boolean;
+  placeholder?: string;
+}) {
   return (
     <Controller
       control={control}
       name={name}
       render={({ field, fieldState }) => (
-        <TextFieldAdapter label={label} value={field.value ?? ''} onBlur={field.onBlur} onChangeText={field.onChange} error={fieldState.error?.message} />
+        <TextFieldAdapter
+          label={label}
+          value={field.value ?? ''}
+          onBlur={field.onBlur}
+          onChangeText={field.onChange}
+          error={fieldState.error?.message}
+          helperText={helperText}
+          keyboardType={keyboardType}
+          multiline={multiline}
+          placeholder={placeholder}
+        />
       )}
     />
   );
 }
 
-function TextFieldAdapter({ label, value, onBlur, onChangeText, error }: { label: string; value: string; onBlur: () => void; onChangeText: (value: string) => void; error?: string }) {
-  return <TextField label={label} value={value} onBlur={onBlur} onChangeText={onChangeText} error={error} />;
+function TextFieldAdapter({ label, value, onBlur, onChangeText, error, helperText, keyboardType, multiline, placeholder }: { label: string; value: string; onBlur: () => void; onChangeText: (value: string) => void; error?: string; helperText?: string; keyboardType?: React.ComponentProps<typeof TextField>['keyboardType']; multiline?: boolean; placeholder?: string }) {
+  return <TextField label={label} value={value} onBlur={onBlur} onChangeText={onChangeText} error={error} helperText={helperText} keyboardType={keyboardType} multiline={multiline} numberOfLines={multiline ? 4 : undefined} placeholder={placeholder} />;
 }
 
 const styles = StyleSheet.create({
   container: { gap: spacing.lg },
   header: { gap: spacing.sm, marginBottom: spacing.sm },
-  form: { gap: spacing.lg },
+  section: { gap: spacing.lg },
 });

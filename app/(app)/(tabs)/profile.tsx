@@ -3,11 +3,14 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { ProfileContactSection } from '@/features/profile/components/ProfileContactSection';
+import { ProfileHeader } from '@/features/profile/components/ProfileHeader';
+import { ProfileInfoCard } from '@/features/profile/components/ProfileInfoCard';
+import { ProfileSettingsList } from '@/features/profile/components/ProfileSettingsList';
 import { useProfileQuery } from '@/features/profile/queries';
 import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
@@ -31,20 +34,21 @@ export default function ProfileScreen() {
 
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
-      <AppText variant="title">Mon profil</AppText>
-      <Card>
-        <View style={styles.cardContent}>
-          <AppText variant="sectionTitle">{profileQuery.data.first_name ?? 'Profil'}</AppText>
-          <AppText color="textSecondary">{profileQuery.data.country ?? 'Pays non renseigné'}</AppText>
-          <AppText variant="caption" color="textSecondary">Les informations affichées sont celles de ton compte.</AppText>
-        </View>
-      </Card>
+      <View style={styles.header}>
+        <AppText variant="title">Mon profil</AppText>
+        <Button label="Modifier" variant="secondary" onPress={() => router.push('/(app)/complete-profile')} />
+      </View>
+      <ProfileHeader profile={profileQuery.data} />
+      <ProfileInfoCard profile={profileQuery.data} />
+      <ProfileContactSection />
+      <ProfileSettingsList onLegal={() => router.push('/(auth)/legal')} />
       <Button label="Se déconnecter" variant="ghost" onPress={() => void signOut()} />
+      <AppText variant="caption" color="textSecondary" align="center">La suppression sécurisée du compte sera disponible avec l’opération serveur dédiée.</AppText>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.xxl },
-  cardContent: { gap: spacing.md },
+  container: { gap: spacing.xxl, paddingBottom: spacing.huge },
+  header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
 });

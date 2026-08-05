@@ -1,0 +1,16 @@
+import { getScoreColor } from './score';
+
+describe('score selector presentation', () => {
+  it('keeps an undeclared score neutral', () => {
+    expect(getScoreColor(null)).toBe('textSecondary');
+  });
+
+  it('uses descriptive ranges without treating them as a diagnosis', () => {
+    expect(getScoreColor(0)).toBe('success');
+    expect(getScoreColor(3)).toBe('success');
+    expect(getScoreColor(4)).toBe('warning');
+    expect(getScoreColor(6)).toBe('warning');
+    expect(getScoreColor(7)).toBe('sos');
+    expect(getScoreColor(10)).toBe('sos');
+  });
+});

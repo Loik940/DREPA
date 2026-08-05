@@ -1,10 +1,12 @@
-import { ScrollView, StyleSheet, Pressable } from 'react-native';
+import { useState } from 'react';
+import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
-import { useAppTheme } from '@/theme/use-app-theme';
+import { colors } from '@/theme/colors';
 import { radii } from '@/theme/radii';
 import { sizes } from '@/theme/sizes';
 import { spacing } from '@/theme/spacing';
+import { getScoreColor } from './score';
 
 type ScoreSelectorProps = {
   label: string;
@@ -13,41 +15,54 @@ type ScoreSelectorProps = {
 };
 
 export function ScoreSelector({ label, value, onChange }: ScoreSelectorProps) {
-  const { colors } = useAppTheme();
+  const [trackWidth, setTrackWidth] = useState(0);
+  const scoreColor = getScoreColor(value);
+  const scoreHex = colors[scoreColor];
+
+  const handleLayout = (event: LayoutChangeEvent) => {
+    setTrackWidth(event.nativeEvent.layout.width);
+  };
+
+  const handleTrackPress = (locationX: number) => {
+    if (!trackWidth) return;
+    const nextValue = Math.round(Math.max(0, Math.min(locationX, trackWidth)) / trackWidth * 10);
+    onChange(nextValue);
+  };
 
   return (
-    <ScrollView
-      horizontal
-      accessibilityLabel={label}
-      contentContainerStyle={styles.content}
-      showsHorizontalScrollIndicator={false}
-    >
+    <View style={styles.container}>
+      <View style={styles.valueRow}>
+        <AppText variant="label" color="textSecondary">{label}</AppText>
+        <AppText variant="display" color={scoreColor}>{value ?? '—'}</AppText>
+      </View>
       <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ selected: value === null }}
-        onPress={() => onChange(null)}
-        style={[styles.score, { backgroundColor: value === null ? colors.brand : colors.backgroundSurface, borderColor: colors.border }]}
+        accessibilityLabel={`${label}. Curseur de 0 à 10`}
+        accessibilityRole="adjustable"
+        accessibilityValue={{ min: 0, max: 10, now: value ?? undefined, text: value === null ? 'Non renseigné' : `${value} sur 10` }}
+        onLayout={handleLayout}
+        onPress={(event) => handleTrackPress(event.nativeEvent.locationX)}
+        style={styles.track}
       >
-        <AppText variant="label" color={value === null ? 'onBrand' : 'textSecondary'}>Non renseigné</AppText>
+        <View style={[styles.trackFill, { backgroundColor: scoreHex, width: value === null ? 0 : `${value * 10}%` }]} />
+        {value !== null && <View style={[styles.thumb, { backgroundColor: scoreHex, left: `${value * 10}%` }]} />}
       </Pressable>
-      {Array.from({ length: 11 }, (_, score) => (
-        <Pressable
-          key={score}
-          accessibilityRole="button"
-          accessibilityState={{ selected: value === score }}
-          accessibilityLabel={`${label} ${score} sur 10`}
-          onPress={() => onChange(score)}
-          style={[styles.score, styles.number, { backgroundColor: value === score ? colors.brand : colors.backgroundSurface, borderColor: colors.border }]}
-        >
-          <AppText variant="label" color={value === score ? 'onBrand' : 'textPrimary'}>{score}</AppText>
-        </Pressable>
-      ))}
-    </ScrollView>
+      <View style={styles.scaleLabels}>
+        <AppText variant="caption" color="textSecondary">Aucune</AppText>
+        <AppText variant="caption" color="textSecondary">Très forte</AppText>
+      </View>
+      <Pressable accessibilityRole="button" onPress={() => onChange(null)} style={styles.resetButton}>
+        <AppText variant="caption" color={value === null ? 'brand' : 'textSecondary'}>Non renseigné</AppText>
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.sm },
-  score: { alignItems: 'center', borderRadius: radii.full, borderWidth: 1, justifyContent: 'center', minHeight: sizes.touchTarget, paddingHorizontal: spacing.lg },
-  number: { minWidth: sizes.touchTarget, paddingHorizontal: spacing.sm },
+  container: { gap: spacing.sm },
+  valueRow: { alignItems: 'center', gap: spacing.xs },
+  track: { backgroundColor: colors.border, borderRadius: radii.full, height: 10, justifyContent: 'center', marginHorizontal: spacing.sm, overflow: 'visible' },
+  trackFill: { borderRadius: radii.full, height: '100%' },
+  thumb: { borderColor: colors.backgroundSurface, borderRadius: radii.full, borderWidth: 3, height: 28, marginLeft: -14, position: 'absolute', width: 28 },
+  scaleLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+  resetButton: { alignSelf: 'center', minHeight: sizes.touchTarget, justifyContent: 'center', paddingHorizontal: spacing.md },
 });
