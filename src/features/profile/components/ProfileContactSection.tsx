@@ -1,3 +1,4 @@
+// Section Profil réservée aux contacts d’urgence ; aucune donnée fictive ni action SOS n’y est créée.
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';

@@ -1,3 +1,4 @@
+// Formulaire du journal : saisit des données de santé déclarées et les enregistre via RLS.
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';

@@ -1,3 +1,4 @@
+// Écran d’inscription : valide l’e-mail et le mot de passe avant d’appeler Supabase Auth.
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';

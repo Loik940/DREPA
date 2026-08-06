@@ -1,3 +1,4 @@
+// Champ texte partagé : gère label, valeur, aide, erreur et élément d’action à droite.
 import type { ReactNode } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 

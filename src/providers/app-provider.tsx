@@ -1,3 +1,4 @@
+// Provider racine : compose le cache TanStack Query et la session Auth pour toute l’application.
 import type { PropsWithChildren } from 'react';
 
 import { AuthProvider } from './auth-provider';

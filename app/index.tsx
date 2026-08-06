@@ -1,3 +1,4 @@
+// Route d’entrée : affiche l’accueil initial puis oriente selon l’onboarding et la session.
 import { Redirect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';

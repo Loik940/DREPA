@@ -1,3 +1,4 @@
+// Surface partagée pour regrouper les informations avec les tokens de rayon et de thème.
 import { StyleSheet, View, type ViewProps } from 'react-native';
 
 import { useAppTheme } from '@/theme/use-app-theme';

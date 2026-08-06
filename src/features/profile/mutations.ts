@@ -1,3 +1,4 @@
+// Mutations Profil : enregistre le profil et les consentements via Supabase et invalide leur cache.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { legalVersions } from '@/constants/legal-versions';

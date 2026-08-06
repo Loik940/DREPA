@@ -1,3 +1,4 @@
+// Conteneur d’écran : fournit Safe Area, fond du thème, défilement et comportement clavier.
 import { ScrollView, StyleSheet, View, type ScrollViewProps, type ViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

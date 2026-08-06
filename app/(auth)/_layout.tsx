@@ -1,3 +1,4 @@
+// Layout public : protège les écrans d’authentification et laisse passer la récupération de session.
 import { Redirect, Stack } from 'expo-router';
 
 import { ScreenPlaceholder } from '@/components/screen-placeholder';

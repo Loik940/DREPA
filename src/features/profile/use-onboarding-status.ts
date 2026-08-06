@@ -1,3 +1,4 @@
+// Hook d’onboarding : combine session, profil et consentements pour piloter les redirections.
 import { useAuth } from '@/providers/auth-provider';
 import { getOnboardingStatus, hasCurrentConsent, ProfileDataError } from './completion';
 import { useConsentsQuery, useProfileQuery } from './queries';

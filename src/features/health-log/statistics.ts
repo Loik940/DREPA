@@ -1,3 +1,4 @@
+// Calculs descriptifs du Journal : moyennes, jours suivis et fréquences sans interprétation médicale.
 import type { HealthLog } from './queries';
 
 type StatisticsEntry = Pick<HealthLog, 'id' | 'pain_level' | 'fatigue_level' | 'symptoms' | 'possible_triggers' | 'medication_taken' | 'recorded_at'>;

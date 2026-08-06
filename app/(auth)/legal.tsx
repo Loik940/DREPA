@@ -1,3 +1,4 @@
+// Écran légal provisoire : réserve l’accès aux mentions et documents de consentement.
 import { ScreenPlaceholder } from '@/components/screen-placeholder';
 
 export default function LegalScreen() {

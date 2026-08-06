@@ -1,3 +1,4 @@
+// Statistiques du journal : présente uniquement des agrégats descriptifs des entrées déclarées.
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';

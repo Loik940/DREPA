@@ -1,3 +1,4 @@
+// Onglet Journal : liste les entrées privées et ouvre la création ou le détail.
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 

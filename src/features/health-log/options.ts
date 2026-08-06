@@ -1,3 +1,4 @@
+// Choix localisés et valeurs stables utilisés par les formulaires du Journal.
 export const symptomChoices = [
   { label: 'Fatigue', value: 'fatigue' },
   { label: 'Maux de tête', value: 'headache' },

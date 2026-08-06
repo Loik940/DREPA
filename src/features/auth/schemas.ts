@@ -1,3 +1,4 @@
+// Schémas Zod des formulaires d’authentification et de changement de mot de passe.
 import { z } from 'zod';
 
 const email = z.string().trim().toLowerCase().email('Saisissez une adresse e-mail valide.').max(254);

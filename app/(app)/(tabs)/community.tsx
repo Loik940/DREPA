@@ -1,3 +1,4 @@
+// Onglet Communauté : placeholder du futur espace de publications et de modération.
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 

@@ -1,3 +1,4 @@
+// Tests des calculs et états de présentation utilisés par l’accueil.
 import { buildDashboardSummary, flattenDashboardEntries, formatDashboardAverage, getLatestDashboardEntry } from './dashboard';
 
 const entries = [

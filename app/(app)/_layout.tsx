@@ -1,3 +1,4 @@
+// Layout protégé : vérifie la session puis impose l’ordre consentements, profil et onglets.
 import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 

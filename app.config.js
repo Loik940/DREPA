@@ -1,3 +1,4 @@
+// Configuration Expo Android et EAS : identité, plugins, assets, schéma et projet distant.
 module.exports = {
   name: 'DREPA',
   slug: 'drepa',

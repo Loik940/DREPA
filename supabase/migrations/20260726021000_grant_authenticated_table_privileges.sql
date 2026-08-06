@@ -1,3 +1,4 @@
+-- Accorde les privilèges SQL minimaux à authenticated sans modifier la RLS ni ouvrir anon/public.
 grant usage on schema public to authenticated;
 
 revoke all privileges on table public.profiles from anon;

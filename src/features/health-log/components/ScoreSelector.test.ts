@@ -1,3 +1,4 @@
+// Tests des tokens de présentation du sélecteur de score Journal.
 import { getScoreColor } from './score';
 
 describe('score selector presentation', () => {

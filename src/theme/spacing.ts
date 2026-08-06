@@ -1,3 +1,4 @@
+// Grille d’espacement et dimensions de confort du design system mobile.
 export const spacing = {
   none: 0,
   xs: 4,

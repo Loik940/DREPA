@@ -1,3 +1,4 @@
+// En-tête Profil : construit l’identité affichée à partir des données réelles du compte.
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';

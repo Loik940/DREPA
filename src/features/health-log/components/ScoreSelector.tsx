@@ -1,3 +1,4 @@
+// Sélecteur de score accessible pour une valeur déclarée de douleur ou de fatigue.
 import { useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 

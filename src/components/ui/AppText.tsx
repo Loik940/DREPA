@@ -1,3 +1,4 @@
+// Texte partagé : applique les variantes typographiques et les couleurs du thème DRÉPA.
 import { StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
 
 import { useAppTheme } from '@/theme/use-app-theme';

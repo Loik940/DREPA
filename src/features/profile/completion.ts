@@ -1,3 +1,4 @@
+// Logique pure d’onboarding et classification des erreurs Profil/Consentements.
 import { legalVersions } from '../../constants/legal-versions';
 
 export type ProfileQuerySource = 'profiles' | 'user_consents';

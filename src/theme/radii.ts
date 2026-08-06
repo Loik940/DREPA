@@ -1,3 +1,4 @@
+// Rayons de bordure partagés pour cartes, champs, boutons et badges.
 export const radii = {
   sm: 4,
   default: 8,

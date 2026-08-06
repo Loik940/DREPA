@@ -1,3 +1,4 @@
+// Adaptateur Expo SecureStore utilisé par Supabase Auth pour persister la session mobile.
 import * as SecureStore from 'expo-secure-store';
 
 export const secureStorage = {

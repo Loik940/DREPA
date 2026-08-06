@@ -1,3 +1,4 @@
+// Navigation principale : déclare les cinq onglets de l’espace authentifié.
 import { Tabs } from 'expo-router';
 import { SymbolView, type AndroidSymbol } from 'expo-symbols';
 

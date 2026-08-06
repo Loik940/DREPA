@@ -1,3 +1,4 @@
+// Normalisation pure du payload Journal avant son envoi à Supabase.
 import type { HealthLogValues } from './schemas';
 
 function optionalValue(value: string | undefined) {

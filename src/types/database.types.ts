@@ -1,3 +1,4 @@
+// Types Supabase correspondant aux tables et opérations utilisées par l’application.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {

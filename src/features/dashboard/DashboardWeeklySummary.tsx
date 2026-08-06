@@ -1,3 +1,4 @@
+// Résumé descriptif des entrées récentes du Journal, sans interprétation médicale.
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';

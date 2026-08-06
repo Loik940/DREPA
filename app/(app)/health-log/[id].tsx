@@ -1,3 +1,4 @@
+// Détail d’une entrée : affiche, modifie ou supprime une entrée appartenant à l’utilisateur courant.
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, StyleSheet, View } from 'react-native';
 

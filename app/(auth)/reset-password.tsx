@@ -1,3 +1,4 @@
+// Écran de réinitialisation : valide et enregistre un nouveau mot de passe après un lien sécurisé.
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Redirect, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';

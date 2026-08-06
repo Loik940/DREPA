@@ -1,3 +1,4 @@
+// Bouton partagé : gère les variantes visuelles, le chargement, l’état désactivé et l’accessibilité.
 import { Pressable, StyleSheet, ActivityIndicator, Text, type PressableProps, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { useAppTheme } from '@/theme/use-app-theme';

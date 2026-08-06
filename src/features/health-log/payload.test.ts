@@ -1,3 +1,4 @@
+// Tests de conversion des champs Journal vers le payload PostgreSQL.
 import { buildHealthLogPayload } from './payload';
 import { healthLogDefaults } from './schemas';
 

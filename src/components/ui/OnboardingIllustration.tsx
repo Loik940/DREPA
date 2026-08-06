@@ -1,3 +1,4 @@
+// Illustration locale des étapes de bienvenue, sans asset distant ni donnée utilisateur.
 import { StyleSheet, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/use-app-theme';

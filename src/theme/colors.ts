@@ -1,3 +1,4 @@
+// Tokens de couleurs « Terre et Sang » du mode clair actif de DRÉPA.
 export const colors = {
     brand: '#7B1E1E',
     onBrand: '#FFFFFF',

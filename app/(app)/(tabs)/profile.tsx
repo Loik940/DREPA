@@ -1,3 +1,4 @@
+// Onglet Profil : présente les informations du compte et la déconnexion.
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 

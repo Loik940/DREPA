@@ -1,3 +1,4 @@
+// Queries Journal : charge les entrées et statistiques de l’utilisateur avec session et RLS.
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';

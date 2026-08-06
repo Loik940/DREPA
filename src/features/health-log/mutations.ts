@@ -1,3 +1,4 @@
+// Mutations Journal : crée, modifie et supprime les entrées privées avec invalidation du cache.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';

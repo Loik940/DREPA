@@ -1,3 +1,4 @@
+// Onglet Médicaments : placeholder du futur module de traitements et rappels.
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 

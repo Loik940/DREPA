@@ -1,3 +1,4 @@
+// Schéma Zod d’une entrée Journal partielle, avec date contrôlée et champs médicaux déclaratifs.
 import { z } from 'zod';
 
 const optionalText = (max: number) => z.string().trim().max(max, `Maximum ${max} caractères.`).optional();

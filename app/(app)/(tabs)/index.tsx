@@ -1,3 +1,4 @@
+// Accueil dashboard : combine le profil et les entrées récentes pour présenter l’espace personnel.
 import { StyleSheet } from 'react-native';
 
 import { ScreenContainer } from '@/components/ui/ScreenContainer';

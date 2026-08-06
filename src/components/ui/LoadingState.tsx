@@ -1,3 +1,4 @@
+// État de chargement partagé pour les écrans qui attendent une donnée serveur ou une session.
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/use-app-theme';

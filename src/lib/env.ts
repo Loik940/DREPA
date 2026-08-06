@@ -1,3 +1,4 @@
+// Validation des variables publiques d’environnement nécessaires au client Supabase.
 import { z } from 'zod';
 
 export const envSchema = z.object({

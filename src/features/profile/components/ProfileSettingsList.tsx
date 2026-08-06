@@ -1,3 +1,4 @@
+// Liste des paramètres Profil : expose les réglages disponibles et marque les fonctions différées.
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';

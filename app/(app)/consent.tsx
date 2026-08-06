@@ -1,3 +1,4 @@
+// Écran de consentement : enregistre les versions acceptées avant l’accès au profil.
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import { Controller, useForm, type Control, type FieldPath } from 'react-hook-form';

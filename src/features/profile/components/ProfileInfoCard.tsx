@@ -1,3 +1,4 @@
+// Carte Profil : présente les informations de suivi facultatives sans les interpréter médicalement.
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';

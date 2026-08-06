@@ -1,3 +1,4 @@
+// État générique d’attente, d’erreur ou de fonctionnalité différée avec action optionnelle.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 type ScreenPlaceholderProps = {

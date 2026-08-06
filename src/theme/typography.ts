@@ -1,3 +1,4 @@
+// Familles, poids et styles typographiques utilisés par les composants DRÉPA.
 export const fontFamilies = {
   body: 'Inter',
   display: 'Inter',

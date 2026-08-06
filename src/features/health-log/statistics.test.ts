@@ -1,3 +1,4 @@
+// Tests des statistiques descriptives calculées à partir des entrées du Journal.
 import { calculateHealthLogStatistics } from './statistics';
 
 const entries = [

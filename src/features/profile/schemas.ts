@@ -1,3 +1,4 @@
+// Schémas Zod des champs de profil et des trois consentements obligatoires.
 import { z } from 'zod';
 
 const optionalText = (max: number) => z.string().trim().max(max).optional();

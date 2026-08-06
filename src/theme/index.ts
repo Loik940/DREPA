@@ -1,3 +1,4 @@
+// Export central du thème et du type Theme utilisé par les composants UI.
 import { colors } from './colors';
 import { radii } from './radii';
 import { shadows } from './shadows';

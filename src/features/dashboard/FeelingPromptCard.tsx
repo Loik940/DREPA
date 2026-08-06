@@ -1,3 +1,4 @@
+// Carte d’appel à l’action qui ouvre le formulaire du Journal sans créer de donnée seule.
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 

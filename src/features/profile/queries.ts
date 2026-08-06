@@ -1,3 +1,4 @@
+// Queries Profil/Consentements : attendent une session prête et appliquent les filtres RLS par utilisateur.
 import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';

@@ -1,3 +1,4 @@
+// Formulaire de profil : crée ou met à jour les informations personnelles déclarées.
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';

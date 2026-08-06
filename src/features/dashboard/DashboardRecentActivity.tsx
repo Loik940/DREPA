@@ -1,3 +1,4 @@
+// Carte de dernière activité : affiche uniquement l’entrée de journal réellement disponible.
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';

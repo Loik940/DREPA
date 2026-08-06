@@ -1,3 +1,4 @@
+// État d’erreur partagé : affiche un message neutre et permet de relancer une requête.
 import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/theme/spacing';

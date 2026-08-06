@@ -1,3 +1,4 @@
+// En-tête de l’accueil : affiche l’identité DRÉPA, la salutation et la date courante.
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';

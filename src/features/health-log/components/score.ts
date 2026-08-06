@@ -1,3 +1,4 @@
+// Calcul pur du token de couleur descriptif associé à un score du Journal.
 export type ScoreColorToken = 'textSecondary' | 'success' | 'warning' | 'sos';
 
 export function getScoreColor(value: number | null): ScoreColorToken {

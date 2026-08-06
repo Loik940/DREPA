@@ -1,3 +1,4 @@
+// Écran de connexion : collecte les identifiants et redirige après confirmation de session.
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';

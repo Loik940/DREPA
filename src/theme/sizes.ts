@@ -1,3 +1,4 @@
+// Dimensions communes des champs, boutons, icônes, avatars et zones tactiles.
 export const sizes = {
   inputHeight: 52,
   buttonHeight: 52,

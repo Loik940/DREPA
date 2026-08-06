@@ -1,3 +1,4 @@
+// Chips de choix du Journal pour les symptômes, facteurs, hydratation et prises déclarées.
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';

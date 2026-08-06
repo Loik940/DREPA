@@ -1,3 +1,4 @@
+// Erreurs structurées du Journal : session, réseau, RLS, absence, Supabase et configuration.
 export type HealthLogOperation = 'list' | 'detail' | 'statistics' | 'create' | 'update' | 'delete';
 export type HealthLogErrorKind = 'session' | 'configuration' | 'network' | 'rls' | 'not_found' | 'supabase' | 'unknown';
 

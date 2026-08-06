@@ -1,3 +1,4 @@
+// Case à cocher accessible utilisée pour les consentements et choix booléens.
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/use-app-theme';

@@ -1,3 +1,4 @@
+// Tests des règles de validation e-mail, mot de passe et confirmation Auth.
 import { passwordResetRequestSchema, signInSchema, signUpSchema, updatePasswordSchema } from './schemas';
 
 describe('authentication schemas', () => {

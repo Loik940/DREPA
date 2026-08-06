@@ -1,3 +1,4 @@
+// Fonctions pures de l’accueil : aplatir le cache Journal et produire des résumés descriptifs.
 import { calculateHealthLogStatistics, type HealthLogStatistics } from '@/features/health-log/statistics';
 import type { HealthLog } from '@/features/health-log/queries';
 

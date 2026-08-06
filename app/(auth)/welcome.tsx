@@ -1,3 +1,4 @@
+// Onboarding visuel de bienvenue : présente DRÉPA avant l’inscription ou la connexion.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';

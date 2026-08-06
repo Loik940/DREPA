@@ -1,3 +1,4 @@
+// Instance TanStack Query et helpers de purge/invalidation des données privées par utilisateur.
 import { QueryClient } from '@tanstack/react-query';
 
 export const queryClient = new QueryClient({

@@ -1,3 +1,4 @@
+// Grille de raccourcis de l’accueil vers les onglets et fonctionnalités disponibles ou futures.
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 

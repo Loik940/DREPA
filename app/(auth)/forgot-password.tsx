@@ -1,3 +1,4 @@
+// Écran de récupération : demande un lien de réinitialisation sans révéler l’existence d’un compte.
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'expo-router';
 import { useState } from 'react';

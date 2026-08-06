@@ -1,3 +1,4 @@
+// Service Auth : encapsule les opérations Supabase d’inscription, connexion et récupération.
 import { createURL } from 'expo-linking';
 
 import { supabase } from '@/lib/supabase';

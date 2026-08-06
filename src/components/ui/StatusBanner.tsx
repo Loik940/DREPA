@@ -1,3 +1,4 @@
+// Bandeau d’état partagé pour les informations, succès, avertissements et erreurs neutres.
 import { StyleSheet, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/use-app-theme';

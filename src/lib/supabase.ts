@@ -1,3 +1,4 @@
+// Singleton Supabase typé avec persistance SecureStore et session mobile protégée.
 import 'react-native-url-polyfill/auto';
 
 import { createClient } from '@supabase/supabase-js';

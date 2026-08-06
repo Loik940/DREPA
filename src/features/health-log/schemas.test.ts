@@ -1,3 +1,4 @@
+// Tests de validation des entrées partielles du Journal.
 import { healthLogDefaults, healthLogSchema } from './schemas';
 
 describe('health log schema', () => {

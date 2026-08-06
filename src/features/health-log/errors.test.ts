@@ -1,3 +1,4 @@
+// Tests de classification et de nettoyage des erreurs du Journal.
 import { classifyHealthLogError } from './errors';
 
 describe('health log errors', () => {

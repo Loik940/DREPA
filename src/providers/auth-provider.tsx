@@ -1,3 +1,4 @@
+// Provider Auth : restaure la session, écoute ses changements et expose les actions Supabase Auth.
 import type { Session, User } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';

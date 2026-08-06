@@ -1,3 +1,4 @@
+// Exports publics des composants et états du dashboard DRÉPA.
 export { DashboardErrorState, DashboardLoadingState } from './DashboardState';
 export { DashboardHeader } from './DashboardHeader';
 export { DashboardRecentActivity } from './DashboardRecentActivity';

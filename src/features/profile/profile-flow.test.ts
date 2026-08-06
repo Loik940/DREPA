@@ -1,3 +1,4 @@
+// Tests du parcours d’onboarding, des erreurs structurées et du cache privé.
 import { legalVersions } from '../../constants/legal-versions';
 import { invalidatePrivateQueries, queryClient, removePrivateQueries } from '../../lib/query-client';
 import {

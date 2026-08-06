@@ -1,3 +1,4 @@
+// Champ de mot de passe : permet l’affichage temporaire de la valeur sans la persister ni la journaliser.
 import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 

@@ -1,3 +1,4 @@
+// Ombres Android légères utilisées pour préserver la lisibilité et les performances.
 export const shadows = {
   none: {
     shadowColor: '#000000',

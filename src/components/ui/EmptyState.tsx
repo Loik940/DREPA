@@ -1,3 +1,4 @@
+// État vide partagé : explique l’absence normale de données et propose une action facultative.
 import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/theme/spacing';

@@ -1,3 +1,4 @@
+// États de chargement et d’erreur propres au dashboard, avec action Réessayer.
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
