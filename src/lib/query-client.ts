@@ -10,7 +10,14 @@ export const queryClient = new QueryClient({
   },
 });
 
-const privateQueryRoots = new Set(['profile', 'user-consents']);
+const privateQueryRoots = new Set([
+  'profile',
+  'user-consents',
+  'health-logs',
+  'health-log',
+  'health-log-statistics',
+  'medications',
+]);
 
 export function removePrivateQueries(userId?: string) {
   queryClient.removeQueries({

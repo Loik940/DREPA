@@ -91,6 +91,68 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['health_logs']['Insert']>;
         Relationships: [];
       };
+      medications: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          dosage: string;
+          frequency: string;
+          start_date: string;
+          end_date: string | null;
+          is_active: boolean;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['medications']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['medications']['Insert']>;
+        Relationships: [];
+      };
+      medication_reminders: {
+        Row: {
+          id: string;
+          user_id: string;
+          medication_id: string;
+          reminder_time: string;
+          is_enabled: boolean;
+          notification_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['medication_reminders']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['medication_reminders']['Insert']>;
+        Relationships: [];
+      };
+      medication_intakes: {
+        Row: {
+          id: string;
+          user_id: string;
+          medication_id: string;
+          scheduled_at: string;
+          taken_at: string | null;
+          status: 'pending' | 'taken' | 'skipped' | 'snoozed';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['medication_intakes']['Row'], 'id' | 'created_at' | 'updated_at' | 'status' | 'taken_at'> & {
+          id?: string;
+          status?: 'pending' | 'taken' | 'skipped' | 'snoozed';
+          taken_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['medication_intakes']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

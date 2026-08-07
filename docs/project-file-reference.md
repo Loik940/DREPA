@@ -82,6 +82,7 @@ DREPA/
 │       ├── _layout.tsx
 │       ├── complete-profile.tsx
 │       ├── consent.tsx
+│       ├── medication-form.tsx
 │       └── (tabs)/
 │           ├── _layout.tsx
 │           ├── community.tsx
@@ -156,7 +157,8 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/(app)/(tabs)/_layout.tsx` | Groupe protégé `(app)/(tabs)` | Déclare les onglets principaux. | Accessible après session, consentements et profil complet. |
 | `app/(app)/(tabs)/index.tsx` | Onglet accueil | Dashboard scalable : identité, action d’enregistrement, raccourcis, résumé conditionnel du journal et dernière activité. | Réutilise le cache Profil et la requête des entrées des 7 derniers jours. N’invente aucune donnée, n’ajoute pas de SOS et ne produit aucune interprétation médicale. |
 | `app/(app)/(tabs)/journal.tsx` | Onglet journal | Affiche l’état vide ou les 50 entrées récentes et ouvre le formulaire de saisie. | Utilise `useHealthLogsQuery`, les états UI partagés et des données privées filtrées par `session.user.id`. Les informations restent descriptives. |
-| `app/(app)/(tabs)/medications.tsx` | Onglet médicaments | Placeholder des médicaments et rappels. | Ne pas ajouter de prescription, d’ordonnance ou de traitement automatique. |
+| `app/(app)/medication-form.tsx` | `/medication-form` | Formulaire d’ajout d’un traitement prescrit et de ses horaires de rappel local. | React Hook Form, Zod, Expo Notifications et mutation transactionnelle avec nettoyage des notifications en cas d’échec. Aucun médicament ou dosage n’est proposé. |
+| `app/(app)/(tabs)/medications.tsx` | Onglet médicaments | Affiche les traitements saisis, les rappels du jour et permet de confirmer une prise déclarée. | Charge uniquement les lignes du propriétaire, calcule les statuts localement et n’affiche aucune donnée fictive ou conseil médical non sourcé. |
 | `app/(app)/(tabs)/community.tsx` | Onglet communauté | Placeholder de la communauté. | Ne pas ajouter de publications, commentaires ou modération dans le socle actuel. |
 | `app/(app)/(tabs)/profile.tsx` | Onglet profil | Présente l’identité, les informations de suivi, les paramètres disponibles, la déconnexion et la suppression sécurisée du compte. | Utilise `useProfileQuery`, les composants `src/features/profile/components/` et `useAuth`. La suppression passe par l’Edge Function après confirmation explicite. |
 
@@ -255,6 +257,21 @@ Les routes documentées mais absentes actuellement incluent les écrans métier 
 | `src/features/health-log/components/score.ts` | Calcul pur du token de couleur descriptif associé à un score. | Aucun accès réseau ; `null` reste neutre. |
 | `src/features/health-log/components/ScoreSelector.test.ts` | Teste les états neutre, succès, vigilance et SOS du sélecteur de score. | Jest/Babel ; les couleurs restent descriptives et non diagnostiques. |
 
+### `src/features/medications/`
+
+| Fichier | Rôle | Dépendances, données et risques |
+|---|---|---|
+| `src/features/medications/schemas.ts` | Valide le traitement prescrit, les dates et les horaires `HH:MM`. | Zod ; aucun nom, dosage ou horaire par défaut n’est inventé. |
+| `src/features/medications/errors.ts` | Classe les erreurs session, réseau, RLS et Supabase du module. | Messages utilisateur neutres ; aucun token ou détail sensible affiché. |
+| `src/features/medications/queries.ts` | Charge en parallèle les traitements, rappels et prises du jour du seul utilisateur authentifié. | Supabase, TanStack Query et `sessionReady`; query key isolée par `user.id`. |
+| `src/features/medications/mutations.ts` | Crée un traitement et ses rappels, annule les notifications en cas d’échec, et enregistre les prises déclarées. | Supabase, QueryClient et Expo Notifications. Le cache est invalidé après succès. |
+| `src/features/medications/notifications.ts` | Configure le canal Android, demande la permission et programme/annule des rappels quotidiens génériques. | Expo Notifications. Le contenu verrouillé ne contient ni nom de médicament ni dosage. |
+| `src/features/medications/status.ts` | Calcule les rappels du jour et les statuts `late`, `pending`, `taken`, `snoozed`, `skipped`. | Fonction pure basée sur l’heure locale et les prises réelles. |
+| `src/features/medications/components/ReminderCard.tsx` | Carte horizontale d’un rappel avec statut et action de confirmation. | Composants UI et tokens ; aucune confirmation automatique. |
+| `src/features/medications/components/MedicationCard.tsx` | Carte d’un traitement réellement saisi. | Affiche nom, dosage déclaré, fréquence et état actif/arrêté. |
+| `src/features/medications/components/MedicationInfoCard.tsx` | Mention de prudence concernant les traitements prescrits. | Contenu générique non médical et sans dosage conseillé. |
+| `src/features/medications/medications.test.ts` | Tests des horaires, validation, erreurs RLS et statuts du jour. | Jest/Babel ; données synthétiques uniquement. |
+
 ### `src/lib/`
 
 | Fichier | Rôle | Dépendances et précautions |
@@ -300,7 +317,7 @@ Les routes documentées mais absentes actuellement incluent les écrans métier 
 
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
-| `src/types/database.types.ts` | Types TypeScript pour `profiles`, `emergency_contacts` et `user_consents`, ainsi que le type `Json`. | Client Supabase et mutations/requêtes. Toute migration de schéma doit entraîner une régénération ou une mise à jour vérifiée de ces types. |
+| `src/types/database.types.ts` | Types TypeScript pour les profils, consentements, contacts, journal, traitements, rappels et prises, ainsi que le type `Json`. | Client Supabase et mutations/requêtes. Toute migration de schéma doit entraîner une régénération ou une mise à jour vérifiée de ces types. |
 | `src/types/domain.ts` | Type initial `ProfileCompletion` décrivant les indicateurs de complétude. | Disponible pour les futurs services d’onboarding. Garder ce type cohérent avec `completion.ts`. |
 
 ### Dossiers actuellement absents
@@ -326,10 +343,13 @@ Les routes documentées mais absentes actuellement incluent les écrans métier 
 | `supabase/migrations/20260723200200_create_user_consents.sql` | Crée `public.user_consents` avec versions CGU, confidentialité, charte, `accepted_at` et `revoked_at`. | `user_id` référence `auth.users(id)` avec cascade. RLS select/insert/update propriétaire. Trigger d’historique empêchant la modification des versions et la réactivation d’un consentement révoqué. | 3 dans le dépôt actuel |
 | `supabase/migrations/20260726021000_grant_authenticated_table_privileges.sql` | Accorde les privilèges SQL nécessaires aux tables initiales. | Aucun accès `anon`; `user_consents` ne reçoit pas de privilège DELETE. | 4 dans le dépôt actuel |
 | `supabase/migrations/20260803153000_create_health_logs.sql` | Crée `public.health_logs` avec mesures et observations facultatives, timestamps et `recorded_at`. | `user_id` référence `auth.users(id)`, contraintes 0–10, rejet des dates futures, index utilisateur/date, privilèges SQL et RLS CRUD propriétaire. | 5 dans le dépôt actuel |
+| `supabase/migrations/20260807235000_create_medications.sql` | Crée `public.medications` avec traitement déclaré, fréquence, dates, notes et état actif. | Propriétaire lié à `auth.users`, contraintes de longueur/date, index, trigger `updated_at`, RLS CRUD et aucun accès `anon/public`. | 6 |
+| `supabase/migrations/20260807235100_create_medication_reminders.sql` | Crée `public.medication_reminders` avec heure locale, activation et identifiant de notification locale. | Clé étrangère composite `(medication_id, user_id)` empêchant une association inter-utilisateurs, unicité horaire, RLS CRUD propriétaire. | 7 |
+| `supabase/migrations/20260807235200_create_medication_intakes.sql` | Crée `public.medication_intakes` avec horaire prévu, prise déclarée et statut contraint. | Clé étrangère composite propriétaire, contrainte `taken_at`, unicité traitement/horaire, RLS CRUD et aucun accès `anon/public`. | 8 |
 
 Le schéma documentaire prévoit également `user_roles` entre `profiles` et `user_consents`, mais aucune migration `user_roles` n’est présente dans le dépôt actuel. Cette différence doit rester visible avant toute implémentation d’administration ou de ressources éducatives. Les migrations déjà appliquées ne doivent jamais être modifiées : toute évolution passe par une nouvelle migration versionnée.
 
-Les Edge Functions Supabase prévues par la documentation, notamment pour la suppression de compte, ne sont pas présentes dans `supabase/` à ce jour.
+L’Edge Function `delete-account` est présente et déployée pour la suppression sécurisée du compte authentifié.
 
 ## 9. Dossier `docs/`
 
