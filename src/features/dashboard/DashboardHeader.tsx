@@ -1,5 +1,6 @@
 // En-tête de l’accueil : affiche l’identité DRÉPA, la salutation et la date courante.
-import { StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { colors } from '@/theme/colors';
@@ -17,6 +18,7 @@ function getInitials(firstName?: string | null) {
 }
 
 export function DashboardHeader({ firstName }: DashboardHeaderProps) {
+  const router = useRouter();
   const date = new Intl.DateTimeFormat('fr-FR', {
     weekday: 'long',
     day: 'numeric',
@@ -30,9 +32,15 @@ export function DashboardHeader({ firstName }: DashboardHeaderProps) {
         <AppText variant="title">Bonjour{firstName ? `, ${firstName}` : ''}</AppText>
         <AppText color="textSecondary">{date}</AppText>
       </View>
-      <View accessibilityLabel="Identité DRÉPA" style={styles.avatar}>
+      <Pressable
+        accessibilityHint="Ouvre ton profil"
+        accessibilityLabel="Ouvrir le profil"
+        accessibilityRole="button"
+        onPress={() => router.push('/(app)/(tabs)/profile')}
+        style={({ pressed }) => [styles.avatar, { opacity: pressed ? 0.78 : 1 }]}
+      >
         <AppText variant="label" color="brand" align="center">{getInitials(firstName)}</AppText>
-      </View>
+      </Pressable>
     </View>
   );
 }

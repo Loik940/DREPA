@@ -11,7 +11,6 @@ type ProfileSettingsListProps = {
 };
 
 const settings = [
-  { label: 'Apparence', value: 'Mode clair', enabled: false },
   { label: 'Notifications', value: 'Bientôt disponible', enabled: false },
   { label: 'Confidentialité', value: 'Bientôt disponible', enabled: false },
   { label: "Conditions d'utilisation", value: '', enabled: true },
