@@ -1,6 +1,7 @@
 // Onglet Profil : présente les informations du compte et la déconnexion.
 import { useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
@@ -18,7 +19,9 @@ import { spacing } from '@/theme/spacing';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const profileQuery = useProfileQuery(user?.id);
 
   if (profileQuery.isPending) {
@@ -33,6 +36,30 @@ export default function ProfileScreen() {
     return <EmptyState title="Profil incomplet" description="Complète ton profil pour retrouver ici tes informations personnelles." actionLabel="Compléter le profil" onAction={() => router.push('/(app)/complete-profile')} />;
   }
 
+  const confirmDelete = () => {
+    Alert.alert(
+      'Supprimer ton compte ?',
+      'Cette action est définitive et supprimera tes données associées.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Supprimer', style: 'destructive', onPress: () => void handleDelete() },
+      ],
+    );
+  };
+
+  const handleDelete = async () => {
+    setDeleteError(null);
+    setIsDeleting(true);
+
+    try {
+      await deleteAccount();
+    } catch {
+      setDeleteError('Le compte ne peut pas être supprimé pour le moment.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <View style={styles.header}>
@@ -44,7 +71,9 @@ export default function ProfileScreen() {
       <ProfileContactSection />
       <ProfileSettingsList onLegal={() => router.push('/(auth)/legal')} />
       <Button label="Se déconnecter" variant="ghost" onPress={() => void signOut()} />
-      <AppText variant="caption" color="textSecondary" align="center">La suppression sécurisée du compte sera disponible avec l’opération serveur dédiée.</AppText>
+      {deleteError && <AppText variant="caption" color="sos" align="center">{deleteError}</AppText>}
+      <Button label="Supprimer mon compte" variant="danger" loading={isDeleting} onPress={confirmDelete} />
+      <AppText variant="caption" color="textSecondary" align="center">La suppression est définitive et passe par une opération serveur sécurisée.</AppText>
     </ScreenContainer>
   );
 }

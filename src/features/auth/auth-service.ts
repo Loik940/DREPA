@@ -1,7 +1,8 @@
 // Service Auth : encapsule les opérations Supabase d’inscription, connexion et récupération.
-import { createURL } from 'expo-linking';
-
 import { supabase } from '@/lib/supabase';
+
+export const authCallbackUrl = 'drepa://auth/callback';
+export const passwordResetUrl = 'drepa://reset-password';
 
 export class AuthOperationError extends Error {
   constructor(message = 'Une erreur est survenue. Réessayez plus tard.') {
@@ -28,7 +29,11 @@ function toAuthOperationError(error: unknown) {
 
 export async function signUp(email: string, password: string) {
   try {
-    const { data, error } = await requireSupabase().auth.signUp({ email, password });
+    const { data, error } = await requireSupabase().auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: authCallbackUrl },
+    });
 
     if (error) {
       throw error;
@@ -66,11 +71,21 @@ export async function signOut() {
   }
 }
 
+export async function deleteAccount() {
+  try {
+    const { error } = await requireSupabase().functions.invoke('delete-account', { body: {} });
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    throw toAuthOperationError(error);
+  }
+}
+
 export async function requestPasswordReset(email: string) {
   try {
-    const { error } = await requireSupabase().auth.resetPasswordForEmail(email, {
-      redirectTo: createURL('/reset-password'),
-    });
+    const { error } = await requireSupabase().auth.resetPasswordForEmail(email, { redirectTo: passwordResetUrl });
 
     if (error) {
       throw error;

@@ -40,7 +40,7 @@ DRÉPA est une application mobile Android francophone destinée à l’accompagn
 - **Expo Router** utilise l’arborescence `app/` pour les routes publiques, les contrôles d’onboarding et les onglets protégés.
 - **Supabase Auth** gère l’inscription, la connexion, la restauration de session, la déconnexion et la récupération du mot de passe.
 - **Supabase PostgreSQL** stocke les profils, consentements et futures données métier.
-- **Supabase Edge Functions** sont prévues pour les opérations serveur privilégiées, notamment la suppression de compte, mais aucun dossier `supabase/functions/` n’est actuellement présent.
+- **Supabase Edge Functions** portent les opérations serveur privilégiées, notamment la suppression de compte ; le dépôt contient actuellement `supabase/functions/delete-account/index.ts`.
 - **Row Level Security (RLS)** limite les accès aux lignes appartenant à l’utilisateur authentifié et protège les opérations administratives côté Supabase.
 - **TanStack Query** gère le cache et les requêtes de données serveur.
 - **React Hook Form** gère les formulaires React Native.
@@ -71,6 +71,8 @@ DREPA/
 │   ├── (auth)/
 │   │   ├── _layout.tsx
 │   │   ├── welcome.tsx
+│   │   ├── auth/
+│   │   │   └── callback.tsx
 │   │   ├── forgot-password.tsx
 │   │   ├── legal.tsx
 │   │   ├── login.tsx
@@ -103,6 +105,9 @@ DREPA/
 └── supabase/
     ├── .gitignore
     ├── config.toml
+    ├── functions/
+    │   └── delete-account/
+    │       └── index.ts
     ├── migrations/
     └── seed.sql
 ```
@@ -141,7 +146,7 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/(auth)/forgot-password.tsx` | `/forgot-password` | Demande de récupération par e-mail. | Utilise `requestPasswordReset`, `expo-linking` via le service Auth et une réponse neutre pour ne pas révéler l’existence d’un compte. |
 | `app/(auth)/reset-password.tsx` | `/reset-password` | Formulaire de nouveau mot de passe dans le contexte `PASSWORD_RECOVERY`. | Utilise le schéma Zod, `updatePassword`, SecureStore via Supabase Auth et retour à la connexion après succès. |
 | `app/(auth)/legal.tsx` | `/legal` | Placeholder pour les documents légaux et les consentements versionnés. | Ne doit pas enregistrer un consentement avant identification. Les versions effectives sont centralisées dans `src/constants/legal-versions.ts`. |
-| `app/(auth)/auth/callback.tsx` | Absent actuellement | Callback de confirmation e-mail prévu mais non présent dans l’arborescence réelle. | Le flux de confirmation devra être complété avec une route et une URL de deep link autorisée côté Supabase avant une validation Android complète. |
+| `app/(auth)/auth/callback.tsx` | `/auth/callback` | Échange les paramètres du deep link de confirmation contre une session Supabase puis revient au routeur d’onboarding. | Utilise `drepa://auth/callback`, masque les erreurs techniques et évite les doubles redirections du layout public. |
 | `app/(app)/_layout.tsx` | Groupe protégé `(app)` | Vérifie la session puis le statut d’onboarding. | Utilise `useAuth`, `useOnboardingStatus`, `useSegments` et `ScreenPlaceholder`. Priorité : consentements, profil, onglets. Les erreurs de données proposent `Réessayer`. |
 | `app/(app)/consent.tsx` | `/consent` | Enregistre l’acceptation des versions courantes des CGU, de la politique de confidentialité et de la charte communautaire. | Protégé par session. Utilise React Hook Form, Zod, `legalVersions` et `useAcceptConsentMutation`. Après succès, la requête est invalidée et l’utilisateur va vers `complete-profile`. |
 | `app/(app)/complete-profile.tsx` | `/complete-profile` | Crée ou met à jour le profil et affiche les champs d’identité et de suivi déjà présents dans le schéma. | Protégé par session. Utilise `useProfileQuery`, `useUpsertProfileMutation`, `profileSchema` et `auth.users.id`. Les champs facultatifs restent déclaratifs ; `null` signifie profil absent normal. |
@@ -153,7 +158,7 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/(app)/(tabs)/journal.tsx` | Onglet journal | Affiche l’état vide ou les 50 entrées récentes et ouvre le formulaire de saisie. | Utilise `useHealthLogsQuery`, les états UI partagés et des données privées filtrées par `session.user.id`. Les informations restent descriptives. |
 | `app/(app)/(tabs)/medications.tsx` | Onglet médicaments | Placeholder des médicaments et rappels. | Ne pas ajouter de prescription, d’ordonnance ou de traitement automatique. |
 | `app/(app)/(tabs)/community.tsx` | Onglet communauté | Placeholder de la communauté. | Ne pas ajouter de publications, commentaires ou modération dans le socle actuel. |
-| `app/(app)/(tabs)/profile.tsx` | Onglet profil | Présente l’identité, les informations de suivi, les paramètres disponibles et la déconnexion. | Utilise `useProfileQuery`, les composants `src/features/profile/components/` et `useAuth`. Aucun contact ou action SOS fictif n’est affiché. |
+| `app/(app)/(tabs)/profile.tsx` | Onglet profil | Présente l’identité, les informations de suivi, les paramètres disponibles, la déconnexion et la suppression sécurisée du compte. | Utilise `useProfileQuery`, les composants `src/features/profile/components/` et `useAuth`. La suppression passe par l’Edge Function après confirmation explicite. |
 
 Les routes documentées mais absentes actuellement incluent les écrans métier détaillés du journal, des médicaments, du SOS, des ressources, de la communauté et de la modération. Leur absence est volontaire tant que le périmètre correspondant n’est pas implémenté.
 
@@ -272,6 +277,12 @@ Les routes documentées mais absentes actuellement incluent les écrans métier 
 |---|---|---|
 | `src/services/secure-storage.ts` | Adapte `getItemAsync`, `setItemAsync` et `deleteItemAsync` d’Expo SecureStore au stockage de session Supabase. | `expo-secure-store`. Réservé aux sessions et secrets de session ; ne pas y stocker les données métier ou médicales. |
 
+### `supabase/functions/`
+
+| Fichier | Rôle | Dépendances et précautions |
+|---|---|---|
+| `supabase/functions/delete-account/index.ts` | Vérifie le bearer token, récupère l’utilisateur authentifié puis supprime uniquement son compte avec la clé serveur côté Supabase. | Deno et Supabase JS distant. `SUPABASE_SERVICE_ROLE_KEY` reste un secret de fonction et n’est jamais envoyé au mobile. |
+
 ### `src/theme/`
 
 | Fichier | Rôle | Dépendances et précautions |
@@ -381,6 +392,7 @@ login/register
     → src/features/auth/auth-service.ts
     → src/lib/supabase.ts
     → Supabase Auth
+    → app/(auth)/auth/callback.tsx pour les confirmations deep link
     → src/providers/auth-provider.tsx
     → app/index.tsx
     → app/(app)/_layout.tsx
@@ -438,6 +450,13 @@ profile.tsx
     → Supabase signOut
     → purge du QueryClient
     → routes publiques
+
+suppression confirmée du compte
+    → AuthProvider.deleteAccount
+    → supabase.functions/delete-account
+    → Supabase Auth Admin côté serveur
+    → purge de la session locale
+    → routes publiques
 ```
 
 ### Récupération du mot de passe
@@ -451,7 +470,7 @@ forgot-password.tsx
     → Supabase updateUser
 ```
 
-Le callback de confirmation e-mail dédié n’existe pas encore dans `app/`. Il devra être ajouté et documenté avant de considérer le parcours de confirmation Android comme complet.
+Le callback de confirmation e-mail est implémenté dans `app/(auth)/auth/callback.tsx`. Il doit rester autorisé côté Supabase avec `drepa://auth/callback`.
 
 ## 12. Matrice des dépendances
 
@@ -463,11 +482,12 @@ Le callback de confirmation e-mail dédié n’existe pas encore dans `app/`. Il
 | `app/(auth)/register.tsx` | `auth-service` via `AuthProvider`, `auth/schemas.ts`, React Hook Form, Zod | Utilisateur non connecté. |
 | `app/(auth)/forgot-password.tsx` | `auth-service` via `AuthProvider`, `auth/schemas.ts`, Expo Linking indirectement | Utilisateur demandant une récupération. |
 | `app/(auth)/reset-password.tsx` | `AuthProvider`, `auth/schemas.ts` | Session de récupération de mot de passe. |
+| `app/(auth)/auth/callback.tsx` | `supabase.ts`, Expo Linking, `AuthProvider` | Confirmation e-mail Android et redirection vers l’onboarding. |
 | `app/(auth)/_layout.tsx` | `AuthProvider`, `ScreenPlaceholder`, Expo Router | Toutes les routes `(auth)`. |
 | `app/(app)/_layout.tsx` | `AuthProvider`, `use-onboarding-status`, `ScreenPlaceholder`, Expo Router | Toutes les routes protégées `(app)`. |
 | `app/(app)/consent.tsx` | `legal-versions`, `profile/schemas`, `profile/mutations`, `AuthProvider` | Utilisateur authentifié sans consentements courants. |
 | `app/(app)/complete-profile.tsx` | `profile/schemas`, `profile/queries`, `profile/mutations`, `AuthProvider` | Utilisateur authentifié avec consentements valides mais profil incomplet. |
-| `src/features/auth/auth-service.ts` | `src/lib/supabase.ts`, `expo-linking` | `AuthProvider` et routes Auth. |
+| `src/features/auth/auth-service.ts` | `src/lib/supabase.ts`, Expo Linking | `AuthProvider`, routes Auth et suppression de compte. |
 | `src/providers/auth-provider.tsx` | `supabase.ts`, `auth-service.ts`, `query-client.ts`, AppState | `app/_layout.tsx`, layouts Auth/App et profil. |
 | `src/features/profile/queries.ts` | Supabase, `database.types.ts`, TanStack Query | `use-onboarding-status`, `complete-profile`, onglet profil. |
 | `src/features/profile/mutations.ts` | Supabase, `database.types.ts`, `legal-versions`, query keys | `consent.tsx`, `complete-profile.tsx`. |
@@ -479,6 +499,7 @@ Le callback de confirmation e-mail dédié n’existe pas encore dans `app/`. Il
 | `src/providers/app-provider.tsx` | `QueryProvider`, `AuthProvider` | `app/_layout.tsx`. |
 | `src/providers/query-provider.tsx` | TanStack Query, `query-client.ts` | `AppProvider`. |
 | `src/services/secure-storage.ts` | Expo SecureStore | `src/lib/supabase.ts`. |
+| `supabase/functions/delete-account/index.ts` | Supabase Auth Admin, secrets Edge Function | `auth-service.ts` via `functions.invoke`; ne jamais déployer la clé serveur au mobile. |
 | `src/types/database.types.ts` | Schéma des migrations existantes | Client Supabase et code profil. |
 | `supabase/migrations/*.sql` | PostgreSQL et `auth.users` | Projet Supabase distant/local ; consommées par le client via RLS. |
 | `app.config.js` | Expo et assets principaux | Expo CLI et EAS Build. |

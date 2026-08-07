@@ -8,6 +8,7 @@ import {
   signIn,
   signOut,
   signUp,
+  deleteAccount,
   updatePassword,
 } from '@/features/auth/auth-service';
 import { invalidatePrivateQueries, removePrivateQueries } from '@/lib/query-client';
@@ -26,6 +27,7 @@ type AuthContextValue = {
   signUp: typeof signUp;
   signIn: typeof signIn;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   requestPasswordReset: typeof requestPasswordReset;
   updatePassword: typeof updatePassword;
   clearPasswordRecovery: () => void;
@@ -139,6 +141,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     removePrivateQueries();
   };
 
+  const handleDeleteAccount = async () => {
+    await deleteAccount();
+    await signOut();
+    removePrivateQueries();
+  };
+
   const value: AuthContextValue = {
     session,
     user: session?.user ?? null,
@@ -150,6 +158,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     signUp,
     signIn,
     signOut: handleSignOut,
+    deleteAccount: handleDeleteAccount,
     requestPasswordReset,
     updatePassword,
     clearPasswordRecovery: () => setIsPasswordRecovery(false),
