@@ -1,5 +1,9 @@
 // Onglet Profil : présente les informations du compte et la déconnexion.
-import { useRouter } from 'expo-router';
+// Il est utilisé par une personne authentifiée dont l'onboarding est terminé.
+// Il affiche les données personnelles et de suivi enregistrées pour ce compte.
+// Ses actions ouvrent l'édition du profil, les mentions légales ou quittent la session.
+// Les accès restent liés à la session et les informations affichées ne valent pas avis médical.
+import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
@@ -16,6 +20,8 @@ import { ProfileSettingsList } from '@/features/profile/components/ProfileSettin
 import { useProfileQuery } from '@/features/profile/queries';
 import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
+
+const profileEditRoute = '/(app)/profile-edit' as Href;
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -64,7 +70,7 @@ export default function ProfileScreen() {
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <AppText variant="title">Mon profil</AppText>
-        <Button label="Modifier" variant="secondary" onPress={() => router.push('/(app)/complete-profile')} />
+        <Button label="Modifier" variant="secondary" onPress={() => router.push(profileEditRoute)} />
       </View>
       <ProfileHeader profile={profileQuery.data} />
       <ProfileInfoCard profile={profileQuery.data} />

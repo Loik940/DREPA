@@ -83,6 +83,7 @@ DREPA/
 │       ├── complete-profile.tsx
 │       ├── consent.tsx
 │       ├── medication-form.tsx
+│       ├── profile-edit.tsx
 │       └── (tabs)/
 │           ├── _layout.tsx
 │           ├── community.tsx
@@ -98,6 +99,9 @@ DREPA/
 │   ├── components/
 │   ├── constants/
 │   ├── features/
+│   │   └── profile/
+│   │       └── components/
+│   │           └── ProfileForm.tsx
 │   ├── lib/
 │   ├── providers/
 │   ├── services/
@@ -150,7 +154,8 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/(auth)/auth/callback.tsx` | `/auth/callback` | Échange les paramètres du deep link de confirmation contre une session Supabase puis revient au routeur d’onboarding. | Utilise `drepa://auth/callback`, masque les erreurs techniques et évite les doubles redirections du layout public. |
 | `app/(app)/_layout.tsx` | Groupe protégé `(app)` | Vérifie la session puis le statut d’onboarding. | Utilise `useAuth`, `useOnboardingStatus`, `useSegments` et `ScreenPlaceholder`. Priorité : consentements, profil, onglets. Les erreurs de données proposent `Réessayer`. |
 | `app/(app)/consent.tsx` | `/consent` | Enregistre l’acceptation des versions courantes des CGU, de la politique de confidentialité et de la charte communautaire. | Protégé par session. Utilise React Hook Form, Zod, `legalVersions` et `useAcceptConsentMutation`. Après succès, la requête est invalidée et l’utilisateur va vers `complete-profile`. |
-| `app/(app)/complete-profile.tsx` | `/complete-profile` | Crée ou met à jour le profil et affiche les champs d’identité et de suivi déjà présents dans le schéma. | Protégé par session. Utilise `useProfileQuery`, `useUpsertProfileMutation`, `profileSchema` et `auth.users.id`. Les champs facultatifs restent déclaratifs ; `null` signifie profil absent normal. |
+| `app/(app)/complete-profile.tsx` | `/complete-profile` | Wrapper d’onboarding qui configure le formulaire partagé pour créer le profil requis puis ouvre les onglets. | Protégé par session et réservé au profil incomplet par le guard. Utilise `ProfileForm`; les données et la sauvegarde restent gérées dans le composant partagé. |
+| `app/(app)/profile-edit.tsx` | `/profile-edit` | Wrapper d’édition qui configure le formulaire partagé puis revient à l’onglet Profil après sauvegarde. | Protégé par session et accessible lorsque l’onboarding est complet. Utilise `ProfileForm`; un profil incomplet est toujours redirigé vers `complete-profile` par le guard existant. |
 | `app/(app)/health-entry.tsx` | `/health-entry` | Formulaire de nouvelle entrée du journal avec champs facultatifs et brouillon mémoire. | Protégé par session. Utilise React Hook Form, Zod et `useCreateHealthLogMutation`. Ne persiste aucune donnée médicale localement et conserve les valeurs en cas d’erreur réseau. |
 | `app/(app)/health-log/[id].tsx` | `/health-log/:id` | Détail privé d’une entrée avec modification et suppression confirmée. | Charge avec `id + user_id`, affiche uniquement des données déclaratives et utilise des mutations filtrées par propriétaire. |
 | `app/(app)/health-statistics.tsx` | `/health-statistics` | Statistiques descriptives des 30 derniers jours. | Charge uniquement les colonnes nécessaires, limite à 500 lignes et n’affiche aucun diagnostic, prédiction ou niveau de danger. |
@@ -160,7 +165,7 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/(app)/medication-form.tsx` | `/medication-form` | Formulaire d’ajout d’un traitement prescrit et de ses horaires de rappel local. | React Hook Form, Zod, Expo Notifications et mutation transactionnelle avec nettoyage des notifications en cas d’échec. Aucun médicament ou dosage n’est proposé. |
 | `app/(app)/(tabs)/medications.tsx` | Onglet médicaments | Affiche les traitements saisis, les rappels du jour et permet de confirmer une prise déclarée. | Charge uniquement les lignes du propriétaire, calcule les statuts localement et n’affiche aucune donnée fictive ou conseil médical non sourcé. |
 | `app/(app)/(tabs)/community.tsx` | Onglet communauté | Placeholder de la communauté. | Ne pas ajouter de publications, commentaires ou modération dans le socle actuel. |
-| `app/(app)/(tabs)/profile.tsx` | Onglet profil | Présente l’identité, les informations de suivi, les paramètres disponibles, la déconnexion et la suppression sécurisée du compte. | Utilise `useProfileQuery`, les composants `src/features/profile/components/` et `useAuth`. La suppression passe par l’Edge Function après confirmation explicite. |
+| `app/(app)/(tabs)/profile.tsx` | Onglet profil | Présente l’identité, les informations de suivi, les paramètres disponibles, la déconnexion et la suppression sécurisée du compte. Le bouton `Modifier` ouvre `/profile-edit`. | Utilise `useProfileQuery`, les composants `src/features/profile/components/`, Expo Router et `useAuth`. La suppression passe par l’Edge Function après confirmation explicite. |
 
 Les routes documentées mais absentes actuellement incluent les écrans métier détaillés du journal, des médicaments, du SOS, des ressources, de la communauté et de la modération. Leur absence est volontaire tant que le périmètre correspondant n’est pas implémenté.
 
@@ -219,6 +224,7 @@ Les routes documentées mais absentes actuellement incluent les écrans métier 
 | Fichier | Rôle | Dépendances, données et risques |
 |---|---|---|
 | `src/features/profile/components/ProfileHeader.tsx` | Carte d’identité du profil avec initiales dérivées, nom d’affichage et localisation disponible. | `Profile`, composants UI et tokens. Ne doit jamais utiliser de nom ou de localisation fictifs. |
+| `src/features/profile/components/ProfileForm.tsx` | Formulaire partagé entre finalisation de l’onboarding et édition du profil. Préremplit tous les champs existants, valide avec Zod et conserve les états de chargement et d’erreur. | `useAuth`, `useProfileQuery`, `useUpsertProfileMutation`, React Hook Form, `profileSchema` et composants UI. L’identité vient uniquement de la session ; les informations de suivi sont déclaratives et ne constituent pas un document médical. |
 | `src/features/profile/components/ProfileInfoCard.tsx` | Présente les informations de suivi et les valeurs facultatives avec `Non renseigné`. | `Profile`, Card et AppText. Le groupe sanguin est explicitement marqué comme déclaré, non validé médicalement. |
 | `src/features/profile/components/ProfileContactSection.tsx` | État visuel réservé aux futurs contacts d’urgence. | Aucun accès réseau et aucun contact fictif ; ne déclenche pas de SOS. |
 | `src/features/profile/components/ProfileSettingsList.tsx` | Liste des paramètres disponibles et différés, avec accès aux conditions d’utilisation. | Expo Router indirectement via callback. Les lignes différées restent non actionnables. |
@@ -453,12 +459,16 @@ consent.tsx
     → invalidation de consentQueryKey(userId)
 
 complete-profile.tsx
-    → profileSchema
-    → useProfileQuery(userId)
-    → useUpsertProfileMutation(userId)
+    → ProfileForm.tsx
+    → profileSchema + useProfileQuery(userId) + useUpsertProfileMutation(userId)
     → profiles.id = auth.users.id
     → invalidation de profileQueryKey(userId)
     → tabs
+
+profile.tsx → profile-edit.tsx
+    → ProfileForm.tsx
+    → profil prérempli et sauvegarde propriétaire
+    → onglet profile
 ```
 
 ### Profil et déconnexion
@@ -506,11 +516,14 @@ Le callback de confirmation e-mail est implémenté dans `app/(auth)/auth/callba
 | `app/(auth)/_layout.tsx` | `AuthProvider`, `ScreenPlaceholder`, Expo Router | Toutes les routes `(auth)`. |
 | `app/(app)/_layout.tsx` | `AuthProvider`, `use-onboarding-status`, `ScreenPlaceholder`, Expo Router | Toutes les routes protégées `(app)`. |
 | `app/(app)/consent.tsx` | `legal-versions`, `profile/schemas`, `profile/mutations`, `AuthProvider` | Utilisateur authentifié sans consentements courants. |
-| `app/(app)/complete-profile.tsx` | `profile/schemas`, `profile/queries`, `profile/mutations`, `AuthProvider` | Utilisateur authentifié avec consentements valides mais profil incomplet. |
+| `app/(app)/complete-profile.tsx` | `ProfileForm`, Expo Router | Utilisateur authentifié avec consentements valides mais profil incomplet. |
+| `app/(app)/profile-edit.tsx` | `ProfileForm`, Expo Router | Utilisateur authentifié avec onboarding complet depuis l’onglet Profil. |
+| `app/(app)/(tabs)/profile.tsx` | `profile/queries`, composants Profil, `AuthProvider`, Expo Router | Utilisateur consultant son profil et route `/profile-edit`. |
+| `src/features/profile/components/ProfileForm.tsx` | `profile/schemas`, `profile/queries`, `profile/mutations`, `AuthProvider`, React Hook Form, Zod, composants UI | `complete-profile.tsx`, `profile-edit.tsx`. |
 | `src/features/auth/auth-service.ts` | `src/lib/supabase.ts`, Expo Linking | `AuthProvider`, routes Auth et suppression de compte. |
 | `src/providers/auth-provider.tsx` | `supabase.ts`, `auth-service.ts`, `query-client.ts`, AppState | `app/_layout.tsx`, layouts Auth/App et profil. |
-| `src/features/profile/queries.ts` | Supabase, `database.types.ts`, TanStack Query | `use-onboarding-status`, `complete-profile`, onglet profil. |
-| `src/features/profile/mutations.ts` | Supabase, `database.types.ts`, `legal-versions`, query keys | `consent.tsx`, `complete-profile.tsx`. |
+| `src/features/profile/queries.ts` | Supabase, `database.types.ts`, TanStack Query | `use-onboarding-status`, `ProfileForm`, onglet profil. |
+| `src/features/profile/mutations.ts` | Supabase, `database.types.ts`, `legal-versions`, query keys | `consent.tsx`, `ProfileForm`. |
 | `src/features/profile/completion.ts` | `legal-versions`, types consentement | `use-onboarding-status` et tests du flux. |
 | `src/features/profile/use-onboarding-status.ts` | `AuthProvider`, queries profil/consentements, `completion.ts` | `app/(app)/_layout.tsx`. |
 | `src/lib/supabase.ts` | `env.ts`, SecureStore, `database.types.ts`, Supabase JS | Services Auth, queries et mutations. |

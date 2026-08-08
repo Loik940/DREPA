@@ -5,6 +5,11 @@ description: Règles de documentation permanente et de cohérence du dépôt DR�
 
 # DRÉPA Documentation
 
+- Avant de coder, fournir au moins cinq lignes en français simple sur le rôle des fichiers à créer ou modifier.
+- Chaque nouveau fichier commence par un commentaire en français simple qui explique son rôle.
+- Commenter les éléments complexes, les protections de sécurité et les limites médicales utiles à la compréhension.
+- Éviter les commentaires qui répètent simplement ce que le code exprime déjà clairement.
+- Après toute évolution significative, mettre à jour `docs/project-file-reference.md`.
 - `docs/project-file-reference.md` décrit chaque fichier source, configuration, migration, asset et documentation utile.
 - Tout nouveau fichier doit être ajouté à cette référence.
 - Toute modification significative doit mettre à jour son rôle, ses dépendances et ses risques.
