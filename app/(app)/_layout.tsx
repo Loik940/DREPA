@@ -9,6 +9,7 @@ import { env } from '@/lib/env';
 import { useAuth } from '@/providers/auth-provider';
 
 export default function ProtectedLayout() {
+  // Les hooks lisent la session, l’onboarding et la route protégée courante.
   const router = useRouter();
   const { session, sessionReady, status } = useAuth();
   const onboarding = useOnboardingStatus();
@@ -16,6 +17,7 @@ export default function ProtectedLayout() {
   const isConsentRoute = segments.includes('consent');
   const isCompleteProfileRoute = segments.includes('complete-profile');
 
+  // Les états de chargement et d’erreur bloquent la navigation protégée.
   if (!sessionReady || status === 'loading') {
     return <ScreenPlaceholder title="Chargement" description="Restauration de la session." />;
   }
@@ -31,10 +33,12 @@ export default function ProtectedLayout() {
     );
   }
 
+  // Une session absente renvoie vers la connexion.
   if (!session) {
     return <Redirect href="/(auth)/login" />;
   }
 
+  // Le profil et les consentements doivent être chargés avant de poursuivre.
   if (onboarding.status === 'loading') {
     return <ScreenPlaceholder title="Chargement" description="Lecture du profil et des consentements." />;
   }
@@ -45,6 +49,7 @@ export default function ProtectedLayout() {
     );
   }
 
+  // Les redirections imposent chaque étape incomplète dans le bon ordre.
   if (onboarding.status === 'needs-consent' && !isConsentRoute) {
     return <Redirect href="/(app)/consent" />;
   }
@@ -57,12 +62,14 @@ export default function ProtectedLayout() {
     return <Redirect href="/(app)/(tabs)" />;
   }
 
+  // Le rendu principal expose la pile protégée lorsque tous les contrôles passent.
   return <Stack screenOptions={{ headerShown: false }} />;
 }
 
 function DataErrorScreen({ error, onRetry }: { error: ProfileDataError | null; onRetry: () => void }) {
   const showDiagnostic = env?.EXPO_PUBLIC_APP_ENV === 'development' && error;
 
+  // Le rendu d’erreur garde le diagnostic technique réservé au développement.
   return (
     <View style={styles.errorScreen}>
       <ScreenPlaceholder

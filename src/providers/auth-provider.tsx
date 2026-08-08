@@ -14,8 +14,10 @@ import {
 import { invalidatePrivateQueries, removePrivateQueries } from '@/lib/query-client';
 import { supabase } from '../lib/supabase';
 
+// Ces états distinguent clairement la restauration, la présence, l’absence et l’échec de session.
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
 
+// Le contexte rassemble l’état de session et les seules actions d’authentification exposées aux écrans.
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
@@ -37,6 +39,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  // Ces états représentent la session courante, la fin de son initialisation et la récupération de mot de passe.
   const [session, setSession] = useState<Session | null>(null);
   const [status, setStatus] = useState<AuthStatus>(supabase ? 'loading' : 'error');
   const [sessionReady, setSessionReady] = useState(!supabase);
@@ -45,6 +48,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     supabase ? null : 'La configuration de l’authentification est indisponible.',
   );
 
+  // Cet effet restaure la session, écoute les événements Supabase et suit le cycle de vie mobile.
   useEffect(() => {
     const client = supabase;
 
@@ -58,6 +62,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     let latestSession: Session | null = null;
     let activeUserId: string | null = null;
 
+    // Un changement de compte purge d’abord le cache privé de l’utilisateur précédent.
     const applySession = (nextSession: Session | null) => {
       const nextUserId = nextSession?.user.id ?? null;
 
@@ -71,6 +76,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setError(null);
     };
 
+    // Les événements reçus maintiennent la session, la récupération et le cache privé synchronisés.
     const { data } = client.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) {
         return;
@@ -97,6 +103,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
     });
 
+    // La lecture initiale attend la session persistée sans écraser un événement reçu entre-temps.
     void client.auth.getSession().then(({ data: sessionData, error: sessionError }) => {
       if (!mounted) {
         return;
@@ -121,6 +128,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
     });
 
+    // Le rafraîchissement automatique ne reste actif que lorsque l’application est au premier plan.
     const appStateSubscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         void client.auth.startAutoRefresh();
@@ -136,6 +144,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
+  // La déconnexion et la suppression de compte terminent aussi la présence des données privées en cache.
   const handleSignOut = async () => {
     await signOut();
     removePrivateQueries();
@@ -147,6 +156,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     removePrivateQueries();
   };
 
+  // Cette valeur forme l’API stable du provider pour ses composants descendants.
   const value: AuthContextValue = {
     session,
     user: session?.user ?? null,
@@ -168,6 +178,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// Le hook refuse un usage hors provider afin d’éviter un état d’authentification implicite.
 export function useAuth() {
   const context = useContext(AuthContext);
 

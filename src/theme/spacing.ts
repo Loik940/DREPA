@@ -1,4 +1,5 @@
 // Grille d’espacement et dimensions de confort du design system mobile.
+// Les valeurs dédiées aux écrans, cartes et zones tactiles complètent la progression d’espacement générale.
 export const spacing = {
   none: 0,
   xs: 4,

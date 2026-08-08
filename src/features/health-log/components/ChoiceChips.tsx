@@ -21,6 +21,7 @@ type SingleChoiceChipsProps = {
   onChange: (selected: string | null) => void;
 };
 
+// Composants de sélection : ils recueillent des choix déclarés et ne suggèrent aucune cause médicale.
 export function ChoiceChips({ choices, selected, onChange }: ChoiceChipsProps) {
   const { colors } = useAppTheme();
 

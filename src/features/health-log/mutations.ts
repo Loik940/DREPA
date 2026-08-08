@@ -7,6 +7,7 @@ import { buildHealthLogPayload } from './payload';
 import { healthLogDetailQueryKey, healthLogsQueryKey, healthLogStatisticsQueryKey } from './queries';
 import type { HealthLogValues } from './schemas';
 
+// Mutations propriétaires : les écritures exigent une session et restent limitées aux données de son utilisateur.
 function requireClient(operation: HealthLogOperation) {
   if (!supabase) {
     throw new HealthLogDataError(operation, 'configuration', 'La configuration du journal est indisponible.');
@@ -14,6 +15,7 @@ function requireClient(operation: HealthLogOperation) {
   return supabase;
 }
 
+// Invalidation du cache : la liste et les statistiques sont rechargées après chaque écriture réussie.
 async function invalidateHealthLogQueries(queryClient: ReturnType<typeof useQueryClient>, userId: string) {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: healthLogsQueryKey(userId) }),

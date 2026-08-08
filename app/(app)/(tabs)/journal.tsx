@@ -14,11 +14,13 @@ import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
 
 export default function JournalScreen() {
+  // Les hooks préparent la navigation, l’utilisateur et la liste paginée privée.
   const router = useRouter();
   const { user } = useAuth();
   const query = useHealthLogsQuery(user?.id);
   const entries = query.data?.pages.flat() ?? [];
 
+  // Le chargement, l’erreur et le journal vide ont chacun un rendu dédié.
   if (query.isPending) {
     return <LoadingState message="Chargement du journal..." />;
   }
@@ -40,6 +42,7 @@ export default function JournalScreen() {
     );
   }
 
+  // Le rendu principal affiche les entrées et les actions de navigation.
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <View style={styles.header}>

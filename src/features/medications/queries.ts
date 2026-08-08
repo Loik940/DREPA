@@ -13,6 +13,7 @@ export type MedicationIntake = Database['public']['Tables']['medication_intakes'
 
 export const medicationsQueryKey = (userId: string) => ['medications', userId] as const;
 
+// Queries propriétaires : chaque table est filtrée par l’utilisateur authentifié, en complément de la RLS.
 function requireClient() {
   if (!supabase) throw new MedicationDataError('list', 'configuration', 'La configuration des traitements est indisponible.');
   return supabase;

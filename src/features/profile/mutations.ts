@@ -17,6 +17,7 @@ function requireSupabase() {
 export function useUpsertProfileMutation(userId: string) {
   const queryClient = useQueryClient();
 
+  // La mutation associe toujours le profil à l'identifiant de session reçu par le hook.
   return useMutation({
     mutationFn: async (values: ProfileValues) => {
       const profile = {
@@ -46,6 +47,7 @@ export function useUpsertProfileMutation(userId: string) {
       return data;
     },
     onSuccess: async () => {
+      // Après l'écriture, cette invalidation force le cache du même utilisateur à relire les données enregistrées.
       await queryClient.invalidateQueries({ queryKey: profileQueryKey(userId) });
     },
   });
@@ -54,6 +56,7 @@ export function useUpsertProfileMutation(userId: string) {
 export function useAcceptConsentMutation(userId: string) {
   const queryClient = useQueryClient();
 
+  // Le consentement conserve les versions légales courantes et l'identifiant de l'utilisateur authentifié.
   return useMutation({
     mutationFn: async (_values: ConsentValues) => {
       const { data, error } = await requireSupabase()
@@ -74,6 +77,7 @@ export function useAcceptConsentMutation(userId: string) {
       return data;
     },
     onSuccess: async () => {
+      // Seul le cache des consentements de cette session est invalidé après la mutation.
       await queryClient.invalidateQueries({ queryKey: consentQueryKey(userId) });
     },
   });

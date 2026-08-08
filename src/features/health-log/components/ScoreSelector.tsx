@@ -15,6 +15,7 @@ type ScoreSelectorProps = {
   onChange: (value: number | null) => void;
 };
 
+// Composant déclaratif : le score choisi décrit un ressenti et ne constitue ni une mesure clinique ni un diagnostic.
 export function ScoreSelector({ label, value, onChange }: ScoreSelectorProps) {
   const [trackWidth, setTrackWidth] = useState(0);
   const scoreColor = getScoreColor(value);

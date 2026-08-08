@@ -11,6 +11,7 @@ type PasswordFieldProps = Omit<TextFieldProps, 'secureTextEntry' | 'rightElement
 export function PasswordField(props: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
 
+  // Le bouton expose son rôle, son action et son état aux lecteurs d’écran.
   return (
     <TextField
       {...props}

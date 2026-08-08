@@ -34,6 +34,7 @@ const painLocationChoices = [
 ] as const;
 
 export default function HealthEntryScreen() {
+  // Les hooks préparent la navigation, l’entrée éventuelle et le formulaire validé.
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { user } = useAuth();
@@ -46,6 +47,7 @@ export default function HealthEntryScreen() {
     defaultValues: healthLogDefaults,
   });
 
+  // En édition, les données chargées remplissent le formulaire existant.
   useEffect(() => {
     if (!entryQuery.data) return;
     reset({
@@ -62,17 +64,20 @@ export default function HealthEntryScreen() {
     });
   }, [entryQuery.data, reset]);
 
+  // Après validation, l’appel serveur crée ou met à jour l’entrée selon le contexte.
   const onSubmit = async (values: HealthLogValues) => {
     try {
       const savedEntry = isEditing
         ? await updateMutation.mutateAsync(values)
         : await createMutation.mutateAsync(values);
+      // Une sauvegarde réussie ouvre le détail de l’entrée enregistrée.
       router.replace({ pathname: '/(app)/health-log/[id]', params: { id: savedEntry.id } });
     } catch (error) {
       setError('root', { message: error instanceof Error ? error.message : 'L’entrée ne peut pas être enregistrée.' });
     }
   };
 
+  // En édition, le chargement et l’erreur sont traités avant le formulaire.
   if (isEditing && entryQuery.isPending) {
     return <LoadingState message="Chargement de l’entrée..." />;
   }
@@ -83,6 +88,7 @@ export default function HealthEntryScreen() {
 
   const mutationPending = createMutation.isPending || updateMutation.isPending;
 
+  // Le rendu principal regroupe les différentes sections de saisie déclarative.
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <View style={styles.header}>

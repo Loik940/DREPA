@@ -19,6 +19,7 @@ export function TextField({ label, error, helperText, rightElement, style, ...pr
   const { colors } = useAppTheme();
   const borderColor = error ? colors.sos : colors.border;
 
+  // Le libellé transmis au lecteur d’écran reprend le label visible quand aucun autre texte n’est fourni.
   return (
     <View style={styles.wrapper}>
       <AppText variant="label">{label}</AppText>

@@ -11,6 +11,7 @@ import type { TodayReminder } from '../status';
 
 const labels = { late: 'EN RETARD', pending: 'EN ATTENTE', taken: 'PRIS', snoozed: 'REPORTÉ', skipped: 'IGNORÉ' } as const;
 
+// Composant de rappel : le statut affiché vient des horaires et déclarations, sans confirmer la prise du traitement.
 export function ReminderCard({ item, onTaken, loading }: { item: TodayReminder; onTaken: () => void; loading: boolean }) {
   const palette = item.status === 'late'
     ? { color: colors.sos, background: colors.errorSoft, icon: 'alarm' as const }

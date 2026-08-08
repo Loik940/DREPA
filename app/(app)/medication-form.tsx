@@ -17,21 +17,25 @@ import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
 
 export default function MedicationFormScreen() {
+  // Les hooks préparent la navigation, l’utilisateur, la mutation et le formulaire validé.
   const router = useRouter();
   const { user } = useAuth();
   const mutation = useCreateMedicationMutation(user?.id);
   const { control, handleSubmit, setError, formState } = useForm<MedicationValues>({ resolver: zodResolver(medicationSchema), defaultValues: medicationDefaults });
   const remindersEnabled = useWatch({ control, name: 'reminders_enabled' });
 
+  // Après validation, le traitement est enregistré par l’appel serveur prévu.
   const onSubmit = async (values: MedicationValues) => {
     try {
       await mutation.mutateAsync(values);
+      // Une sauvegarde réussie ramène vers la liste des médicaments.
       router.replace('/(app)/(tabs)/medications');
     } catch (error) {
       setError('root', { message: error instanceof Error ? error.message : 'Le traitement ne peut pas être enregistré.' });
     }
   };
 
+  // Le rendu principal affiche les informations prescrites et les rappels facultatifs.
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <View style={styles.header}>

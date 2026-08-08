@@ -14,6 +14,7 @@ export { spacing } from './spacing';
 export { fontFamilies, fontWeights, typography } from './typography';
 export { useAppTheme } from './use-app-theme';
 
+// Cet objet regroupe tous les tokens pour les usages qui ont besoin du thème complet.
 export const theme = {
   colors,
   radii,
@@ -25,4 +26,5 @@ export const theme = {
   typography,
 } as const;
 
+// Le type structurant reste toujours aligné sur les tokens réellement exportés.
 export type Theme = typeof theme;

@@ -12,6 +12,7 @@ type ErrorStateProps = {
 };
 
 export function ErrorState({ title = 'Impossible de charger ces informations', description, onRetry }: ErrorStateProps) {
+  // Le rôle d’alerte signale l’erreur aux technologies d’assistance sans dépendre de sa couleur.
   return (
     <View accessibilityRole="alert" style={styles.container}>
       <AppText variant="sectionTitle" align="center">{title}</AppText>

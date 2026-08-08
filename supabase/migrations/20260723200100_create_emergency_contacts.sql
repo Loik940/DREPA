@@ -1,6 +1,8 @@
 -- Emergency contacts are private and can only be accessed by their owner.
+-- Cette table contient les contacts d’urgence privés.
 create table public.emergency_contacts (
   id uuid primary key default gen_random_uuid(),
+  -- Cette contrainte relie le contact à son propriétaire authentifié.
   user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
   phone text not null,
@@ -15,15 +17,19 @@ create table public.emergency_contacts (
     check (consent_confirmed = true)
 );
 
+-- Cet index accélère la recherche des contacts d’un utilisateur.
 create index emergency_contacts_user_id_idx
 on public.emergency_contacts(user_id);
 
+-- Cet index garantit un seul contact principal par utilisateur.
 create unique index one_primary_emergency_contact_per_user
 on public.emergency_contacts(user_id)
 where is_primary = true;
 
+-- La RLS protège chaque contact d’urgence.
 alter table public.emergency_contacts enable row level security;
 
+-- Ces policies limitent chaque opération au propriétaire du contact.
 create policy "emergency_contacts_select_own"
 on public.emergency_contacts
 for select to authenticated

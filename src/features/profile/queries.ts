@@ -31,6 +31,7 @@ async function fetchProfile(userId: string) {
   }
 
   try {
+    // La requête reste filtrée par l'identifiant issu de la session, en complément des règles RLS de Supabase.
     const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
 
     if (error) {
@@ -49,6 +50,7 @@ async function fetchConsents(userId: string) {
   }
 
   try {
+    // Les consentements chargés appartiennent uniquement à l'utilisateur authentifié et sont triés du plus récent au plus ancien.
     const { data, error } = await supabase
       .from('user_consents')
       .select('*')
@@ -67,6 +69,7 @@ async function fetchConsents(userId: string) {
 
 export function useProfileQuery(userId: string | undefined) {
   const { sessionReady, status, user } = useAuth();
+  // Le cache privé ne se charge que lorsque la session est prête et correspond exactement à la clé demandée.
   const queryEnabled = sessionReady && status === 'authenticated' && user?.id === userId;
 
   return useQuery({
@@ -81,6 +84,7 @@ export function useProfileQuery(userId: string | undefined) {
 
 export function useConsentsQuery(userId: string | undefined) {
   const { sessionReady, status, user } = useAuth();
+  // Cette garde empêche une ancienne clé utilisateur de déclencher une requête après un changement de session.
   const queryEnabled = sessionReady && status === 'authenticated' && user?.id === userId;
 
   return useQuery({

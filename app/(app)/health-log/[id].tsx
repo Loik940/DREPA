@@ -16,12 +16,14 @@ import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
 
 export default function HealthLogDetailScreen() {
+  // Les hooks chargent l’entrée demandée et préparent sa suppression éventuelle.
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const query = useHealthLogQuery(user?.id, id);
   const deleteMutation = useDeleteHealthLogMutation(user?.id, id);
 
+  // La suppression destructive demande une confirmation explicite avant l’appel serveur.
   const confirmDelete = () => {
     Alert.alert(
       'Supprimer cette entrée ?',
@@ -39,6 +41,7 @@ export default function HealthLogDetailScreen() {
     );
   };
 
+  // Le chargement, l’erreur et l’entrée absente ont chacun un rendu dédié.
   if (query.isPending) return <LoadingState message="Chargement de l’entrée..." />;
   if (query.isError) return <ErrorState description={query.error.message} onRetry={() => void query.refetch()} />;
   if (!query.data) return <ErrorState description="Cette entrée est introuvable." />;
@@ -46,6 +49,7 @@ export default function HealthLogDetailScreen() {
   const entry = query.data;
   const recordedAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' }).format(new Date(entry.recorded_at));
 
+  // Le rendu principal affiche les données déclarées et les actions disponibles.
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <View style={styles.header}>

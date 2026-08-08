@@ -8,6 +8,7 @@ description: Règles de documentation permanente et de cohérence du dépôt DR�
 - Avant de coder, fournir au moins cinq lignes en français simple sur le rôle des fichiers à créer ou modifier.
 - Chaque nouveau fichier commence par un commentaire en français simple qui explique son rôle.
 - Commenter les éléments complexes, les protections de sécurité et les limites médicales utiles à la compréhension.
+- Ajouter des commentaires internes en français simple avant les grandes étapes du code, sans commenter chaque ligne ni répéter ce que le code exprime déjà.
 - Éviter les commentaires qui répètent simplement ce que le code exprime déjà clairement.
 - Après toute évolution significative, mettre à jour `docs/project-file-reference.md`.
 - `docs/project-file-reference.md` décrit chaque fichier source, configuration, migration, asset et documentation utile.

@@ -46,11 +46,13 @@ export function ProfileForm({ title, description, submitLabel, onSaved }: Profil
   const { user } = useAuth();
   const profileQuery = useProfileQuery(user?.id);
   const mutation = useUpsertProfileMutation(user?.id ?? '');
+  // Le résolveur Zod applique les mêmes limites au parcours d'onboarding et à l'édition du profil.
   const { control, handleSubmit, reset, setError, formState } = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
     defaultValues,
   });
 
+  // Le formulaire est prérempli uniquement avec le profil chargé pour la session authentifiée.
   useEffect(() => {
     if (profileQuery.data) {
       reset({
@@ -70,6 +72,7 @@ export function ProfileForm({ title, description, submitLabel, onSaved }: Profil
   }, [profileQuery.data, reset]);
 
   const onSubmit = async (values: ProfileValues) => {
+    // Aucune mutation n'est lancée sans identifiant provenant de la session courante.
     if (!user?.id) {
       setError('root', { message: 'La session utilisateur est indisponible.' });
       return;
@@ -83,6 +86,7 @@ export function ProfileForm({ title, description, submitLabel, onSaved }: Profil
     }
   };
 
+  // Les états de chargement et d'erreur remplacent le formulaire tant que les données privées ne sont pas prêtes.
   if (profileQuery.isPending) {
     return <LoadingState message="Chargement du profil..." />;
   }
@@ -112,6 +116,7 @@ export function ProfileForm({ title, description, submitLabel, onSaved }: Profil
         </View>
       </Card>
       <Card>
+        {/* Ces champs restent déclaratifs : le formulaire ne valide ni diagnostic, ni traitement, ni urgence. */}
         <View style={styles.section}>
           <AppText variant="sectionTitle">Informations de suivi</AppText>
           <ProfileInput control={control} name="drepanocytosis_type" label="Type de drépanocytose (facultatif)" />
@@ -122,6 +127,7 @@ export function ProfileForm({ title, description, submitLabel, onSaved }: Profil
           <ProfileInput control={control} name="doctor_phone" label="Téléphone du médecin (facultatif)" keyboardType="phone-pad" />
         </View>
       </Card>
+      {/* L'erreur de sauvegarde n'est affichée que lorsqu'un message neutre a été produit par le formulaire. */}
       {formState.errors.root?.message && <AppText color="sos">{formState.errors.root.message}</AppText>}
       <Button label={submitLabel} loading={formState.isSubmitting || mutation.isPending} onPress={handleSubmit(onSubmit)} />
       <AppText variant="caption" color="textSecondary" align="center">Les informations médicales facultatives sont déclarées par toi et ne constituent pas un document médical officiel.</AppText>

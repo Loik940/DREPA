@@ -1,8 +1,11 @@
 // Types Supabase correspondant aux tables et opérations utilisées par l’application.
+// Json décrit les valeurs imbriquées que Supabase peut transporter sans structure métier dédiée.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
+// Database structure le schéma public et sépare les formes de lecture, création et mise à jour.
 export type Database = {
   public: {
+    // Chaque table expose sa ligne complète, ses champs d’insertion et ses champs modifiables.
     Tables: {
       profiles: {
         Row: {

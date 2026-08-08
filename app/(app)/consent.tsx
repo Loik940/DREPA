@@ -17,6 +17,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
 
 export default function ConsentScreen() {
+  // Les hooks préparent la navigation, l’utilisateur, la mutation et le formulaire validé.
   const router = useRouter();
   const { user } = useAuth();
   const mutation = useAcceptConsentMutation(user?.id ?? '');
@@ -25,20 +26,24 @@ export default function ConsentScreen() {
     defaultValues: { termsAccepted: false, privacyAccepted: false, communityAccepted: false },
   });
 
+  // La session est vérifiée avant tout enregistrement des consentements.
   const onSubmit = async (values: ConsentValues) => {
     if (!user?.id) {
       setError('root', { message: 'La session utilisateur est indisponible.' });
       return;
     }
 
+    // Après validation, les versions acceptées sont enregistrées par le serveur.
     try {
       await mutation.mutateAsync(values);
+      // Une sauvegarde réussie ouvre l’étape suivante de l’onboarding.
       router.replace('/(app)/complete-profile');
     } catch {
       setError('root', { message: 'Les consentements ne peuvent pas être enregistrés.' });
     }
   };
 
+  // Le rendu principal présente chaque accord et les limites du service.
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <View style={styles.header}>

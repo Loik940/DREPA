@@ -25,6 +25,7 @@ export function ProfileInfoCard({ profile }: ProfileInfoCardProps) {
       <AppText variant="sectionTitle">Informations médicales</AppText>
       <Card>
         <View style={styles.cardContent}>
+          {/* Chaque valeur est affichée telle qu'elle a été déclarée, sans déduction ni interprétation médicale. */}
           {rows.map((row) => {
             const value = profile[row.key];
             return (
@@ -32,6 +33,7 @@ export function ProfileInfoCard({ profile }: ProfileInfoCardProps) {
                 <AppText color="textSecondary">{row.label}</AppText>
                 <View style={styles.value}>
                   <AppText align="right">{typeof value === 'string' && value.trim() ? value : 'Non renseigné'}</AppText>
+                  {/* La mention rappelle explicitement l'origine déclarative des données concernées. */}
                   {row.declared && value && <AppText variant="caption" color="textSecondary" align="right">Déclaré par toi</AppText>}
                 </View>
               </View>

@@ -6,6 +6,7 @@ const CHANNEL_ID = 'medication-reminders';
 
 export class NotificationPermissionError extends Error {}
 
+// Notifications génériques : elles n’exposent aucun traitement et servent seulement à l’organisation des rappels.
 export async function ensureMedicationNotificationPermission() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
@@ -19,6 +20,7 @@ export async function ensureMedicationNotificationPermission() {
   if (!permission.granted) throw new NotificationPermissionError('Les notifications ne sont pas autorisées.');
 }
 
+// Un rappel planifié ne garantit pas que le traitement a été pris et ne remplace aucune consigne médicale.
 export async function scheduleMedicationReminder(time: string) {
   const [hour, minute] = time.split(':').map(Number);
   return Notifications.scheduleNotificationAsync({

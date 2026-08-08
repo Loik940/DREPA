@@ -7,6 +7,7 @@ import { cancelMedicationReminder, ensureMedicationNotificationPermission, sched
 import { medicationsQueryKey } from './queries';
 import { parseReminderTimes, type MedicationValues } from './schemas';
 
+// Mutations propriétaires : chaque écriture associe les données à la session active et à son utilisateur.
 function requireClient(operation: 'create' | 'intake') {
   if (!supabase) throw new MedicationDataError(operation, 'configuration', 'La configuration des traitements est indisponible.');
   return supabase;
@@ -39,6 +40,7 @@ export function useCreateMedicationMutation(userId: string | undefined) {
 
       if (medicationError) throw classifyMedicationError(medicationError, 'create');
 
+      // Rollback : si un rappel échoue, les notifications déjà créées et le traitement incomplet sont retirés.
       const scheduledIds: string[] = [];
       try {
         for (const time of times) scheduledIds.push(await scheduleMedicationReminder(time));
@@ -59,6 +61,7 @@ export function useCreateMedicationMutation(userId: string | undefined) {
         throw classifyMedicationError(error, 'create');
       }
     },
+    // Invalidation du cache : le tableau de traitements est rechargé seulement après une création complète.
     onSuccess: async () => {
       if (userId) await queryClient.invalidateQueries({ queryKey: medicationsQueryKey(userId) });
     },
@@ -84,6 +87,7 @@ export function useMarkMedicationTakenMutation(userId: string | undefined) {
         throw classifyMedicationError(error, 'intake');
       }
     },
+    // Invalidation du cache : la prise déclarée est relue depuis la source après son enregistrement.
     onSuccess: async () => {
       if (userId) await queryClient.invalidateQueries({ queryKey: medicationsQueryKey(userId) });
     },

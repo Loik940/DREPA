@@ -13,6 +13,7 @@ export const healthLogsQueryKey = (userId: string) => ['health-logs', userId] as
 export const healthLogDetailQueryKey = (userId: string, entryId: string) => ['health-log', userId, entryId] as const;
 export const healthLogStatisticsQueryKey = (userId: string, days: number) => ['health-log-statistics', userId, days] as const;
 
+// Queries propriétaires : chaque lecture filtre explicitement sur l’utilisateur authentifié, en complément de la RLS.
 function requireClient(operation: 'list' | 'detail' | 'statistics') {
   if (!supabase) {
     throw new HealthLogDataError(operation, 'configuration', 'La configuration du journal est indisponible.');

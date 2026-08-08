@@ -22,6 +22,7 @@ export class ProfileDataError extends Error {
   }
 }
 
+// Le nettoyage retire les jetons et secrets éventuels avant de conserver un message technique limité.
 function sanitizeTechnicalMessage(message: string | undefined) {
   if (!message) {
     return undefined;
@@ -34,6 +35,7 @@ function sanitizeTechnicalMessage(message: string | undefined) {
     .slice(0, 500);
 }
 
+// La classification transforme les erreurs techniques en catégories stables et en messages sans détail sensible.
 export function classifyProfileError(error: unknown, source: ProfileQuerySource) {
   if (error instanceof ProfileDataError) {
     return error;
@@ -80,6 +82,7 @@ type ConsentVersions = {
   revoked_at: string | null;
 };
 
+// Un consentement n'est courant que si toutes les versions correspondent et qu'aucune révocation n'est enregistrée.
 export function hasCurrentConsent(consents: ConsentVersions[] | undefined) {
   return Boolean(
     consents?.some(
@@ -111,6 +114,7 @@ export function getOnboardingStatus({
   profileError,
   consentError,
 }: OnboardingInputs) {
+  // L'onboarding attend d'abord la restauration complète de la session et des données privées.
   if (!sessionReady || isLoading) {
     return { status: 'loading' as const, profile: null, error: null };
   }
@@ -129,6 +133,7 @@ export function getOnboardingStatus({
     };
   }
 
+  // Le consentement précède le profil afin de respecter l'ordre obligatoire du parcours.
   if (!currentConsent) {
     return { status: 'needs-consent' as const, profile: profile ?? null, error: null };
   }

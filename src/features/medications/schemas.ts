@@ -4,6 +4,7 @@ import { z } from 'zod';
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+// Contrats Zod : ils valident la saisie d’un traitement prescrit, sans inventer ni recommander médicament ou dosage.
 export const medicationSchema = z
   .object({
     name: z.string().trim().min(1, 'Saisissez le nom du médicament.').max(120),

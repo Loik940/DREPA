@@ -8,10 +8,12 @@ import { spacing } from '@/theme/spacing';
 import { formatDashboardAverage, type DashboardSummary } from './dashboard';
 
 export function DashboardWeeklySummary({ summary }: { summary: DashboardSummary | null }) {
+  // Le composant n'affiche rien lorsque le journal ne fournit aucun résumé réel.
   if (!summary) {
     return null;
   }
 
+  // Le ratio décrit uniquement les prises déclarées et ne confirme pas qu'un traitement a été suivi.
   const medicationSummary = summary.medicationTrackedCount
     ? `${summary.medicationTakenCount}/${summary.medicationTrackedCount}`
     : '—';

@@ -1,6 +1,8 @@
 -- Consent versions are append-only history owned by the authenticated user.
+-- Cette table conserve l’historique des consentements.
 create table public.user_consents (
   id uuid primary key default gen_random_uuid(),
+  -- Cette contrainte relie le consentement à son propriétaire authentifié.
   user_id uuid not null references auth.users(id) on delete cascade,
   terms_version text not null,
   privacy_version text not null,
@@ -9,13 +11,16 @@ create table public.user_consents (
   revoked_at timestamptz
 );
 
+-- Cet index accélère la recherche des consentements d’un utilisateur.
 create index user_consents_user_id_idx
 on public.user_consents(user_id);
 
+-- Cet index accélère la recherche des versions de consentement actives.
 create index user_consents_current_versions_idx
 on public.user_consents(user_id, terms_version, privacy_version, community_guidelines_version, accepted_at desc)
 where revoked_at is null;
 
+-- Cette fonction prépare le contrôle utilisé par le trigger d’historique.
 create or replace function public.prevent_consent_history_mutation()
 returns trigger
 language plpgsql
@@ -36,12 +41,15 @@ begin
 end;
 $$;
 
+-- Ce trigger empêche la modification des données historiques protégées.
 create trigger user_consents_history_immutable
 before update on public.user_consents
 for each row execute function public.prevent_consent_history_mutation();
 
+-- La RLS protège chaque consentement enregistré.
 alter table public.user_consents enable row level security;
 
+-- Ces policies limitent les opérations au propriétaire du consentement.
 create policy "user_consents_select_own"
 on public.user_consents
 for select to authenticated

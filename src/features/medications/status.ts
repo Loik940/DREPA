@@ -10,6 +10,7 @@ export type TodayReminder = {
   status: ReminderDisplayStatus;
 };
 
+// Calculs et statuts : ils organisent les horaires déclarés, sans confirmer une prise ni donner de consigne médicale.
 export function getTodayBounds(date = new Date()) {
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);

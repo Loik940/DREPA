@@ -1,6 +1,7 @@
 // Tests des tokens de présentation du sélecteur de score Journal.
 import { getScoreColor } from './score';
 
+// Ces tests couvrent les statuts visuels descriptifs sans leur attribuer de signification médicale.
 describe('score selector presentation', () => {
   it('keeps an undeclared score neutral', () => {
     expect(getScoreColor(null)).toBe('textSecondary');

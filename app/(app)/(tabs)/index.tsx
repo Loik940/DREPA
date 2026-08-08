@@ -19,10 +19,12 @@ import { spacing } from '@/theme/spacing';
 import { DashboardHeader } from '@/features/dashboard/DashboardHeader';
 
 export default function DashboardScreen() {
+  // Les hooks chargent le profil et les entrées utiles au tableau de bord.
   const { user } = useAuth();
   const profileQuery = useProfileQuery(user?.id);
   const journalQuery = useHealthLogStatisticsSourceQuery(user?.id, 7);
 
+  // Les chargements et les erreurs sont traités avant de calculer le résumé.
   if (profileQuery.isPending || journalQuery.isPending) {
     return (
       <ScreenContainer>
@@ -53,10 +55,12 @@ export default function DashboardScreen() {
     );
   }
 
+  // Le résumé est construit uniquement à partir des données chargées.
   const entries = flattenDashboardEntries({ pages: [journalQuery.data ?? []] });
   const summary = buildDashboardSummary(entries);
   const latestEntry = getLatestDashboardEntry(entries);
 
+  // Le rendu principal rassemble l’accueil personnalisé et l’activité récente.
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <DashboardHeader firstName={profileQuery.data?.first_name} />

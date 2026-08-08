@@ -13,6 +13,8 @@ type StatusBannerProps = {
 
 export function StatusBanner({ message, tone = 'info' }: StatusBannerProps) {
   const { colors } = useAppTheme();
+
+  // Chaque variante associe le message à une couleur d’état tout en gardant un fond calme et lisible.
   const palette = tone === 'success'
     ? { background: colors.backgroundMuted, text: colors.success }
     : tone === 'warning'
@@ -21,6 +23,7 @@ export function StatusBanner({ message, tone = 'info' }: StatusBannerProps) {
         ? { background: colors.backgroundMuted, text: colors.sos }
         : { background: colors.backgroundMuted, text: colors.textPrimary };
 
+  // Le rôle d’alerte permet aux technologies d’assistance d’annoncer le changement d’état.
   return (
     <View accessibilityRole="alert" style={[styles.banner, { backgroundColor: palette.background, borderLeftColor: palette.text }]}>
       <AppText color={palette.text === colors.success ? 'success' : palette.text === colors.warning ? 'warning' : palette.text === colors.sos ? 'sos' : 'textPrimary'}>{message}</AppText>

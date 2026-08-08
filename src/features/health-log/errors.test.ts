@@ -1,6 +1,7 @@
 // Tests de classification et de nettoyage des erreurs du Journal.
 import { classifyHealthLogError } from './errors';
 
+// Ces tests vérifient le classement des erreurs et empêchent l’exposition de données techniques sensibles.
 describe('health log errors', () => {
   it('distinguishes session and RLS errors', () => {
     expect(classifyHealthLogError({ status: 401 }, 'list').kind).toBe('session');

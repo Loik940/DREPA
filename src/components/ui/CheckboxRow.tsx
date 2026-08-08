@@ -18,6 +18,7 @@ type CheckboxRowProps = {
 export function CheckboxRow({ checked, label, onChange, error, disabled = false }: CheckboxRowProps) {
   const { colors } = useAppTheme();
 
+  // Le rôle, la valeur cochée et l’état désactivé rendent le choix compréhensible sans repère visuel.
   return (
     <View style={styles.wrapper}>
       <Pressable

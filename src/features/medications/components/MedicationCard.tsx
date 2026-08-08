@@ -9,6 +9,7 @@ import { radii } from '@/theme/radii';
 import { spacing } from '@/theme/spacing';
 import type { Medication } from '../queries';
 
+// Composant d’affichage : il restitue le traitement saisi sans recommandation ni interprétation médicale.
 export function MedicationCard({ medication }: { medication: Medication }) {
   return (
     <Card style={styles.card}>

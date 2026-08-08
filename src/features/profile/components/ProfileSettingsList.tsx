@@ -31,6 +31,7 @@ export function ProfileSettingsList({ onLegal }: ProfileSettingsListProps) {
               </View>
             );
 
+            // Seuls les réglages déjà disponibles deviennent interactifs ; les autres restent informatifs.
             return setting.enabled ? (
               <Pressable accessibilityRole="button" key={setting.label} onPress={onLegal} style={styles.pressable}>
                 {content}

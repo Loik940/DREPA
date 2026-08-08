@@ -1,6 +1,7 @@
 // Schéma Zod d’une entrée Journal partielle, avec date contrôlée et champs médicaux déclaratifs.
 import { z } from 'zod';
 
+// Contrats Zod : ils contrôlent la forme des données déclarées, sans valider ni interpréter leur sens médical.
 const optionalText = (max: number) => z.string().trim().max(max, `Maximum ${max} caractères.`).optional();
 
 export const healthLogSchema = z.object({

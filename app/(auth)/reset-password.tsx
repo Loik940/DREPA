@@ -8,6 +8,7 @@ import { updatePasswordSchema, type UpdatePasswordValues } from '@/features/auth
 import { useAuth } from '@/providers/auth-provider';
 
 export default function ResetPasswordScreen() {
+  // Les hooks initialisent la navigation, l’authentification et le formulaire validé.
   const router = useRouter();
   const auth = useAuth();
   const { control, handleSubmit, setError, formState } = useForm<UpdatePasswordValues>({
@@ -15,25 +16,30 @@ export default function ResetPasswordScreen() {
     defaultValues: { password: '', passwordConfirmation: '' },
   });
 
+  // Le lien sécurisé doit être vérifié avant d’afficher le formulaire.
   if (auth.status === 'loading') {
     return <Text style={styles.message}>Vérification du lien...</Text>;
   }
 
+  // Un lien invalide ou absent renvoie vers la demande de récupération.
   if (!auth.isPasswordRecovery) {
     return <Redirect href="/(auth)/forgot-password" />;
   }
 
+  // Après validation, le serveur met à jour le mot de passe puis ferme la session.
   const onSubmit = async ({ password }: UpdatePasswordValues) => {
     try {
       await auth.updatePassword(password);
       await auth.signOut();
       auth.clearPasswordRecovery();
+      // Une modification réussie ramène vers la connexion.
       router.replace('/(auth)/login');
     } catch (error) {
       setError('root', { message: error instanceof Error ? error.message : 'Modification impossible.' });
     }
   };
 
+  // Le rendu principal affiche les champs et les erreurs de validation.
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Nouveau mot de passe</Text>

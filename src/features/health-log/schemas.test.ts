@@ -1,6 +1,7 @@
 // Tests de validation des entrées partielles du Journal.
 import { healthLogDefaults, healthLogSchema } from './schemas';
 
+// Ces tests couvrent les limites techniques du contrat Zod, pas la validité médicale des valeurs saisies.
 describe('health log schema', () => {
   it('accepts a partial entry with no health measurement', () => {
     expect(healthLogSchema.parse(healthLogDefaults)).toEqual(healthLogDefaults);

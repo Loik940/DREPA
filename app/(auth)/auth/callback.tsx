@@ -14,10 +14,12 @@ function parseAuthParams(url: string) {
 }
 
 export default function AuthCallbackScreen() {
+  // Les hooks préparent la navigation, le suivi du lien et l’état d’erreur.
   const router = useRouter();
   const handledUrl = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Le lien reçu est vérifié une seule fois puis échangé contre une session.
   useEffect(() => {
     const handleUrl = async (url: string | null) => {
       if (!url || handledUrl.current === url) {
@@ -42,6 +44,7 @@ export default function AuthCallbackScreen() {
         return;
       }
 
+      // L’appel serveur utilise le format de confirmation présent dans le lien.
       const result = code
         ? await supabase.auth.exchangeCodeForSession(code)
         : accessToken && refreshToken
@@ -53,6 +56,7 @@ export default function AuthCallbackScreen() {
         return;
       }
 
+      // Une confirmation réussie relance l’orientation depuis la route d’entrée.
       router.replace('/');
     };
 
@@ -62,9 +66,11 @@ export default function AuthCallbackScreen() {
     return () => subscription.remove();
   }, [router]);
 
+  // Une erreur de confirmation propose un retour sûr vers la connexion.
   if (error) {
     return <ScreenPlaceholder title="Confirmation impossible" description={error} actionLabel="Retour à la connexion" onAction={() => router.replace('/(auth)/login')} />;
   }
 
+  // Le rendu principal indique que la confirmation est encore en cours.
   return <ScreenPlaceholder title="Confirmation en cours" description="Nous vérifions ton adresse e-mail." />;
 }

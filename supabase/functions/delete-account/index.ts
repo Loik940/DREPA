@@ -7,6 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
 };
 
+// Cette fonction construit toutes les réponses JSON avec les en-têtes attendus.
 function response(body: Record<string, string>, status: number) {
   return new Response(JSON.stringify(body), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -15,6 +16,7 @@ function response(body: Record<string, string>, status: number) {
 }
 
 Deno.serve(async (request) => {
+  // La méthode est contrôlée avant toute opération sensible.
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -23,6 +25,7 @@ Deno.serve(async (request) => {
     return response({ error: 'Method not allowed' }, 405);
   }
 
+  // Le bearer token et la configuration serveur sont récupérés puis vérifiés.
   const authorization = request.headers.get('Authorization');
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
@@ -36,6 +39,7 @@ Deno.serve(async (request) => {
     return response({ error: 'Server configuration unavailable' }, 500);
   }
 
+  // Le token est validé auprès de Supabase pour identifier l’utilisateur courant.
   const userClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authorization } },
   });
@@ -45,6 +49,7 @@ Deno.serve(async (request) => {
     return response({ error: 'Unauthorized' }, 401);
   }
 
+  // Le client administrateur reste côté serveur et supprime uniquement cet utilisateur validé.
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -54,5 +59,6 @@ Deno.serve(async (request) => {
     return response({ error: 'Account deletion failed' }, 500);
   }
 
+  // La réponse confirme la suppression sans exposer de donnée sensible.
   return response({ status: 'deleted' }, 200);
 });

@@ -11,6 +11,7 @@ export const fontWeights = {
   bold: '700',
 } as const;
 
+// Les variantes donnent une hiérarchie lisible avec des tailles et interlignes adaptés aux écrans mobiles.
 export const typography = {
   display: {
     fontFamily: fontFamilies.display,

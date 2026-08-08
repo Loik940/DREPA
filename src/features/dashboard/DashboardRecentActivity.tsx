@@ -8,6 +8,7 @@ import { spacing } from '@/theme/spacing';
 import type { DashboardEntry } from './dashboard';
 
 export function DashboardRecentActivity({ entry }: { entry: DashboardEntry | null }) {
+  // Aucune activité fictive n'est rendue lorsque le journal est vide.
   if (!entry) {
     return null;
   }
@@ -27,6 +28,7 @@ export function DashboardRecentActivity({ entry }: { entry: DashboardEntry | nul
         <View style={styles.content}>
           <AppText variant="label">Entrée du journal</AppText>
           <AppText variant="caption" color="textSecondary">Enregistrée le {recordedAt}</AppText>
+          {/* La douleur est une valeur déclarée ; son absence reste masquée sans interprétation. */}
           {entry.pain_level !== null && (
             <AppText variant="caption" color="textSecondary">Douleur déclarée : {entry.pain_level}/10</AppText>
           )}

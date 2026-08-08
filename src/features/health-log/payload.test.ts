@@ -2,6 +2,7 @@
 import { buildHealthLogPayload } from './payload';
 import { healthLogDefaults } from './schemas';
 
+// Ces tests garantissent uniquement la conversion stable des valeurs déclarées avant envoi.
 describe('health log payload', () => {
   it('normalizes empty optional values to null', () => {
     expect(buildHealthLogPayload(healthLogDefaults)).toEqual({

@@ -1,6 +1,7 @@
 // Normalisation pure du payload Journal avant son envoi à Supabase.
 import type { HealthLogValues } from './schemas';
 
+// Normalisation du payload : les champs vides deviennent des valeurs adaptées à PostgreSQL, sans interprétation médicale.
 function optionalValue(value: string | undefined) {
   const normalized = value?.trim();
   return normalized ? normalized : null;

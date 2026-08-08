@@ -1,5 +1,7 @@
 -- Profile data is private and can only be accessed by its owner.
+-- Cette table contient les informations privées du profil.
 create table public.profiles (
+  -- Cette clé relie le profil à son propriétaire authentifié.
   id uuid primary key references auth.users(id) on delete cascade,
   first_name text,
   full_name text,
@@ -18,6 +20,7 @@ create table public.profiles (
   constraint profiles_full_name_length check (char_length(full_name) <= 160)
 );
 
+-- Cette fonction prépare la date utilisée par le trigger de mise à jour.
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -30,12 +33,15 @@ begin
 end;
 $$;
 
+-- Ce trigger actualise la date après chaque modification du profil.
 create trigger profiles_set_updated_at
 before update on public.profiles
 for each row execute function public.set_updated_at();
 
+-- La RLS protège chaque ligne de profil.
 alter table public.profiles enable row level security;
 
+-- Ces policies limitent chaque opération au propriétaire du profil.
 create policy "profiles_select_own"
 on public.profiles
 for select to authenticated

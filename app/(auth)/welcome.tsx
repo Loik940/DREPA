@@ -35,16 +35,19 @@ const slides = [
 ] as const;
 
 export default function WelcomeScreen() {
+  // Les hooks initialisent la navigation, le thème et l’étape affichée.
   const router = useRouter();
   const { colors } = useAppTheme();
   const [index, setIndex] = useState(0);
   const slide = slides[index];
 
+  // La fin du parcours mémorise la bienvenue avant la redirection choisie.
   const finish = async (destination: '/(auth)/login' | '/(auth)/register') => {
     await AsyncStorage.setItem(WELCOME_SEEN_KEY, 'true');
     router.replace(destination);
   };
 
+  // Cette action avance dans les étapes ou termine le parcours.
   const next = () => {
     if (index < slides.length - 1) {
       setIndex((current) => current + 1);
@@ -54,6 +57,7 @@ export default function WelcomeScreen() {
     void finish('/(auth)/register');
   };
 
+  // Le rendu principal présente l’étape courante et les actions de navigation.
   return (
     <ScreenContainer scroll contentContainerStyle={styles.content}>
       <View style={styles.header}>

@@ -15,6 +15,7 @@ import { useAppTheme } from '@/theme/use-app-theme';
 import { spacing } from '@/theme/spacing';
 
 export default function RegisterScreen() {
+  // Les hooks initialisent la navigation, le thème et le formulaire validé.
   const router = useRouter();
   const auth = useAuth();
   const { colors } = useAppTheme();
@@ -23,10 +24,12 @@ export default function RegisterScreen() {
     defaultValues: { email: '', password: '', passwordConfirmation: '' },
   });
 
+  // Après validation, l’inscription est envoyée au service d’authentification.
   const onSubmit = async (values: SignUpValues) => {
     try {
       const { session } = await auth.signUp(values.email, values.password);
 
+      // La redirection immédiate dépend de la création effective de la session.
       if (session) {
         router.replace('/');
       } else {
@@ -37,6 +40,7 @@ export default function RegisterScreen() {
     }
   };
 
+  // Le rendu principal présente le formulaire d’inscription et ses états.
   return (
     <ScreenContainer scroll contentContainerStyle={styles.content}>
       <View style={styles.header}>

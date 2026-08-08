@@ -8,8 +8,10 @@ import { useRouter } from 'expo-router';
 import { ProfileForm } from '@/features/profile/components/ProfileForm';
 
 export default function ProfileEditScreen() {
+  // Le hook prépare la redirection après une sauvegarde réussie.
   const router = useRouter();
 
+  // Le rendu principal délègue la validation et l’appel serveur au formulaire partagé.
   return (
     <ProfileForm
       title="Modifier mon profil"

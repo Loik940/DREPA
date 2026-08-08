@@ -24,12 +24,14 @@ import { spacing } from '@/theme/spacing';
 const profileEditRoute = '/(app)/profile-edit' as Href;
 
 export default function ProfileScreen() {
+  // Les hooks préparent la navigation, la session, la suppression et le profil privé.
   const router = useRouter();
   const { user, signOut, deleteAccount } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const profileQuery = useProfileQuery(user?.id);
 
+  // Le chargement, l’erreur et le profil absent ont chacun un rendu dédié.
   if (profileQuery.isPending) {
     return <LoadingState message="Chargement du profil..." />;
   }
@@ -42,6 +44,7 @@ export default function ProfileScreen() {
     return <EmptyState title="Profil incomplet" description="Complète ton profil pour retrouver ici tes informations personnelles." actionLabel="Compléter le profil" onAction={() => router.push('/(app)/complete-profile')} />;
   }
 
+  // La suppression définitive exige une confirmation destructive explicite.
   const confirmDelete = () => {
     Alert.alert(
       'Supprimer ton compte ?',
@@ -53,6 +56,7 @@ export default function ProfileScreen() {
     );
   };
 
+  // L’appel serveur de suppression expose un état d’attente et une erreur sûre.
   const handleDelete = async () => {
     setDeleteError(null);
     setIsDeleting(true);
@@ -66,6 +70,7 @@ export default function ProfileScreen() {
     }
   };
 
+  // Le rendu principal affiche les informations privées et les actions du compte.
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <View style={styles.header}>

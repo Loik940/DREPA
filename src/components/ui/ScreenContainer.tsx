@@ -13,6 +13,7 @@ type ScreenContainerProps = ViewProps & {
 export function ScreenContainer({ scroll = false, children, style, contentContainerStyle, ...props }: ScreenContainerProps) {
   const { colors } = useAppTheme();
 
+  // La zone sûre et la gestion du clavier gardent le contenu accessible sur les différents écrans mobiles.
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={[styles.safeArea, { backgroundColor: colors.backgroundPrimary }]}>
       {scroll ? (

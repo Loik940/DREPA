@@ -1,6 +1,8 @@
 -- Health journal entries are private, declarative data owned by the authenticated user.
+-- Cette table contient les entrées privées du journal de santé.
 create table public.health_logs (
   id uuid primary key default gen_random_uuid(),
+  -- Cette contrainte relie l’entrée à son propriétaire authentifié.
   user_id uuid not null references auth.users(id) on delete cascade,
   pain_level integer,
   pain_location text,
@@ -26,13 +28,16 @@ create table public.health_logs (
     check (notes is null or char_length(notes) <= 2000)
 );
 
+-- Cet index accélère la recherche chronologique des entrées d’un utilisateur.
 create index health_logs_user_recorded_at_idx
 on public.health_logs(user_id, recorded_at desc);
 
+-- Ce trigger actualise la date après chaque modification d’une entrée.
 create trigger health_logs_set_updated_at
 before update on public.health_logs
 for each row execute function public.set_updated_at();
 
+-- Cette fonction prépare le contrôle utilisé par le trigger de date future.
 create or replace function public.reject_future_health_log()
 returns trigger
 language plpgsql
@@ -48,12 +53,15 @@ begin
 end;
 $$;
 
+-- Ce trigger refuse une entrée enregistrée dans le futur.
 create trigger health_logs_reject_future_recorded_at
 before insert or update on public.health_logs
 for each row execute function public.reject_future_health_log();
 
+-- La RLS protège chaque entrée du journal de santé.
 alter table public.health_logs enable row level security;
 
+-- Ces policies limitent chaque opération au propriétaire de l’entrée.
 create policy "health_logs_select_own"
 on public.health_logs
 for select to authenticated
@@ -75,6 +83,7 @@ on public.health_logs
 for delete to authenticated
 using ((select auth.uid()) = user_id);
 
+-- Ces droits retirent les accès publics et autorisent les utilisateurs authentifiés.
 grant usage on schema public to authenticated;
 revoke all privileges on table public.health_logs from anon;
 revoke all privileges on table public.health_logs from public;

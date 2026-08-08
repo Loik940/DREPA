@@ -9,6 +9,7 @@ import { typography } from '@/theme/typography';
 
 type ButtonVariant = 'primary' | 'brand' | 'secondary' | 'ghost' | 'danger';
 
+// Les variantes gardent la même API tout en distinguant les actions principales, discrètes et dangereuses.
 type ButtonProps = Omit<PressableProps, 'children'> & {
   label: string;
   variant?: ButtonVariant;
@@ -22,6 +23,7 @@ export function Button({ label, variant = 'primary', loading = false, disabled, 
   const isDisabled = disabled || loading;
   const palette = getPalette(variant, colors);
 
+  // Les états désactivé et occupé sont exposés aux technologies d’assistance en plus du rendu visuel.
   return (
     <Pressable
       {...props}
@@ -39,6 +41,7 @@ export function Button({ label, variant = 'primary', loading = false, disabled, 
   );
 }
 
+// La palette traduit chaque intention du bouton avec les couleurs sémantiques du thème.
 function getPalette(variant: ButtonVariant, colors: ReturnType<typeof useAppTheme>['colors']) {
   if (variant === 'brand') return { background: colors.brand, border: colors.brand, text: colors.onBrand };
   if (variant === 'danger') return { background: colors.sos, border: colors.sos, text: colors.onSos };

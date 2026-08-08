@@ -29,6 +29,7 @@ const reminder: MedicationReminder = {
   updated_at: '2026-08-01T00:00:00.000Z',
 };
 
+// Ces tests couvrent les contrats et statuts techniques ; ils ne valident ni prescription, ni dosage, ni prise réelle.
 describe('medication contracts', () => {
   it('parses unique valid reminder times', () => {
     expect(parseReminderTimes('20:00, 08:00, 20:00, invalide')).toEqual(['08:00', '20:00']);

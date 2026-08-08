@@ -13,8 +13,10 @@ const tabIcons = {
 } as const satisfies Record<string, AndroidSymbol>;
 
 export default function TabsLayout() {
+  // Le hook charge les couleurs utilisées par la barre de navigation.
   const { colors } = useAppTheme();
 
+  // Le rendu principal déclare les onglets et leurs icônes.
   return (
     <Tabs
       screenOptions={{

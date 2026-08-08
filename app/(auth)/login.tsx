@@ -15,6 +15,7 @@ import { useAppTheme } from '@/theme/use-app-theme';
 import { spacing } from '@/theme/spacing';
 
 export default function LoginScreen() {
+  // Les hooks initialisent la navigation, le thème et le formulaire validé.
   const router = useRouter();
   const auth = useAuth();
   const { colors } = useAppTheme();
@@ -23,17 +24,20 @@ export default function LoginScreen() {
     defaultValues: { email: '', password: '' },
   });
 
+  // Après validation, les identifiants sont envoyés au service d’authentification.
   const onSubmit = async (values: SignInValues) => {
     auth.clearError();
 
     try {
       await auth.signIn(values.email, values.password);
+      // Une connexion réussie relance l’orientation depuis la route d’entrée.
       router.replace('/');
     } catch (error) {
       setError('root', { message: error instanceof Error ? error.message : 'Connexion impossible.' });
     }
   };
 
+  // Le rendu principal présente le formulaire de connexion et ses erreurs.
   return (
     <ScreenContainer scroll contentContainerStyle={styles.content}>
       <View style={styles.header}>

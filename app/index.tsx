@@ -9,10 +9,12 @@ import { useAuth } from '@/providers/auth-provider';
 export const WELCOME_SEEN_KEY = '@drepa/welcome-seen';
 
 export default function HomeScreen() {
+  // Les hooks préparent la navigation, la session et l’état local de bienvenue.
   const router = useRouter();
   const { session, sessionReady, status } = useAuth();
   const [welcomeSeen, setWelcomeSeen] = useState<boolean | null>(null);
 
+  // La préférence locale est chargée avant de choisir le premier écran public.
   useEffect(() => {
     let mounted = true;
 
@@ -33,6 +35,7 @@ export default function HomeScreen() {
     };
   }, []);
 
+  // Les états de chargement et d’erreur bloquent toute redirection prématurée.
   if (!sessionReady || status === 'loading' || (!session && welcomeSeen === null)) {
     return <ScreenPlaceholder title="Chargement" description="Restauration de la session." />;
   }
@@ -48,9 +51,11 @@ export default function HomeScreen() {
     );
   }
 
+  // Une session valide ouvre directement l’espace protégé.
   if (session) {
     return <Redirect href="/(app)/(tabs)" />;
   }
 
+  // Sans session, la redirection dépend de la consultation de la bienvenue.
   return welcomeSeen ? <Redirect href="/(auth)/login" /> : <Redirect href="/(auth)/welcome" />;
 }

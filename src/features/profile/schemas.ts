@@ -1,6 +1,7 @@
 // Schémas Zod des champs de profil et des trois consentements obligatoires.
 import { z } from 'zod';
 
+// La validation Zod nettoie les textes et borne leur longueur sans interpréter les informations médicales déclarées.
 const optionalText = (max: number) => z.string().trim().max(max).optional();
 
 export const profileSchema = z.object({
@@ -19,6 +20,7 @@ export const profileSchema = z.object({
 
 export type ProfileValues = z.infer<typeof profileSchema>;
 
+// Les trois accords sont obligatoires et sont validés ensemble avant l'enregistrement du consentement.
 export const consentSchema = z.object({
   termsAccepted: z.boolean().refine(Boolean, 'Acceptez les conditions générales.'),
   privacyAccepted: z.boolean().refine(Boolean, 'Acceptez la politique de confidentialité.'),

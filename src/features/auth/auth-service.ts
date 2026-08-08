@@ -19,6 +19,7 @@ function requireSupabase() {
   return supabase;
 }
 
+// Les détails techniques de Supabase ne remontent pas dans l'interface afin de ne pas exposer d'information sensible.
 function toAuthOperationError(error: unknown) {
   if (error instanceof AuthOperationError) {
     return error;
@@ -73,6 +74,7 @@ export async function signOut() {
 
 export async function deleteAccount() {
   try {
+    // La suppression est confiée à la fonction sécurisée qui contrôle la session côté serveur.
     const { error } = await requireSupabase().functions.invoke('delete-account', { body: {} });
 
     if (error) {

@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AppProvider } from '@/providers/app-provider';
 
 export default function RootLayout() {
+  // Le rendu principal installe les services globaux avant la navigation.
   return (
     <AppProvider>
       <StatusBar style="dark" />

@@ -11,6 +11,7 @@ type OnboardingIllustrationProps = {
 export function OnboardingIllustration({ variant }: OnboardingIllustrationProps) {
   const { colors } = useAppTheme();
 
+  // Une même description accessible accompagne les trois variantes purement décoratives de l’illustration.
   return (
     <View accessible accessibilityLabel="Illustration d’accompagnement DRÉPA" style={[styles.canvas, { backgroundColor: colors.backgroundMuted }]}>
       {variant === 'calm' && <CalmIllustration colors={colors} />}
@@ -22,6 +23,7 @@ export function OnboardingIllustration({ variant }: OnboardingIllustrationProps)
 
 type IllustrationColors = ReturnType<typeof useAppTheme>['colors'];
 
+// Chaque variante compose une scène locale avec les couleurs sémantiques du thème.
 function CalmIllustration({ colors }: { colors: IllustrationColors }) {
   return (
     <View style={styles.centered}>

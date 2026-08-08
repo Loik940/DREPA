@@ -9,6 +9,7 @@ import { passwordResetRequestSchema, type PasswordResetRequestValues } from '@/f
 import { useAuth } from '@/providers/auth-provider';
 
 export default function ForgotPasswordScreen() {
+  // Les hooks initialisent l’authentification, l’état d’envoi et le formulaire validé.
   const auth = useAuth();
   const [sent, setSent] = useState(false);
   const { control, handleSubmit, setError, formState } = useForm<PasswordResetRequestValues>({
@@ -16,6 +17,7 @@ export default function ForgotPasswordScreen() {
     defaultValues: { email: '' },
   });
 
+  // Après validation, la demande de récupération est envoyée au serveur.
   const onSubmit = async ({ email }: PasswordResetRequestValues) => {
     try {
       await auth.requestPasswordReset(email);
@@ -25,6 +27,7 @@ export default function ForgotPasswordScreen() {
     }
   };
 
+  // Le rendu principal affiche le formulaire et la confirmation d’envoi.
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Mot de passe oublié</Text>

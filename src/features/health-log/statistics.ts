@@ -14,6 +14,7 @@ export type HealthLogStatistics = {
   topTriggers: { value: string; count: number }[];
 };
 
+// Ces calculs résument uniquement les déclarations enregistrées. Ils ne posent aucun diagnostic et ne prédisent pas une crise.
 function average(values: (number | null)[]) {
   const validValues = values.filter((value): value is number => value !== null);
   if (!validValues.length) return null;

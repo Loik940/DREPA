@@ -10,6 +10,7 @@ export function useOnboardingStatus() {
   const profileQuery = useProfileQuery(user?.id);
   const consentsQuery = useConsentsQuery(user?.id);
 
+  // Les erreurs inattendues sont ramenées à un format neutre sans exposer leur contenu technique à l'écran.
   const normalizeError = (
     error: unknown,
     source: 'profiles' | 'user_consents',
@@ -22,10 +23,12 @@ export function useOnboardingStatus() {
   const profileError = normalizeError(profileQuery.error, 'profiles');
   const consentError = normalizeError(consentsQuery.error, 'user_consents');
 
+  // Une nouvelle tentative recharge ensemble les deux sources nécessaires à la décision d'onboarding.
   const retry = async () => {
     await Promise.all([profileQuery.refetch(), consentsQuery.refetch()]);
   };
 
+  // La décision finale combine l'état de session, les consentements et les champs minimaux du profil.
   return {
     ...getOnboardingStatus({
       sessionReady,

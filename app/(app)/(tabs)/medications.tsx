@@ -21,17 +21,21 @@ import { spacing } from '@/theme/spacing';
 const medicationFormRoute = '/(app)/medication-form' as Href;
 
 export default function MedicationsScreen() {
+  // Les hooks préparent la navigation, l’utilisateur, les traitements et les prises.
   const router = useRouter();
   const { user } = useAuth();
   const query = useMedicationDashboardQuery(user?.id);
   const markTaken = useMarkMedicationTakenMutation(user?.id);
   const date = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
 
+  // Le chargement et l’erreur sont traités avant de construire les rappels.
   if (query.isPending) return <LoadingState message="Chargement des traitements..." />;
   if (query.isError) return <ErrorState description="Tes traitements ne peuvent pas être chargés pour le moment." onRetry={() => void query.refetch()} />;
 
+  // Les rappels du jour sont préparés seulement avec des données disponibles.
   const reminders = buildTodayReminders(query.data.medications, query.data.reminders, query.data.intakes);
 
+  // Le rendu principal affiche les rappels, les traitements et leurs états vides.
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <View style={styles.header}>

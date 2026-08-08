@@ -31,6 +31,7 @@ const entries = [
   },
 ];
 
+// Ces tests vérifient des résultats descriptifs, sans leur donner de portée médicale.
 describe('health log statistics', () => {
   it('calculates descriptive averages and unique tracked days', () => {
     const result = calculateHealthLogStatistics(entries);

@@ -1,4 +1,5 @@
 // Dimensions communes des champs, boutons, icônes, avatars et zones tactiles.
+// Les hauteurs interactives et la cible tactile assurent une zone d’action confortable sur mobile.
 export const sizes = {
   inputHeight: 52,
   buttonHeight: 52,
