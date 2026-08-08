@@ -10,6 +10,7 @@ module.exports = {
   icon: './assets/images/icon.png',
   android: {
     package: 'bj.drepa.app',
+    permissions: ['android.permission.SCHEDULE_EXACT_ALARM'],
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
       foregroundImage: './assets/images/android-icon-foreground.png',
@@ -21,6 +22,7 @@ module.exports = {
     'expo-router',
     'expo-secure-store',
     'expo-notifications',
+    '@react-native-community/datetimepicker',
     'expo-location',
     [
       'expo-splash-screen',

@@ -46,7 +46,8 @@ DRÉPA est une application mobile Android francophone destinée à l’accompagn
 - **React Hook Form** gère les formulaires React Native.
 - **Zod** valide les données d’authentification, de consentement et de profil.
 - **Expo SecureStore** conserve localement la session Supabase ; il ne doit pas servir à stocker des données médicales.
-- **Expo Notifications** est installé pour les notifications locales futures.
+- **Expo Notifications** présente et programme les rappels locaux génériques, y compris au premier plan.
+- **React Native Community DateTimePicker** fournit les calendriers et sélecteurs d’heure natifs sans saisie clavier.
 - **Expo Location** est installé pour les parcours futurs nécessitant une localisation avec consentement.
 - **EAS Build** produit les development builds et APK Android.
 
@@ -125,9 +126,9 @@ DREPA/
 |---|---|---|---|
 | `README.md` | Présentation du produit, objectifs, fonctionnalités prévues, stack, état du projet et avertissement médical. | Développeurs, contributeurs et lecteurs du dépôt. | Ne pas y ajouter de clé, donnée patient ou promesse médicale non validée. Le texte décrit aussi des fonctionnalités futures qui ne sont pas toutes implémentées. |
 | `DREPA-Cahier.md` | Cahier des charges fonctionnel et technique de référence : public cible, MVP, limites médicales, sécurité, navigation et exigences métier. | Documentation, décisions d’architecture et futures implémentations. | Document de référence à préserver. Toute évolution fonctionnelle doit rester compatible avec ce cahier ou être documentée avant mise en œuvre. |
-| `package.json` | Manifeste Node : point d’entrée Expo Router, dépendances Expo/React Native/Supabase, AsyncStorage pour la préférence de bienvenue, scripts de développement, lint, tests, typecheck et builds EAS. | npm, Expo CLI, Jest, ESLint et EAS CLI. | Les versions Expo doivent rester alignées sur SDK 57. Les packages Expo doivent être installés avec `npx expo install`. L’override npm `uuid: 11.1.1` corrige la vulnérabilité transitive de `xcode` sans rétrograder Expo. |
+| `package.json` | Manifeste Node : point d’entrée Expo Router, dépendances Expo/React Native/Supabase, DateTimePicker natif, AsyncStorage pour la préférence de bienvenue, scripts de développement, lint, tests, typecheck et builds EAS. | npm, Expo CLI, Jest, ESLint et EAS CLI. | Les versions Expo doivent rester alignées sur SDK 57. Les packages Expo doivent être installés avec `npx expo install`. L’override npm `uuid: 11.1.1` corrige la vulnérabilité transitive de `xcode` sans rétrograder Expo. |
 | `package-lock.json` | Verrouille l’arbre exact des dépendances npm. | npm install et les environnements CI/build. | Ne pas modifier manuellement. Une modification de `package.json` doit être suivie d’une régénération contrôlée du lockfile. |
-| `app.config.js` | Configuration Expo CommonJS : identité DRÉPA, plateforme Android, schéma de deep link, icône, Android, plugins, splash screen, expériences et identifiant EAS. | Expo CLI, EAS CLI et les builds Android. | Conserver `name: DREPA`, `slug: drepa`, `scheme: drepa`, `platforms: ['android']`, `bj.drepa.app`, les plugins et `extra.eas.projectId`. Ne jamais y placer de secret. |
+| `app.config.js` | Configuration Expo CommonJS : identité DRÉPA, plateforme Android, schéma de deep link, icône, permission `android.permission.SCHEDULE_EXACT_ALARM`, plugins dont DateTimePicker, splash screen, expériences et identifiant EAS. | Expo CLI, EAS CLI et les builds Android. | Conserver `name: DREPA`, `slug: drepa`, `scheme: drepa`, `platforms: ['android']`, `bj.drepa.app`, l’icône adaptative, les plugins et `extra.eas.projectId`. La permission et le plugin natifs exigent un nouveau build Android. Ne jamais y placer de secret. |
 | `eas.json` | Profils EAS `development`, `preview` et `production`, tous configurés pour Android. | EAS Build. | Le profil development utilise `expo-dev-client` et produit un APK interne. Aucun secret ou identifiant Supabase ne doit être ajouté ici. |
 | `tsconfig.json` | Étend la configuration Expo, active le mode strict, les types Jest et les alias `@/*` vers `src/*` et `@/assets/*` vers `assets/*`. | TypeScript, Babel/Jest et l’éditeur. | Les alias doivent rester cohérents avec les imports. Ne pas désactiver `strict` pour masquer une erreur de contrat. |
 | `eslint.config.js` | Configuration ESLint flat basée sur `eslint-config-expo`, avec exclusion de `dist`. | `npm run lint`. | Toute règle désactivée doit être justifiée. Les fichiers générés ne doivent pas être ajoutés au lint sans nécessité. |
@@ -141,7 +142,7 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 
 | Fichier / route | URL ou groupe | Rôle | Accès, dépendances et états |
 |---|---|---|---|
-| `app/_layout.tsx` | Layout racine | Monte `AppProvider` puis le `Stack` Expo Router. | Point d’entrée de tous les écrans. Ne doit pas contenir une redirection concurrente avec les guards enfants. |
+| `app/_layout.tsx` | Layout racine | Configure une fois la présentation sonore et visuelle des notifications au premier plan, puis monte `AppProvider` et le `Stack` Expo Router. | Point d’entrée de tous les écrans. Ne doit pas contenir une redirection concurrente avec les guards enfants ni exposer le contenu d’un traitement. |
 | `app/index.tsx` | `/` | Observe l’état Auth et redirige vers la connexion ou les onglets protégés. | Affiche chargement ou erreur de configuration avec `Réessayer`. La complétude du profil est ensuite décidée par `(app)/_layout.tsx`. |
 | `app/+not-found.tsx` | Absent actuellement | Route de fallback prévue dans la documentation mais non créée dans le code actuel. | À créer avant d’exposer des routes supplémentaires ; toute page inconnue devrait proposer un retour sûr. |
 | `app/(auth)/_layout.tsx` | Groupe public `(auth)` | Protège les écrans publics contre une session déjà authentifiée et autorise le mode récupération. | Utilise `useAuth`, `Redirect`, `Stack` et `ScreenPlaceholder`. États de session `loading`, `error`, `authenticated` et récupération de mot de passe. |
@@ -162,7 +163,7 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/(app)/(tabs)/_layout.tsx` | Groupe protégé `(app)/(tabs)` | Déclare les onglets principaux. | Accessible après session, consentements et profil complet. |
 | `app/(app)/(tabs)/index.tsx` | Onglet accueil | Dashboard scalable : identité, action d’enregistrement, raccourcis, résumé conditionnel du journal et dernière activité. | Réutilise le cache Profil et la requête des entrées des 7 derniers jours. N’invente aucune donnée, n’ajoute pas de SOS et ne produit aucune interprétation médicale. |
 | `app/(app)/(tabs)/journal.tsx` | Onglet journal | Affiche l’état vide ou les 50 entrées récentes et ouvre le formulaire de saisie. | Utilise `useHealthLogsQuery`, les états UI partagés et des données privées filtrées par `session.user.id`. Les informations restent descriptives. |
-| `app/(app)/medication-form.tsx` | `/medication-form` | Formulaire d’ajout d’un traitement prescrit et de ses horaires de rappel local. | React Hook Form, Zod, Expo Notifications et mutation transactionnelle avec nettoyage des notifications en cas d’échec. Aucun médicament ou dosage n’est proposé. |
+| `app/(app)/medication-form.tsx` | `/medication-form` | Formulaire d’ajout d’un traitement prescrit avec calendrier local, sélecteur d’heures sans clavier et test générique de notification à dix secondes. | React Hook Form, Zod, DateTimePicker, Expo Notifications et mutation transactionnelle avec nettoyage des notifications en cas d’échec. Aucun contenu de traitement n’est envoyé dans la notification de test. |
 | `app/(app)/(tabs)/medications.tsx` | Onglet médicaments | Affiche les traitements saisis, les rappels du jour et permet de confirmer une prise déclarée. | Charge uniquement les lignes du propriétaire, calcule les statuts localement et n’affiche aucune donnée fictive ou conseil médical non sourcé. |
 | `app/(app)/(tabs)/community.tsx` | Onglet communauté | Placeholder de la communauté. | Ne pas ajouter de publications, commentaires ou modération dans le socle actuel. |
 | `app/(app)/(tabs)/profile.tsx` | Onglet profil | Présente l’identité, les informations de suivi, les paramètres disponibles, la déconnexion et la suppression sécurisée du compte. Le bouton `Modifier` ouvre `/profile-edit`. | Utilise `useProfileQuery`, les composants `src/features/profile/components/`, Expo Router et `useAuth`. La suppression passe par l’Edge Function après confirmation explicite. |
@@ -268,10 +269,14 @@ Les routes documentées mais absentes actuellement incluent les écrans métier 
 | Fichier | Rôle | Dépendances, données et risques |
 |---|---|---|
 | `src/features/medications/schemas.ts` | Valide le traitement prescrit, les dates et les horaires `HH:MM`. | Zod ; aucun nom, dosage ou horaire par défaut n’est inventé. |
+| `src/features/medications/date-time.ts` | Convertit de façon pure les dates locales `AAAA-MM-JJ` et les heures `HH:MM` vers ou depuis `Date`. | Utilise uniquement les composantes locales de `Date` afin d’éviter un décalage UTC ; refuse les formats et dates invalides. |
+| `src/features/medications/date-time.test.ts` | Vérifie le formatage, le parsing, l’heure sur 24 heures et l’aller-retour sans conversion UTC. | Jest et données calendaires synthétiques uniquement ; aucun accès réseau ou contenu médical. |
 | `src/features/medications/errors.ts` | Classe les erreurs session, réseau, RLS et Supabase du module. | Messages utilisateur neutres ; aucun token ou détail sensible affiché. |
 | `src/features/medications/queries.ts` | Charge en parallèle les traitements, rappels et prises du jour du seul utilisateur authentifié. | Supabase, TanStack Query et `sessionReady`; query key isolée par `user.id`. |
 | `src/features/medications/mutations.ts` | Crée un traitement et ses rappels, annule les notifications en cas d’échec, et enregistre les prises déclarées. | Supabase, QueryClient et Expo Notifications. Le cache est invalidé après succès. |
-| `src/features/medications/notifications.ts` | Configure le canal Android, demande la permission et programme/annule des rappels quotidiens génériques. | Expo Notifications. Le contenu verrouillé ne contient ni nom de médicament ni dosage. |
+| `src/features/medications/notifications.ts` | Configure la présentation au premier plan, le canal Android d’importance haute, la permission, les rappels quotidiens et le test générique après dix secondes. | Expo Notifications. Le son par défaut et une vibration courte sont utilisés ; aucun nom de médicament ni dosage n’entre dans le contenu. |
+| `src/features/medications/components/DatePickerField.tsx` | Champ accessible qui ouvre le calendrier natif, affiche la date en français et conserve `AAAA-MM-JJ` dans le formulaire. | DateTimePicker, design system et `date-time.ts`. Aucun clavier ; la date de fin peut être effacée et bornée par la date de début. |
+| `src/features/medications/components/ReminderTimesField.tsx` | Champ accessible qui ajoute des heures natives sur 24 heures et les affiche en chips supprimables. | DateTimePicker, composants UI, `date-time.ts` et `parseReminderTimes`. Les heures sont uniques, triées et jamais saisies manuellement. |
 | `src/features/medications/status.ts` | Calcule les rappels du jour et les statuts `late`, `pending`, `taken`, `snoozed`, `skipped`. | Fonction pure basée sur l’heure locale et les prises réelles. |
 | `src/features/medications/components/ReminderCard.tsx` | Carte horizontale d’un rappel avec statut et action de confirmation. | Composants UI et tokens ; aucune confirmation automatique. |
 | `src/features/medications/components/MedicationCard.tsx` | Carte d’un traitement réellement saisi. | Affiche nom, dosage déclaré, fréquence et état actif/arrêté. |
@@ -506,7 +511,7 @@ Le callback de confirmation e-mail est implémenté dans `app/(auth)/auth/callba
 
 | Fichier | Dépend de | Utilisé par |
 |---|---|---|
-| `app/_layout.tsx` | `expo-router`, `src/providers/app-provider.tsx` | Toutes les routes `app/`. |
+| `app/_layout.tsx` | `expo-router`, `src/providers/app-provider.tsx`, `medications/notifications.ts` | Toutes les routes `app/` et la présentation des notifications au premier plan. |
 | `app/index.tsx` | `expo-router`, `useAuth`, `ScreenPlaceholder` | Expo Router comme route d’entrée. |
 | `app/(auth)/login.tsx` | `auth-service` via `AuthProvider`, `auth/schemas.ts`, React Hook Form, Zod | Utilisateur non connecté. |
 | `app/(auth)/register.tsx` | `auth-service` via `AuthProvider`, `auth/schemas.ts`, React Hook Form, Zod | Utilisateur non connecté. |
@@ -535,10 +540,10 @@ Le callback de confirmation e-mail est implémenté dans `app/(auth)/auth/callba
 | `supabase/functions/delete-account/index.ts` | Supabase Auth Admin, secrets Edge Function | `auth-service.ts` via `functions.invoke`; ne jamais déployer la clé serveur au mobile. |
 | `src/types/database.types.ts` | Schéma des migrations existantes | Client Supabase et code profil. |
 | `supabase/migrations/*.sql` | PostgreSQL et `auth.users` | Projet Supabase distant/local ; consommées par le client via RLS. |
-| `app.config.js` | Expo et assets principaux | Expo CLI et EAS Build. |
+| `app.config.js` | Expo, DateTimePicker, Notifications et assets principaux | Expo CLI et EAS Build ; un nouveau build natif Android est requis après cette configuration. |
 | `eas.json` | EAS CLI | Profiles development, preview et production Android. |
 
-Les dépendances externes importantes sont centralisées dans `package.json` : Expo/React Native, Expo Router, AsyncStorage, modules SecureStore/Notifications/Location/Linking, Supabase JS, TanStack Query, React Hook Form, Zod, ESLint, TypeScript et les outils de tests. Les fichiers de `node_modules/` ne sont pas documentés individuellement. `npm audit` doit rester à zéro vulnérabilité ; aucun correctif `--force` ne doit être utilisé s’il modifie la version majeure d’Expo.
+Les dépendances externes importantes sont centralisées dans `package.json` : Expo/React Native, Expo Router, React Native Community DateTimePicker, AsyncStorage, modules SecureStore/Notifications/Location/Linking, Supabase JS, TanStack Query, React Hook Form, Zod, ESLint, TypeScript et les outils de tests. Les fichiers de `node_modules/` ne sont pas documentés individuellement. `npm audit` doit rester à zéro vulnérabilité ; aucun correctif `--force` ne doit être utilisé s’il modifie la version majeure d’Expo.
 
 ## 13. Règles de modification
 

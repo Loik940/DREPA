@@ -6,12 +6,25 @@ const CHANNEL_ID = 'medication-reminders';
 
 export class NotificationPermissionError extends Error {}
 
+export function configureMedicationNotificationPresentation() {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
+
 // Notifications génériques : elles n’exposent aucun traitement et servent seulement à l’organisation des rappels.
 export async function ensureMedicationNotificationPermission() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'Rappels de traitements',
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+      vibrationPattern: [0, 250, 250, 250],
     });
   }
 
@@ -24,8 +37,17 @@ export async function ensureMedicationNotificationPermission() {
 export async function scheduleMedicationReminder(time: string) {
   const [hour, minute] = time.split(':').map(Number);
   return Notifications.scheduleNotificationAsync({
-    content: { title: 'Rappel DRÉPA', body: 'Un rappel de traitement est prévu.' },
+    content: { title: 'Rappel DRÉPA', body: 'Vous avez un rappel dans DRÉPA.', sound: 'default' },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, channelId: CHANNEL_ID, hour, minute },
+  });
+}
+
+// Ce test local reste générique et ne reprend aucune information médicale saisie.
+export async function scheduleMedicationReminderTest() {
+  await ensureMedicationNotificationPermission();
+  return Notifications.scheduleNotificationAsync({
+    content: { title: 'Test DRÉPA', body: 'Les notifications DRÉPA fonctionnent sur cet appareil.', sound: 'default' },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, channelId: CHANNEL_ID, seconds: 10 },
   });
 }
 
