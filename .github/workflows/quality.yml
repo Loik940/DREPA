@@ -1,0 +1,73 @@
+# Ce workflow vérifie la qualité et la sécurité du dépôt DRÉPA.
+# Il démarre sur main, sur les pull requests vers main ou manuellement.
+# Il utilise seulement des droits de lecture et ne demande aucun secret Supabase.
+# Il ne déploie rien et le contrôle de secrets cible uniquement des motifs de vraies clés.
+# Une personne doit examiner les résultats et valider toute fusion ou correction.
+
+name: Qualité et sécurité
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Configurer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérifier TypeScript
+        run: npm run typecheck
+
+      - name: Vérifier ESLint
+        run: npm run lint
+
+      - name: Exécuter les tests
+        run: npm test -- --testPathIgnorePatterns='[\\/]\.kilo[\\/]'
+
+      - name: Vérifier les versions Expo
+        run: npx expo install --check
+
+      - name: Vérifier le projet Expo
+        run: npx expo-doctor
+
+      - name: Auditer les dépendances de production critiques
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: Détecter les secrets réels suivis par Git
+        shell: bash
+        run: |
+          service_role_name='SUPABASE_SERVICE_ROLE_KEY'
+          patterns="imole_live_[A-Za-z0-9_-]{16,}|sb_secret_[A-Za-z0-9_-]{16,}|sk-[A-Za-z0-9_-]{20,}|${service_role_name}=[[:space:]]*['\"]?[^[:space:]'\"#]+"
+          matches="$(git grep -n -I -E "$patterns" -- . ':(exclude)package-lock.json' || true)"
+
+          if [ -n "$matches" ]; then
+            echo "Des motifs de secrets réels ont été détectés dans des fichiers suivis par Git :"
+            printf '%s\n' "$matches" | cut -d: -f1,2
+            exit 1
+          fi
+
+          echo "Aucun motif de secret réel détecté."

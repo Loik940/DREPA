@@ -1,0 +1,56 @@
+# Ce workflow lance un build Android Preview interne avec EAS Build.
+# Il démarre uniquement après un déclenchement manuel dans GitHub Actions.
+# Il lit EXPO_TOKEN depuis les secrets GitHub sans jamais afficher sa valeur.
+# Il ne publie aucune version Production et ne remplace pas la recette humaine.
+# Une personne doit autoriser l'environnement Preview et contrôler le build obtenu.
+
+name: Build Android Preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eas-preview
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: preview
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Configurer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérifier la présence du jeton Expo
+        shell: bash
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "Le secret GitHub EXPO_TOKEN est requis pour lancer un build Android Preview."
+            exit 1
+          fi
+
+          echo "Le secret EXPO_TOKEN est configuré."
+
+      - name: Configurer Expo et EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Lancer le build Android Preview
+        run: npx eas-cli@latest build --platform android --profile preview --non-interactive --no-wait

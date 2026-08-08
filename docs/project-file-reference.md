@@ -56,6 +56,11 @@ DRÉPA est une application mobile Android francophone destinée à l’accompagn
 ```text
 DREPA/
 ├── .env.example
+├── .github/
+│   ├── dependabot.yml
+│   └── workflows/
+│       ├── eas-preview.yml
+│       └── quality.yml
 ├── .gitignore
 ├── DREPA-Cahier.md
 ├── README.md
@@ -135,6 +140,32 @@ DREPA/
 | `expo-env.d.ts` | Référence automatique aux types Expo. | TypeScript et l’éditeur. | Fichier généré à ne pas éditer manuellement. Il est ignoré par Git selon `.gitignore`. |
 | `.env.example` | Noms vides des variables publiques attendues : `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` et `EXPO_PUBLIC_APP_ENV`. | Configuration locale et documentation de l’environnement. | Ne contient aucune valeur réelle. Les fichiers `.env` et `.env.local` restent ignorés et ne doivent jamais être lus ou commités dans cette référence. |
 | `.gitignore` | Exclut dépendances, builds, environnements locaux, secrets, certificats, logs, caches et fichiers Expo générés. | Git. | Toute nouvelle source de secret ou de fichier généré doit être ajoutée ici sans ignorer des fichiers source utiles. |
+
+### Automatisation GitHub
+
+| Fichier | Rôle et déclenchement | Dépendances | Sécurité, limites et validation humaine |
+|---|---|---|---|
+| `.github/workflows/quality.yml` | CI « Qualité et sécurité » lancée sur les push vers `main`, les pull requests ciblant `main` et à la demande. Elle exécute l'installation déterministe, TypeScript, ESLint, Jest hors `.kilo`, les contrôles Expo et l'audit critique des dépendances de production. | GitHub Actions, `actions/checkout@v4`, `actions/setup-node@v4`, Node.js 22, npm et les scripts de `package.json`. | Permissions limitées à `contents: read`, aucun secret Supabase requis et concurrence annulant les anciens contrôles d'une même référence. Le scan Git exclut `package-lock.json`, recherche seulement des motifs longs de clés réelles ou une affectation non vide de `SUPABASE_SERVICE_ROLE_KEY`, puis n'affiche que le chemin et la ligne. L'audit bloque au niveau critique afin de ne pas casser la CI sur l'advisory `high` Metro/`image-size` sans correctif compatible Expo SDK 57. Une personne reste responsable de l'analyse des échecs et de la fusion. |
+| `.github/workflows/eas-preview.yml` | CD manuel « Build Android Preview » lancé uniquement avec `workflow_dispatch`. Il soumet à EAS un build Android utilisant le profil `preview` et retourne immédiatement avec `--no-wait`. | GitHub Actions, `actions/checkout@v4`, `actions/setup-node@v4`, `expo/expo-github-action@v8`, Node.js 22, npm, EAS CLI et le profil `preview` d'`eas.json`. | Le secret GitHub `EXPO_TOKEN` est obligatoire dans l'environnement `preview`; sa présence est vérifiée sans afficher sa valeur. Les builds d'un même groupe ne sont pas annulés. Une protection d'environnement GitHub peut imposer une approbation avant accès au secret. Le résultat EAS doit être contrôlé et testé humainement. Aucun build ou déploiement Production n'est automatique. |
+| `.github/dependabot.yml` | Planifie chaque lundi à 06:00, fuseau `Africa/Porto-Novo`, les propositions de mise à jour npm et GitHub Actions. | Service GitHub Dependabot, manifeste et lockfile npm, références d'actions dans `.github/workflows/`. | Limite les pull requests ouvertes à 5 pour npm et 3 pour GitHub Actions, avec des labels dédiés. Aucun automerge n'est configuré : chaque mise à jour doit passer par la CI, une revue et une fusion humaines. |
+
+Flux CI et CD :
+
+```text
+push main / pull request vers main / lancement manuel
+    → quality.yml
+    → installation, TypeScript, ESLint, Jest, Expo, audit critique et scan de secrets
+    → lecture et décision humaines
+
+lancement manuel du workflow Preview
+    → approbation éventuelle de l'environnement preview
+    → vérification de EXPO_TOKEN
+    → eas-preview.yml
+    → build EAS Android preview non bloquant
+    → téléchargement, recette et décision humaines
+```
+
+La Production n'est jamais construite, publiée ou déployée automatiquement par ces workflows.
 
 ## 6. Dossier `app/`
 
@@ -542,8 +573,11 @@ Le callback de confirmation e-mail est implémenté dans `app/(auth)/auth/callba
 | `supabase/migrations/*.sql` | PostgreSQL et `auth.users` | Projet Supabase distant/local ; consommées par le client via RLS. |
 | `app.config.js` | Expo, DateTimePicker, Notifications et assets principaux | Expo CLI et EAS Build ; un nouveau build natif Android est requis après cette configuration. |
 | `eas.json` | EAS CLI | Profiles development, preview et production Android. |
+| `.github/workflows/quality.yml` | GitHub Actions, Node.js 22, npm, Expo CLI, Expo Doctor, Git et scripts de `package.json` | Push sur `main`, pull requests vers `main` et exécutions manuelles de la CI. |
+| `.github/workflows/eas-preview.yml` | GitHub Actions, Node.js 22, npm, EAS CLI, `eas.json`, environnement `preview` et secret `EXPO_TOKEN` | Builds Android Preview déclenchés et validés manuellement. |
+| `.github/dependabot.yml` | Dependabot, `package.json`, `package-lock.json` et workflows GitHub Actions | Pull requests hebdomadaires de mise à jour, sans automerge. |
 
-Les dépendances externes importantes sont centralisées dans `package.json` : Expo/React Native, Expo Router, React Native Community DateTimePicker, AsyncStorage, modules SecureStore/Notifications/Location/Linking, Supabase JS, TanStack Query, React Hook Form, Zod, ESLint, TypeScript et les outils de tests. Les fichiers de `node_modules/` ne sont pas documentés individuellement. `npm audit` doit rester à zéro vulnérabilité ; aucun correctif `--force` ne doit être utilisé s’il modifie la version majeure d’Expo.
+Les dépendances externes importantes sont centralisées dans `package.json` : Expo/React Native, Expo Router, React Native Community DateTimePicker, AsyncStorage, modules SecureStore/Notifications/Location/Linking, Supabase JS, TanStack Query, React Hook Form, Zod, ESLint, TypeScript et les outils de tests. Les fichiers de `node_modules/` ne sont pas documentés individuellement. La CI bloque les vulnérabilités critiques des dépendances de production ; les avis moins sévères, dont l'advisory `high` Metro/`image-size` sans correctif compatible Expo SDK 57, restent soumis à une revue humaine. Aucun correctif `--force` ne doit être utilisé s'il modifie la version majeure d'Expo.
 
 ## 13. Règles de modification
 
