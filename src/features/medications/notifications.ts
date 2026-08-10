@@ -34,10 +34,11 @@ export async function ensureMedicationNotificationPermission() {
 }
 
 // Un rappel planifié ne garantit pas que le traitement a été pris et ne remplace aucune consigne médicale.
+// Le booléen utilise le son du canal et évite qu’Expo cherche un fichier personnalisé nommé default.
 export async function scheduleMedicationReminder(time: string) {
   const [hour, minute] = time.split(':').map(Number);
   return Notifications.scheduleNotificationAsync({
-    content: { title: 'Rappel DRÉPA', body: 'Vous avez un rappel dans DRÉPA.', sound: 'default' },
+    content: { title: 'Rappel DRÉPA', body: 'Vous avez un rappel dans DRÉPA.', sound: true },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, channelId: CHANNEL_ID, hour, minute },
   });
 }
@@ -46,7 +47,7 @@ export async function scheduleMedicationReminder(time: string) {
 export async function scheduleMedicationReminderTest() {
   await ensureMedicationNotificationPermission();
   return Notifications.scheduleNotificationAsync({
-    content: { title: 'Test DRÉPA', body: 'Les notifications DRÉPA fonctionnent sur cet appareil.', sound: 'default' },
+    content: { title: 'Test DRÉPA', body: 'Les notifications DRÉPA fonctionnent sur cet appareil.', sound: true },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, channelId: CHANNEL_ID, seconds: 10 },
   });
 }
