@@ -39,7 +39,7 @@ DRÉPA est une application mobile Android francophone destinée à l’accompagn
 - **TypeScript** impose le typage strict des routes, services, schéma de données et formulaires.
 - **Expo Router** utilise l’arborescence `app/` pour les routes publiques, les contrôles d’onboarding et les onglets protégés.
 - **Supabase Auth** gère l’inscription, la connexion, la restauration de session, la déconnexion et la récupération du mot de passe.
-- **Supabase PostgreSQL** stocke les profils, consentements et futures données métier.
+- **Supabase PostgreSQL** stocke les profils, consentements, données privées de suivi et contenus du premier lot Communauté.
 - **Supabase Edge Functions** portent les opérations serveur privilégiées, notamment la suppression de compte ; le dépôt contient actuellement `supabase/functions/delete-account/index.ts`.
 - **Row Level Security (RLS)** limite les accès aux lignes appartenant à l’utilisateur authentifié et protège les opérations administratives côté Supabase.
 - **TanStack Query** gère le cache et les requêtes de données serveur.
@@ -88,6 +88,10 @@ DREPA/
 │       ├── _layout.tsx
 │       ├── complete-profile.tsx
 │       ├── consent.tsx
+│       ├── community/
+│       │   ├── [id].tsx
+│       │   ├── new.tsx
+│       │   └── report.tsx
 │       ├── medication-form.tsx
 │       ├── medication/
 │       │   ├── [id].tsx
@@ -108,6 +112,24 @@ DREPA/
 │   ├── components/
 │   ├── constants/
 │   ├── features/
+│   │   ├── community/
+│   │   │   ├── components/
+│   │   │   │   ├── CommentCard.tsx
+│   │   │   │   ├── CommunityEmptyState.tsx
+│   │   │   │   ├── CommunityFilters.tsx
+│   │   │   │   ├── CommunityHeader.tsx
+│   │   │   │   ├── CommunitySafetyBanner.tsx
+│   │   │   │   ├── PostCard.tsx
+│   │   │   │   └── SupportButton.tsx
+│   │   │   ├── categories.ts
+│   │   │   ├── community.test.ts
+│   │   │   ├── errors.ts
+│   │   │   ├── format.test.ts
+│   │   │   ├── format.ts
+│   │   │   ├── mutations.ts
+│   │   │   ├── payload.ts
+│   │   │   ├── queries.ts
+│   │   │   └── schemas.ts
 │   │   └── profile/
 │   │       └── components/
 │   │           └── ProfileForm.tsx
@@ -201,10 +223,13 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/(app)/medication/[id].tsx` | `/medication/:id` | Affiche les informations déclarées, les horaires et les actions Modifier, Arrêter/Réactiver et Supprimer. | Lecture `id + user_id`, confirmations d’arrêt et de suppression, cascade en base puis annulation des notifications locales. Aucun conseil médical. |
 | `app/(app)/medication/[id]/edit.tsx` | `/medication/:id/edit` | Construit les valeurs initiales depuis le traitement et ses rappels puis synchronise les modifications. | États loading, erreur et absence structurée ; le succès revient au détail. Les horaires inchangés conservent leur ligne et leur notification. |
 | `app/(app)/(tabs)/medications.tsx` | Onglet médicaments | Affiche les traitements, ouvre leur détail et expose Pris, Reporter 10 min et Ignorer sur les rappels actionnables. | Charge uniquement les lignes du propriétaire, calcule les statuts localement et affiche une erreur neutre propre à chaque mutation. |
-| `app/(app)/(tabs)/community.tsx` | Onglet communauté | Placeholder de la communauté. | Ne pas ajouter de publications, commentaires ou modération dans le socle actuel. |
+| `app/(app)/(tabs)/community.tsx` | Onglet communauté | Fil réel paginé par lots de 10 publications, avec filtres Tout, Questions et Témoignages, états de chargement/erreur/vide, soutien et accès au détail ou au signalement. | Utilise la session, les queries/mutations Communauté et les composants partagés. Un verrou local bloque les doubles appuis rapides sur Soutenir. L’avertissement médical reste visible et aucune donnée fictive n’est affichée. |
+| `app/(app)/community/new.tsx` | `/community/new` | Formulaire de publication avec catégorie, texte limité à 2 000 caractères et acceptation obligatoire de la charte. | React Hook Form, Zod, `useCreatePostMutation` et session authentifiée. Un verrou synchrone bloque une double soumission. Le mobile envoie seulement `user_id`, catégorie et contenu ; le trigger Supabase impose `auth.uid()` et attribue l’alias communautaire stable. Après succès, la route ouvre la publication créée. |
+| `app/(app)/community/[id].tsx` | `/community/:id` | Détail réel d’une publication, soutien, commentaires paginés par lots de 20, ajout de commentaire et retrait confirmé de son propre contenu. | Queries et mutations Communauté, formulaire Zod et composants partagés. La propriété affichée vient de `is_own`, sans UUID de membre dans les vues. Un verrou synchrone bloque les doubles commentaires. Le retrait est un soft delete ; les autres membres peuvent signaler. |
+| `app/(app)/community/report.tsx` | `/community/report?postId=:id&commentId=:id?` | Formulaire de signalement d’une publication ou d’un commentaire, avec une cible unique, un motif contrôlé et des précisions facultatives limitées à 500 caractères. | Valide les paramètres, utilise `useReportMutation`, traite doublon et limite anti-spam, puis confirme la transmission à une modération humaine. Il ne décide ni ne masque un contenu dans le mobile. |
 | `app/(app)/(tabs)/profile.tsx` | Onglet profil | Présente l’identité, les informations de suivi, les paramètres disponibles, la déconnexion et la suppression sécurisée du compte. Le bouton `Modifier` ouvre `/profile-edit`. | Utilise `useProfileQuery`, les composants `src/features/profile/components/`, Expo Router et `useAuth`. La suppression passe par l’Edge Function après confirmation explicite. |
 
-Les routes documentées mais encore absentes incluent les écrans métier du SOS, des ressources, de la communauté et de la modération. Leur absence est volontaire tant que le périmètre correspondant n’est pas implémenté.
+Les routes métier du SOS, des ressources éducatives et d’une interface d’administration restent absentes. Le premier lot Communauté est réel, mais la modération administrative et l’attribution du rôle `admin` restent uniquement côté Supabase, sans écran privilégié dans l’application mobile.
 
 ## 7. Dossier `src/`
 
@@ -320,13 +345,41 @@ Les routes documentées mais encore absentes incluent les écrans métier du SOS
 | `src/features/medications/components/MedicationInfoCard.tsx` | Mention de prudence concernant les traitements prescrits. | Contenu générique non médical et sans dosage conseillé. |
 | `src/features/medications/medications.test.ts` | Tests des horaires, validation, erreurs RLS, intakeId, prise, ignorance et report avant/après l’heure effective. | Jest/Babel et fonctions pures uniquement ; aucun composant natif importé et aucune donnée médicale réelle. |
 
+### `src/features/community/`
+
+| Fichier | Rôle | Dépendances, données et risques |
+|---|---|---|
+| `src/features/community/categories.ts` | Centralise les cinq catégories `testimony`, `question`, `motivation`, `daily_life`, `resources`, les trois filtres du fil et les six motifs de signalement avec leurs libellés français. | Contrat partagé par les formulaires, filtres, schémas, formatage et types Supabase. La catégorie Conseils n’existe pas dans ce lot. |
+| `src/features/community/schemas.ts` | Schémas Zod des publications, commentaires et signalements. | Publication limitée à 2 000 caractères avec charte obligatoire, commentaire à 1 000 et précisions de signalement à 500. Les textes sont nettoyés de leurs espaces extérieurs avant mutation. |
+| `src/features/community/errors.ts` | Classe les erreurs de session, configuration, réseau, RLS, absence, limite anti-spam, doublon, Supabase et inconnues. | Transforme les codes contrôlés `42501`, `PGRST116`, `P0001` et `23505` en messages neutres sans exposer le contenu technique. |
+| `src/features/community/queries.ts` | Charge le fil, le détail et les commentaires depuis `community_posts_feed` et `community_comments_feed`, avec des clés TanStack Query isolées par `userId`. Ajoute au résultat le soutien du membre connecté. | Supabase, AuthProvider, types de base et TanStack Query. Les vues excluent les contenus masqués ou supprimés et ne révèlent aucun UUID de membre ; `is_own` porte la propriété. Le fil est paginé par 10 et les commentaires par 20 avec tri stable `created_at + id`. |
+| `src/features/community/mutations.ts` | Crée les publications/commentaires, effectue leur soft delete propriétaire, ajoute ou retire un soutien, crée un signalement et invalide les caches concernés. | Supabase, session, queries, payloads et schémas. Les créations ne relisent que l’`id`; les retraits mettent `deleted_at` et `is_hidden` avec filtres `id + user_id`. Les lignes conservées empêchent de contourner l’anti-spam par suppression puis recréation. |
+| `src/features/community/payload.ts` | Construit les payloads purs de création des publications et commentaires. | Dépend des types Supabase et des valeurs validées. Exclut explicitement alias, compteurs, visibilité, dates et suppression, tous gérés côté base. |
+| `src/features/community/format.ts` | Formate en français les dates relatives récentes puis les dates courtes, et traduit les catégories techniques. | Fonctions pures fondées sur `Intl.DateTimeFormat` et `categories.ts`, sans accès réseau ni donnée privée. |
+| `src/features/community/format.test.ts` | Vérifie instant, minutes, heures, date ancienne, date invalide et libellés de catégories. | Jest avec dates synthétiques figées ; aucune dépendance React Native et aucune donnée réelle. |
+| `src/features/community/community.test.ts` | Vérifie catégories, motifs, charte, espaces, limites de longueur, payloads client minimaux et classification RLS/anti-spam/doublon. | Jest, Zod et fonctions pures avec textes et identifiants fictifs. Aucun composant natif n’est importé ; les politiques RLS restent à valider aussi dans Supabase. |
+
+### `src/features/community/components/`
+
+Le dossier contient actuellement sept composants partagés. Aucun huitième fichier de composant n’est présent dans l’état réel du dépôt ; les petits composants `FeedPostCard` et `CommunityCommentCard` restent locaux à leurs routes afin de porter leurs mutations propres.
+
+| Fichier | Rôle | Dépendances, données et risques |
+|---|---|---|
+| `src/features/community/components/CommunityHeader.tsx` | En-tête de l’onglet avec titre et action Publier. | Bouton et typographie du design system. Aucun raccourci SOS n’est exposé. |
+| `src/features/community/components/CommunityFilters.tsx` | Groupe radio accessible des filtres Tout, Questions et Témoignages. | `categories.ts` et tokens du thème clair ; ne filtre pas localement des données privées. |
+| `src/features/community/components/CommunitySafetyBanner.tsx` | Affiche que les témoignages et échanges ne remplacent pas l’avis d’un professionnel de santé, avec action de charte facultative. | Card, Button et AppText. Le message doit rester visible et ne constitue pas un conseil médical. |
+| `src/features/community/components/CommunityEmptyState.tsx` | État vide réel du fil avec action Publier. | `EmptyState`; n’insère aucune publication fictive. |
+| `src/features/community/components/PostCard.tsx` | Carte texte d’une publication avec pseudonyme, date, catégorie, compteur de commentaires, Soutien et Signalement. | `format.ts`, `SupportButton`, design system et données de query. Aucun asset image, aucune identité complète et aucun contenu inventé. |
+| `src/features/community/components/SupportButton.tsx` | Bouton accessible Soutenir/Soutenu avec compteur réel et état de chargement. | Tokens du thème ; `reaction_type` reste exclusivement `support`, sans like générique. |
+| `src/features/community/components/CommentCard.tsx` | Carte d’un commentaire avec pseudonyme, date, contenu et action Supprimer pour l’auteur ou Signaler pour les autres. | `format.ts`, design system et données de vue. La route transmet la propriété `is_own`; aucun UUID d’auteur n’est exposé et l’autorisation réelle reste imposée par RLS. |
+
 ### `src/lib/`
 
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
 | `src/lib/env.ts` | Valide les variables publiques d’environnement et retourne `null` si la configuration est incomplète. | Zod et `process.env`. Ne jamais ajouter de valeur réelle ou de clé privilégiée dans le dépôt. |
 | `src/lib/supabase.ts` | Crée le client Supabase typé avec l’URL publique, la clé anon publique et l’adaptateur SecureStore. | `@supabase/supabase-js`, polyfill URL, `secure-storage.ts`, `database.types.ts`. `service_role` est interdit dans l’application mobile. |
-| `src/lib/query-client.ts` | Instance globale TanStack Query avec retry limité et durée de fraîcheur de 30 secondes. | Utilisée par `QueryProvider`, les mutations et `AuthProvider`. Le cache doit être purgé lors d’un changement de compte ou d’une déconnexion. |
+| `src/lib/query-client.ts` | Instance globale TanStack Query avec retry limité, durée de fraîcheur de 30 secondes et liste des racines privées, dont `community-posts`, `community-post` et `community-comments`. | Utilisée par `QueryProvider`, les mutations et `AuthProvider`. Les caches Communauté dépendant du membre connecté sont purgés lors d’un changement de compte ou d’une déconnexion. |
 
 ### `src/providers/`
 
@@ -365,7 +418,7 @@ Les routes documentées mais encore absentes incluent les écrans métier du SOS
 
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
-| `src/types/database.types.ts` | Types TypeScript pour les profils, consentements, contacts, journal, traitements, rappels et prises, dont `snoozed_until` et `snooze_notification_id`, ainsi que le type `Json`. | Client Supabase et mutations/requêtes. Toute migration de schéma doit entraîner une régénération ou une mise à jour vérifiée de ces types. |
+| `src/types/database.types.ts` | Types TypeScript pour les tables Communauté, `user_roles.community_alias`, les colonnes `deleted_at`, les vues `community_posts_feed` et `community_comments_feed`, leurs unions et la fonction `is_admin`. | Client Supabase et mutations/requêtes. Les vues exposent `is_own` sans UUID de membre ; les formes Insert gardent facultatifs les champs système gérés par triggers. Toute migration de schéma doit entraîner une régénération ou une mise à jour vérifiée de ces types. |
 | `src/types/domain.ts` | Type initial `ProfileCompletion` décrivant les indicateurs de complétude. | Disponible pour les futurs services d’onboarding. Garder ce type cohérent avec `completion.ts`. |
 
 ### Dossiers actuellement absents
@@ -395,8 +448,15 @@ Les routes documentées mais encore absentes incluent les écrans métier du SOS
 | `supabase/migrations/20260807235100_create_medication_reminders.sql` | Crée `public.medication_reminders` avec heure locale, activation et identifiant de notification locale. | Clé étrangère composite `(medication_id, user_id)` empêchant une association inter-utilisateurs, unicité horaire, RLS CRUD propriétaire. | 7 |
 | `supabase/migrations/20260807235200_create_medication_intakes.sql` | Crée `public.medication_intakes` avec horaire prévu, prise déclarée et statut contraint. | Clé étrangère composite propriétaire, contrainte `taken_at`, unicité traitement/horaire, RLS CRUD et aucun accès `anon/public`. | 8 |
 | `supabase/migrations/20260811005300_add_snooze_fields_to_medication_intakes.sql` | Ajoute `snoozed_until` et `snooze_notification_id` aux prises déclarées. | Identifiant limité à 200 caractères, cohérence obligatoire entre statut et heure reportée, index partiel propriétaire sur les reports ; la RLS existante reste inchangée. | 9 |
+| `supabase/migrations/20260811181000_create_user_roles.sql` | Crée `user_roles` avec rôle `user` par défaut ou `admin`, pseudonyme `community_alias` nullable, puis ajoute les triggers de rôle/timestamp et `is_admin()`. | L’alias communautaire est attribué au premier contenu puis reste stable. RLS en lecture propriétaire ou admin, privilège mobile `SELECT` seulement, aucun accès `anon`. Le rôle et l’alias ne sont jamais choisis par le mobile. | 10, avant toutes les tables Communauté |
+| `supabase/migrations/20260811181100_create_community_posts.sql` | Crée `community_posts` avec auteur, catégorie, texte, compteurs, visibilité, `deleted_at` et timestamps, puis la vue `community_posts_feed`. | `prepare_community_post` impose `auth.uid()`, attribue l’alias stable et limite à 5 publications en 10 minutes sous verrou. La vue masque `user_id`; `is_own` remplace la comparaison mobile. Le soft delete conserve la ligne et le droit DELETE n’est pas accordé, donc l’anti-spam ne peut pas être contourné. | 11, après `user_roles` |
+| `supabase/migrations/20260811181200_create_community_comments.sql` | Crée `community_comments` avec alias, texte, visibilité, `deleted_at` et timestamps, puis la vue `community_comments_feed`. | Identité et alias stable sont imposés. La limite reste de 20 commentaires en 10 minutes, y compris après soft delete. La vue masque `user_id`, expose `is_own` et exclut les contenus retirés ou dont le parent est retiré. | 12, après `community_posts` |
+| `supabase/migrations/20260811181300_create_community_post_reactions.sql` | Crée `community_post_reactions` avec une unique réaction `support` par membre et publication. | Les réactions sont privées : chaque membre lit uniquement les siennes, hors administration. La contrainte unique, `auth.uid()`, la visibilité du post et le trigger de compteur protègent ajout/retrait ; aucune mise à jour n’est accordée. | 13, après `community_posts` |
+| `supabase/migrations/20260811181400_create_community_reports.sql` | Crée `community_reports` avec une cible unique publication ou commentaire, motif, détails, statut et timestamps. | Unicité d’un signalement par membre et cible, statut initial `pending`, limite de 10 signalements par heure et identité imposée par trigger. RLS : lecture propriétaire/admin, insertion propriétaire vers une cible existante, mise à jour admin, aucune suppression. La décision reste une modération humaine côté Supabase. | 14, après publications et commentaires |
 
-Le schéma documentaire prévoit également `user_roles` entre `profiles` et `user_consents`, mais aucune migration `user_roles` n’est présente dans le dépôt actuel. Cette différence doit rester visible avant toute implémentation d’administration ou de ressources éducatives. Les migrations déjà appliquées ne doivent jamais être modifiées : toute évolution passe par une nouvelle migration versionnée.
+L’ordre 10 à 14 est obligatoire : `user_roles` fournit `is_admin()` et le `community_alias` stable avant les contenus. Les vues de fil ne révèlent aucun UUID de membre et utilisent `is_own`. Les réactions restent privées. Les soft deletes conservent les lignes dans les fenêtres anti-spam, sans privilège DELETE mobile : supprimer puis recréer ne réinitialise donc pas les limites. Les compteurs restent maintenus par triggers. Les migrations déjà appliquées ne doivent jamais être modifiées.
+
+Le rôle `admin` est attribué et modifié côté Supabase uniquement. L’application React Native ne possède aucun formulaire de rôle, aucun écran de modération privilégié et aucune clé `service_role`. Les policies consultent `is_admin()` pour les opérations de modération autorisées ; un examen humain reste nécessaire avant toute action sur un signalement.
 
 L’Edge Function `delete-account` est présente et déployée pour la suppression sécurisée du compte authentifié.
 
@@ -545,6 +605,46 @@ forgot-password.tsx
 
 Le callback de confirmation e-mail est implémenté dans `app/(auth)/auth/callback.tsx`. Il doit rester autorisé côté Supabase avec `drepa://auth/callback`.
 
+### Communauté et modération humaine
+
+```text
+onglet community
+    → useCommunityPostsQuery(userId, filtre)
+    → community_posts_feed sans UUID de membre + soutien propre dans community_post_reactions
+    → PostCard avec compteurs réels
+
+publication
+    → app/(app)/community/new.tsx
+    → postSchema + acceptation de la charte
+    → useCreatePostMutation
+    → community_posts
+    → trigger Supabase : auth.uid(), community_alias stable et limite anti-spam
+    → app/(app)/community/[id].tsx
+
+commentaire
+    → app/(app)/community/[id].tsx
+    → commentSchema
+    → useCreateCommentMutation
+    → community_comments
+    → trigger Supabase : identité, alias stable, limite anti-spam et comments_count
+
+soutien
+    → SupportButton avec verrou contre le double appui
+    → useToggleSupportMutation
+    → ajout ou retrait dans community_post_reactions
+    → contrainte unique + trigger support_count
+
+signalement d’une publication ou d’un commentaire
+    → app/(app)/community/report.tsx
+    → reportSchema
+    → useReportMutation
+    → community_reports au statut pending
+    → examen humain côté Supabase
+    → action administrative autorisée par user_roles + is_admin()
+```
+
+Les publications et commentaires restent textuels et communautaires. Les lectures passent par des vues sans UUID de membre et les réactions propres restent privées. Le retrait d’un contenu est un soft delete qui ne réinitialise pas l’anti-spam. Ce premier lot ne contient aucun SOS, aucune image, aucun chat privé, aucun conseil médical et aucune donnée médicale privée. Les témoignages ne remplacent jamais l’avis d’un professionnel de santé. Le rôle `admin`, l’examen des signalements et les actions privilégiées restent côté Supabase uniquement.
+
 ## 12. Matrice des dépendances
 
 | Fichier | Dépend de | Utilisé par |
@@ -562,6 +662,10 @@ Le callback de confirmation e-mail est implémenté dans `app/(auth)/auth/callba
 | `app/(app)/complete-profile.tsx` | `ProfileForm`, Expo Router | Utilisateur authentifié avec consentements valides mais profil incomplet. |
 | `app/(app)/profile-edit.tsx` | `ProfileForm`, Expo Router | Utilisateur authentifié avec onboarding complet depuis l’onglet Profil. |
 | `app/(app)/(tabs)/profile.tsx` | `profile/queries`, composants Profil, `AuthProvider`, Expo Router | Utilisateur consultant son profil et route `/profile-edit`. |
+| `app/(app)/(tabs)/community.tsx` | `community/queries`, `community/mutations`, composants Communauté, `AuthProvider`, Expo Router | Fil authentifié, filtres, pagination, soutien, publication, détail et signalement. |
+| `app/(app)/community/new.tsx` | `community/categories`, `community/schemas`, `community/mutations`, React Hook Form, Zod, `AuthProvider` | Création textuelle d’une publication puis route `/community/:id`. |
+| `app/(app)/community/[id].tsx` | `community/queries`, `community/mutations`, `community/schemas`, composants Communauté, React Hook Form, Zod | Détail, commentaires, soutien, suppression propriétaire et signalement. |
+| `app/(app)/community/report.tsx` | `community/categories`, `community/schemas`, `community/mutations`, React Hook Form, Zod, paramètres Expo Router | Signalement d’une publication ou d’un commentaire vers la modération humaine. |
 | `src/features/profile/components/ProfileForm.tsx` | `profile/schemas`, `profile/queries`, `profile/mutations`, `AuthProvider`, React Hook Form, Zod, composants UI | `complete-profile.tsx`, `profile-edit.tsx`. |
 | `src/features/auth/auth-service.ts` | `src/lib/supabase.ts`, Expo Linking | `AuthProvider`, routes Auth et suppression de compte. |
 | `src/providers/auth-provider.tsx` | `supabase.ts`, `auth-service.ts`, `query-client.ts`, AppState | `app/_layout.tsx`, layouts Auth/App et profil. |
@@ -569,6 +673,12 @@ Le callback de confirmation e-mail est implémenté dans `app/(auth)/auth/callba
 | `src/features/profile/mutations.ts` | Supabase, `database.types.ts`, `legal-versions`, query keys | `consent.tsx`, `ProfileForm`. |
 | `src/features/profile/completion.ts` | `legal-versions`, types consentement | `use-onboarding-status` et tests du flux. |
 | `src/features/profile/use-onboarding-status.ts` | `AuthProvider`, queries profil/consentements, `completion.ts` | `app/(app)/_layout.tsx`. |
+| `src/features/community/categories.ts` | Contrats TypeScript locaux | Schémas, filtres, formulaires, formatage et tests Communauté. |
+| `src/features/community/schemas.ts` | Zod, `categories.ts` | Routes de publication, commentaire, signalement et tests. |
+| `src/features/community/payload.ts` | `database.types.ts`, valeurs validées des schémas | Mutations de création et tests des champs client autorisés. |
+| `src/features/community/queries.ts` | Supabase, `database.types.ts`, TanStack Query, `AuthProvider`, `errors.ts` | Onglet Communauté et détail d’une publication. |
+| `src/features/community/mutations.ts` | Supabase, `database.types.ts`, TanStack Query, `AuthProvider`, queries, schémas et erreurs | Routes Communauté pour publication, commentaire, soutien, suppression et signalement. |
+| `src/features/community/components/*.tsx` | Composants UI, thème, catégories, format et types de queries | Onglet Communauté, création et détail ; uniquement du texte, des compteurs et des actions autorisées. |
 | `src/lib/supabase.ts` | `env.ts`, SecureStore, `database.types.ts`, Supabase JS | Services Auth, queries et mutations. |
 | `src/lib/env.ts` | Zod et variables `EXPO_PUBLIC_*` | `src/lib/supabase.ts`. |
 | `src/lib/query-client.ts` | TanStack Query | `QueryProvider`, `AuthProvider`, mutations. |
@@ -576,7 +686,12 @@ Le callback de confirmation e-mail est implémenté dans `app/(auth)/auth/callba
 | `src/providers/query-provider.tsx` | TanStack Query, `query-client.ts` | `AppProvider`. |
 | `src/services/secure-storage.ts` | Expo SecureStore | `src/lib/supabase.ts`. |
 | `supabase/functions/delete-account/index.ts` | Supabase Auth Admin, secrets Edge Function | `auth-service.ts` via `functions.invoke`; ne jamais déployer la clé serveur au mobile. |
-| `src/types/database.types.ts` | Schéma des migrations existantes | Client Supabase et code profil. |
+| `src/types/database.types.ts` | Schéma des migrations existantes, dont tables Communauté et `is_admin()` | Client Supabase, code profil, journal, médicaments et Communauté. |
+| `supabase/migrations/20260811181000_create_user_roles.sql` | PostgreSQL, `auth.users`, `set_updated_at()` | Policies RLS Communauté et contrôle administratif côté Supabase. |
+| `supabase/migrations/20260811181100_create_community_posts.sql` | `auth.users`, `profiles`, `user_roles`, PostgreSQL/RLS | Fil, détail et mutations des publications ; parent des commentaires, réactions et signalements. |
+| `supabase/migrations/20260811181200_create_community_comments.sql` | `community_posts`, `auth.users`, `profiles`, `user_roles`, PostgreSQL/RLS | Détail, commentaires, compteur de commentaires visibles et signalements. |
+| `supabase/migrations/20260811181300_create_community_post_reactions.sql` | `community_posts`, `auth.users`, `user_roles`, PostgreSQL/RLS | Soutien unique et compteur de soutiens. |
+| `supabase/migrations/20260811181400_create_community_reports.sql` | `community_posts`, `community_comments`, `auth.users`, `user_roles`, PostgreSQL/RLS | Signalement mobile et examen humain côté Supabase. |
 | `supabase/migrations/*.sql` | PostgreSQL et `auth.users` | Projet Supabase distant/local ; consommées par le client via RLS. |
 | `app.config.js` | Expo, DateTimePicker, Notifications et assets principaux | Expo CLI et EAS Build ; un nouveau build natif Android est requis après cette configuration. |
 | `eas.json` | EAS CLI | Profiles development, preview et production Android. |

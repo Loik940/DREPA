@@ -31,6 +31,24 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
         Relationships: [];
       };
+      // Cette table associe chaque compte à son rôle applicatif.
+      user_roles: {
+        Row: {
+          user_id: string;
+          role: 'user' | 'admin';
+          community_alias: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['user_roles']['Row'], 'role' | 'community_alias' | 'created_at' | 'updated_at'> & {
+          role?: 'user' | 'admin';
+          community_alias?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['user_roles']['Insert']>;
+        Relationships: [];
+      };
       emergency_contacts: {
         Row: {
           id: string;
@@ -160,9 +178,151 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['medication_intakes']['Insert']>;
         Relationships: [];
       };
+      // Cette table décrit les publications visibles dans la communauté.
+      community_posts: {
+        Row: {
+          id: string;
+          user_id: string;
+          author_alias: string;
+          category: 'testimony' | 'question' | 'motivation' | 'daily_life' | 'resources';
+          content: string;
+          support_count: number;
+          comments_count: number;
+          is_hidden: boolean;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['community_posts']['Row'], 'user_id' | 'category' | 'content'> &
+          Partial<
+            Pick<
+              Database['public']['Tables']['community_posts']['Row'],
+              'id' | 'author_alias' | 'support_count' | 'comments_count' | 'is_hidden' | 'deleted_at' | 'created_at' | 'updated_at'
+            >
+          >;
+        Update: Partial<Database['public']['Tables']['community_posts']['Insert']>;
+        Relationships: [];
+      };
+      // Cette table conserve les commentaires liés aux publications.
+      community_comments: {
+        Row: {
+          id: string;
+          post_id: string;
+          user_id: string;
+          author_alias: string;
+          content: string;
+          is_hidden: boolean;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Pick<
+          Database['public']['Tables']['community_comments']['Row'],
+          'post_id' | 'user_id' | 'content'
+        > &
+          Partial<
+            Pick<
+              Database['public']['Tables']['community_comments']['Row'],
+              'id' | 'author_alias' | 'is_hidden' | 'deleted_at' | 'created_at' | 'updated_at'
+            >
+          >;
+        Update: Partial<Database['public']['Tables']['community_comments']['Insert']>;
+        Relationships: [];
+      };
+      // Cette table enregistre une réaction de soutien par publication.
+      community_post_reactions: {
+        Row: {
+          id: string;
+          post_id: string;
+          user_id: string;
+          reaction_type: 'support';
+          created_at: string;
+        };
+        Insert: Omit<
+          Database['public']['Tables']['community_post_reactions']['Row'],
+          'id' | 'reaction_type' | 'created_at'
+        > & {
+          id?: string;
+          reaction_type?: 'support';
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['community_post_reactions']['Insert']>;
+        Relationships: [];
+      };
+      // Cette table conserve les signalements envoyés pour modération.
+      community_reports: {
+        Row: {
+          id: string;
+          reporter_id: string;
+          post_id: string | null;
+          comment_id: string | null;
+          reason:
+            | 'dangerous_medical_advice'
+            | 'harassment'
+            | 'misleading_information'
+            | 'scam_or_advertising'
+            | 'personal_data'
+            | 'other';
+          details: string | null;
+          status: 'pending' | 'reviewed' | 'dismissed';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database['public']['Tables']['community_reports']['Row'],
+          'id' | 'post_id' | 'comment_id' | 'details' | 'status' | 'created_at' | 'updated_at'
+        > & {
+          id?: string;
+          post_id?: string | null;
+          comment_id?: string | null;
+          details?: string | null;
+          status?: 'pending' | 'reviewed' | 'dismissed';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['community_reports']['Insert']>;
+        Relationships: [];
+      };
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
+    // Ces vues exposent les contenus communautaires sans identifiant de membre.
+    Views: {
+      community_posts_feed: {
+        Row: {
+          id: string;
+          author_alias: string;
+          category: 'testimony' | 'question' | 'motivation' | 'daily_life' | 'resources';
+          content: string;
+          support_count: number;
+          comments_count: number;
+          created_at: string;
+          updated_at: string;
+          is_own: boolean;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      community_comments_feed: {
+        Row: {
+          id: string;
+          post_id: string;
+          author_alias: string;
+          content: string;
+          created_at: string;
+          updated_at: string;
+          is_own: boolean;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+    };
+    Functions: {
+      is_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
