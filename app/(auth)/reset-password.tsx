@@ -2,8 +2,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Redirect, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { PasswordField } from '@/components/ui/PasswordField';
 import { updatePasswordSchema, type UpdatePasswordValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
 
@@ -47,36 +48,26 @@ export default function ResetPasswordScreen() {
         control={control}
         name="password"
         render={({ field, fieldState }) => (
-          <View>
-            <TextInput
-              autoCapitalize="none"
-              onBlur={field.onBlur}
-              onChangeText={field.onChange}
-              placeholder="Nouveau mot de passe"
-              secureTextEntry
-              style={styles.input}
-              value={field.value}
-            />
-            {fieldState.error && <Text style={styles.error}>{fieldState.error.message}</Text>}
-          </View>
+          <PasswordField
+            label="Nouveau mot de passe"
+            onBlur={field.onBlur}
+            onChangeText={field.onChange}
+            value={field.value}
+            error={fieldState.error?.message}
+          />
         )}
       />
       <Controller
         control={control}
         name="passwordConfirmation"
         render={({ field, fieldState }) => (
-          <View>
-            <TextInput
-              autoCapitalize="none"
-              onBlur={field.onBlur}
-              onChangeText={field.onChange}
-              placeholder="Confirmer le mot de passe"
-              secureTextEntry
-              style={styles.input}
-              value={field.value}
-            />
-            {fieldState.error && <Text style={styles.error}>{fieldState.error.message}</Text>}
-          </View>
+          <PasswordField
+            label="Confirmer le mot de passe"
+            onBlur={field.onBlur}
+            onChangeText={field.onChange}
+            value={field.value}
+            error={fieldState.error?.message}
+          />
         )}
       />
       {formState.errors.root?.message && <Text style={styles.error}>{formState.errors.root.message}</Text>}
@@ -90,7 +81,6 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', gap: 12, padding: 24 },
   title: { fontSize: 28, fontWeight: '700', marginBottom: 12 },
-  input: { borderColor: '#A0A0A0', borderRadius: 8, borderWidth: 1, padding: 12 },
   button: { alignItems: 'center', backgroundColor: '#208AEF', borderRadius: 8, padding: 14 },
   buttonText: { color: '#FFFFFF', fontWeight: '700' },
   error: { color: '#B00020' },
