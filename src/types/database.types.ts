@@ -143,13 +143,17 @@ export type Database = {
           scheduled_at: string;
           taken_at: string | null;
           status: 'pending' | 'taken' | 'skipped' | 'snoozed';
+          snoozed_until: string | null;
+          snooze_notification_id: string | null;
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['medication_intakes']['Row'], 'id' | 'created_at' | 'updated_at' | 'status' | 'taken_at'> & {
+        Insert: Omit<Database['public']['Tables']['medication_intakes']['Row'], 'id' | 'created_at' | 'updated_at' | 'status' | 'taken_at' | 'snoozed_until' | 'snooze_notification_id'> & {
           id?: string;
           status?: 'pending' | 'taken' | 'skipped' | 'snoozed';
           taken_at?: string | null;
+          snoozed_until?: string | null;
+          snooze_notification_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };

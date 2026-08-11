@@ -2,6 +2,10 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { NotificationCancellationError, uniqueNotificationIds } from './notification-ids';
+
+export { NotificationCancellationError } from './notification-ids';
+
 const CHANNEL_ID = 'medication-reminders';
 
 export class NotificationPermissionError extends Error {}
@@ -52,6 +56,29 @@ export async function scheduleMedicationReminderTest() {
   });
 }
 
-export async function cancelMedicationReminder(notificationId: string | null) {
-  if (notificationId) await Notifications.cancelScheduledNotificationAsync(notificationId);
+// Le report programme un message générique et ne reprend aucune donnée de traitement.
+export async function scheduleMedicationSnooze(minutes = 10) {
+  await ensureMedicationNotificationPermission();
+  return Notifications.scheduleNotificationAsync({
+    content: { title: 'Rappel DRÉPA', body: 'Vous avez un rappel dans DRÉPA.', sound: true },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      channelId: CHANNEL_ID,
+      seconds: minutes * 60,
+    },
+  });
+}
+
+// L’ordre séquentiel permet de connaître exactement les identifiants annulés avant un éventuel échec.
+export async function cancelNotificationIds(ids: readonly (string | null | undefined)[]) {
+  const cancelledIds: string[] = [];
+  for (const id of uniqueNotificationIds(ids)) {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(id);
+      cancelledIds.push(id);
+    } catch (cause) {
+      throw new NotificationCancellationError(cancelledIds, cause);
+    }
+  }
+  return cancelledIds;
 }

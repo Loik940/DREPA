@@ -6,7 +6,11 @@ export type ReminderDisplayStatus = 'late' | 'pending' | 'taken' | 'snoozed' | '
 export type TodayReminder = {
   medication: Medication;
   reminder: MedicationReminder;
+  intakeId: string | null;
+  originalScheduledAt: string;
   scheduledAt: string;
+  snoozeNotificationId: string | null;
+  snoozedUntil: string | null;
   status: ReminderDisplayStatus;
 };
 
@@ -29,8 +33,24 @@ export function buildTodayReminders(medications: Medication[], reminders: Medica
       const scheduled = new Date(now);
       scheduled.setHours(hour, minute, 0, 0);
       const intake = intakes.find((item) => item.medication_id === medication.id && sameMinute(item.scheduled_at, scheduled));
-      const status: ReminderDisplayStatus = intake?.status ?? (scheduled.getTime() < now.getTime() ? 'late' : 'pending');
-      return [{ medication, reminder, scheduledAt: scheduled.toISOString(), status }];
+      const originalScheduledAt = scheduled.toISOString();
+      const snoozedUntil = intake?.status === 'snoozed' && intake.snoozed_until
+        ? new Date(intake.snoozed_until)
+        : null;
+      const effectiveSchedule = snoozedUntil ?? scheduled;
+      const status: ReminderDisplayStatus = snoozedUntil
+        ? effectiveSchedule.getTime() > now.getTime() ? 'snoozed' : 'late'
+        : intake?.status ?? (scheduled.getTime() < now.getTime() ? 'late' : 'pending');
+      return [{
+        medication,
+        reminder,
+        intakeId: intake?.id ?? null,
+        originalScheduledAt,
+        scheduledAt: effectiveSchedule.toISOString(),
+        snoozeNotificationId: intake?.snooze_notification_id ?? null,
+        snoozedUntil: intake?.snoozed_until ?? null,
+        status,
+      }];
     })
     .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
 }

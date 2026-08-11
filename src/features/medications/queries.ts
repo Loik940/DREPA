@@ -12,17 +12,18 @@ export type MedicationReminder = Database['public']['Tables']['medication_remind
 export type MedicationIntake = Database['public']['Tables']['medication_intakes']['Row'];
 
 export const medicationsQueryKey = (userId: string) => ['medications', userId] as const;
+export const medicationDetailQueryKey = (userId: string, id: string) => ['medications', userId, 'detail', id] as const;
 
 // Queries propriétaires : chaque table est filtrée par l’utilisateur authentifié, en complément de la RLS.
-function requireClient() {
-  if (!supabase) throw new MedicationDataError('list', 'configuration', 'La configuration des traitements est indisponible.');
+function requireClient(operation: 'list' | 'detail') {
+  if (!supabase) throw new MedicationDataError(operation, 'configuration', 'La configuration des traitements est indisponible.');
   return supabase;
 }
 
 async function fetchMedicationDashboard(userId: string) {
   try {
     const { start, end } = getTodayBounds();
-    const client = requireClient();
+    const client = requireClient('list');
     const [medicationsResult, remindersResult, intakesResult] = await Promise.all([
       client.from('medications').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       client.from('medication_reminders').select('*').eq('user_id', userId).order('reminder_time'),
@@ -43,6 +44,29 @@ async function fetchMedicationDashboard(userId: string) {
   }
 }
 
+async function fetchMedicationDetail(userId: string, id: string) {
+  try {
+    const client = requireClient('detail');
+    const [medicationResult, remindersResult] = await Promise.all([
+      client.from('medications').select('*').eq('id', id).eq('user_id', userId).maybeSingle(),
+      client.from('medication_reminders').select('*').eq('medication_id', id).eq('user_id', userId).order('reminder_time'),
+    ]);
+
+    if (medicationResult.error) throw medicationResult.error;
+    if (remindersResult.error) throw remindersResult.error;
+    if (!medicationResult.data) {
+      throw new MedicationDataError('detail', 'not_found', 'Ce traitement est introuvable.');
+    }
+
+    return {
+      medication: medicationResult.data as Medication,
+      reminders: (remindersResult.data ?? []) as MedicationReminder[],
+    };
+  } catch (error) {
+    throw classifyMedicationError(error, 'detail');
+  }
+}
+
 export function useMedicationDashboardQuery(userId: string | undefined) {
   const { sessionReady, status, user } = useAuth();
   const enabled = sessionReady && status === 'authenticated' && Boolean(userId) && user?.id === userId;
@@ -50,6 +74,17 @@ export function useMedicationDashboardQuery(userId: string | undefined) {
   return useQuery({
     queryKey: userId ? medicationsQueryKey(userId) : ['medications', 'anonymous'],
     queryFn: () => fetchMedicationDashboard(userId as string),
+    enabled,
+  });
+}
+
+export function useMedicationDetailQuery(userId: string | undefined, id: string | undefined) {
+  const { sessionReady, status, user } = useAuth();
+  const enabled = sessionReady && status === 'authenticated' && Boolean(userId && id) && user?.id === userId;
+
+  return useQuery({
+    queryKey: userId && id ? medicationDetailQueryKey(userId, id) : ['medications', 'anonymous', 'detail'],
+    queryFn: () => fetchMedicationDetail(userId as string, id as string),
     enabled,
   });
 }

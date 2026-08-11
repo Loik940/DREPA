@@ -89,6 +89,9 @@ DREPA/
 │       ├── complete-profile.tsx
 │       ├── consent.tsx
 │       ├── medication-form.tsx
+│       ├── medication/
+│       │   ├── [id].tsx
+│       │   └── [id]/edit.tsx
 │       ├── profile-edit.tsx
 │       └── (tabs)/
 │           ├── _layout.tsx
@@ -194,12 +197,14 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/(app)/(tabs)/_layout.tsx` | Groupe protégé `(app)/(tabs)` | Déclare les onglets principaux. | Accessible après session, consentements et profil complet. |
 | `app/(app)/(tabs)/index.tsx` | Onglet accueil | Dashboard scalable : identité, action d’enregistrement, raccourcis, résumé conditionnel du journal et dernière activité. | Réutilise le cache Profil et la requête des entrées des 7 derniers jours. N’invente aucune donnée, n’ajoute pas de SOS et ne produit aucune interprétation médicale. |
 | `app/(app)/(tabs)/journal.tsx` | Onglet journal | Affiche l’état vide ou les 50 entrées récentes et ouvre le formulaire de saisie. | Utilise `useHealthLogsQuery`, les états UI partagés et des données privées filtrées par `session.user.id`. Les informations restent descriptives. |
-| `app/(app)/medication-form.tsx` | `/medication-form` | Formulaire d’ajout d’un traitement prescrit avec calendrier local, sélecteur d’heures sans clavier et test générique de notification à dix secondes. | React Hook Form, Zod, DateTimePicker, Expo Notifications et mutation transactionnelle avec nettoyage des notifications en cas d’échec. Aucun contenu de traitement n’est envoyé dans la notification de test. |
-| `app/(app)/(tabs)/medications.tsx` | Onglet médicaments | Affiche les traitements saisis, les rappels du jour et permet de confirmer une prise déclarée. | Charge uniquement les lignes du propriétaire, calcule les statuts localement et n’affiche aucune donnée fictive ou conseil médical non sourcé. |
+| `app/(app)/medication-form.tsx` | `/medication-form` | Wrapper de création qui relie le formulaire partagé à la session et revient à la liste après succès. | `useAuth`, `MedicationForm` et mutation de création compensatoire ; aucun accès direct aux champs natifs ou à Supabase dans le formulaire partagé. |
+| `app/(app)/medication/[id].tsx` | `/medication/:id` | Affiche les informations déclarées, les horaires et les actions Modifier, Arrêter/Réactiver et Supprimer. | Lecture `id + user_id`, confirmations d’arrêt et de suppression, cascade en base puis annulation des notifications locales. Aucun conseil médical. |
+| `app/(app)/medication/[id]/edit.tsx` | `/medication/:id/edit` | Construit les valeurs initiales depuis le traitement et ses rappels puis synchronise les modifications. | États loading, erreur et absence structurée ; le succès revient au détail. Les horaires inchangés conservent leur ligne et leur notification. |
+| `app/(app)/(tabs)/medications.tsx` | Onglet médicaments | Affiche les traitements, ouvre leur détail et expose Pris, Reporter 10 min et Ignorer sur les rappels actionnables. | Charge uniquement les lignes du propriétaire, calcule les statuts localement et affiche une erreur neutre propre à chaque mutation. |
 | `app/(app)/(tabs)/community.tsx` | Onglet communauté | Placeholder de la communauté. | Ne pas ajouter de publications, commentaires ou modération dans le socle actuel. |
 | `app/(app)/(tabs)/profile.tsx` | Onglet profil | Présente l’identité, les informations de suivi, les paramètres disponibles, la déconnexion et la suppression sécurisée du compte. Le bouton `Modifier` ouvre `/profile-edit`. | Utilise `useProfileQuery`, les composants `src/features/profile/components/`, Expo Router et `useAuth`. La suppression passe par l’Edge Function après confirmation explicite. |
 
-Les routes documentées mais absentes actuellement incluent les écrans métier détaillés du journal, des médicaments, du SOS, des ressources, de la communauté et de la modération. Leur absence est volontaire tant que le périmètre correspondant n’est pas implémenté.
+Les routes documentées mais encore absentes incluent les écrans métier du SOS, des ressources, de la communauté et de la modération. Leur absence est volontaire tant que le périmètre correspondant n’est pas implémenté.
 
 ## 7. Dossier `src/`
 
@@ -303,16 +308,17 @@ Les routes documentées mais absentes actuellement incluent les écrans métier 
 | `src/features/medications/date-time.ts` | Convertit de façon pure les dates locales `AAAA-MM-JJ` et les heures `HH:MM` vers ou depuis `Date`. | Utilise uniquement les composantes locales de `Date` afin d’éviter un décalage UTC ; refuse les formats et dates invalides. |
 | `src/features/medications/date-time.test.ts` | Vérifie le formatage, le parsing, l’heure sur 24 heures et l’aller-retour sans conversion UTC. | Jest et données calendaires synthétiques uniquement ; aucun accès réseau ou contenu médical. |
 | `src/features/medications/errors.ts` | Classe les erreurs session, réseau, RLS et Supabase du module. | Messages utilisateur neutres ; aucun token ou détail sensible affiché. |
-| `src/features/medications/queries.ts` | Charge en parallèle les traitements, rappels et prises du jour du seul utilisateur authentifié. | Supabase, TanStack Query et `sessionReady`; query key isolée par `user.id`. |
-| `src/features/medications/mutations.ts` | Crée un traitement et ses rappels, annule les notifications en cas d’échec, et enregistre les prises déclarées. | Supabase, QueryClient et Expo Notifications. Le cache est invalidé après succès. |
-| `src/features/medications/notifications.ts` | Configure la présentation au premier plan, le canal Android d’importance haute, la permission, les rappels quotidiens et le test générique après dix secondes. | Expo Notifications. Le son par défaut et une vibration courte sont utilisés ; aucun nom de médicament ni dosage n’entre dans le contenu. |
+| `src/features/medications/queries.ts` | Charge le tableau de bord et le détail d’un traitement avec ses rappels. | Supabase, TanStack Query et `sessionReady`; clés isolées par `user.id`, filtres `user_id` explicites et absence structurée après `maybeSingle`. |
+| `src/features/medications/mutations.ts` | Couvre création, modification synchronisée, arrêt, réactivation, suppression, prise, report et ignorance. | Toutes les écritures sont filtrées par `user_id`. Les nouvelles notifications sont compensées en cas d’échec ; une suppression DB réussie déclenche ensuite l’annulation locale des rappels quotidiens et reports. |
+| `src/features/medications/notifications.ts` | Configure le canal, la permission, les rappels quotidiens, le test et le report local de dix minutes. | Expo Notifications avec son du canal via `true`. Tous les messages sont génériques, sans nom de médicament ni dosage. |
+| `src/features/medications/components/MedicationForm.tsx` | Formulaire partagé de création et d’édition avec validation, dates, horaires et test générique de notification. | React Hook Form, Zod et composants UI ; ne lit pas Supabase, ne connaît pas la session et reçoit la sauvegarde par prop. |
 | `src/features/medications/components/DatePickerField.tsx` | Champ accessible qui ouvre le calendrier natif, affiche la date en français et conserve `AAAA-MM-JJ` dans le formulaire. | DateTimePicker, design system et `date-time.ts`. Aucun clavier ; la date de fin peut être effacée et bornée par la date de début. |
 | `src/features/medications/components/ReminderTimesField.tsx` | Champ accessible qui ajoute des heures natives sur 24 heures et les affiche en chips supprimables. | DateTimePicker, composants UI, `date-time.ts` et `parseReminderTimes`. Les heures sont uniques, triées et jamais saisies manuellement. |
-| `src/features/medications/status.ts` | Calcule les rappels du jour et les statuts `late`, `pending`, `taken`, `snoozed`, `skipped`. | Fonction pure basée sur l’heure locale et les prises réelles. |
-| `src/features/medications/components/ReminderCard.tsx` | Carte horizontale d’un rappel avec statut et action de confirmation. | Composants UI et tokens ; aucune confirmation automatique. |
-| `src/features/medications/components/MedicationCard.tsx` | Carte d’un traitement réellement saisi. | Affiche nom, dosage déclaré, fréquence et état actif/arrêté. |
+| `src/features/medications/status.ts` | Calcule l’horaire original, l’horaire effectif, l’intake lié et les statuts `late`, `pending`, `taken`, `snoozed`, `skipped`. | Un report reste `snoozed` avant `snoozed_until`, puis devient `late`; fonction pure sans interprétation médicale. |
+| `src/features/medications/components/ReminderCard.tsx` | Carte horizontale avec badge et actions accessibles Pris, Reporter 10 min et Ignorer. | Les actions sont absentes pendant une mutation ainsi que pour `taken` et `skipped`; libellés et couleurs communiquent ensemble l’état. |
+| `src/features/medications/components/MedicationCard.tsx` | Carte pressable d’un traitement réellement saisi. | Affiche le contenu existant, l’état et un chevron ; le rôle et l’indication d’accessibilité annoncent l’ouverture du détail. |
 | `src/features/medications/components/MedicationInfoCard.tsx` | Mention de prudence concernant les traitements prescrits. | Contenu générique non médical et sans dosage conseillé. |
-| `src/features/medications/medications.test.ts` | Tests des horaires, validation, erreurs RLS et statuts du jour. | Jest/Babel ; données synthétiques uniquement. |
+| `src/features/medications/medications.test.ts` | Tests des horaires, validation, erreurs RLS, intakeId, prise, ignorance et report avant/après l’heure effective. | Jest/Babel et fonctions pures uniquement ; aucun composant natif importé et aucune donnée médicale réelle. |
 
 ### `src/lib/`
 
@@ -359,7 +365,7 @@ Les routes documentées mais absentes actuellement incluent les écrans métier 
 
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
-| `src/types/database.types.ts` | Types TypeScript pour les profils, consentements, contacts, journal, traitements, rappels et prises, ainsi que le type `Json`. | Client Supabase et mutations/requêtes. Toute migration de schéma doit entraîner une régénération ou une mise à jour vérifiée de ces types. |
+| `src/types/database.types.ts` | Types TypeScript pour les profils, consentements, contacts, journal, traitements, rappels et prises, dont `snoozed_until` et `snooze_notification_id`, ainsi que le type `Json`. | Client Supabase et mutations/requêtes. Toute migration de schéma doit entraîner une régénération ou une mise à jour vérifiée de ces types. |
 | `src/types/domain.ts` | Type initial `ProfileCompletion` décrivant les indicateurs de complétude. | Disponible pour les futurs services d’onboarding. Garder ce type cohérent avec `completion.ts`. |
 
 ### Dossiers actuellement absents
@@ -388,6 +394,7 @@ Les routes documentées mais absentes actuellement incluent les écrans métier 
 | `supabase/migrations/20260807235000_create_medications.sql` | Crée `public.medications` avec traitement déclaré, fréquence, dates, notes et état actif. | Propriétaire lié à `auth.users`, contraintes de longueur/date, index, trigger `updated_at`, RLS CRUD et aucun accès `anon/public`. | 6 |
 | `supabase/migrations/20260807235100_create_medication_reminders.sql` | Crée `public.medication_reminders` avec heure locale, activation et identifiant de notification locale. | Clé étrangère composite `(medication_id, user_id)` empêchant une association inter-utilisateurs, unicité horaire, RLS CRUD propriétaire. | 7 |
 | `supabase/migrations/20260807235200_create_medication_intakes.sql` | Crée `public.medication_intakes` avec horaire prévu, prise déclarée et statut contraint. | Clé étrangère composite propriétaire, contrainte `taken_at`, unicité traitement/horaire, RLS CRUD et aucun accès `anon/public`. | 8 |
+| `supabase/migrations/20260811005300_add_snooze_fields_to_medication_intakes.sql` | Ajoute `snoozed_until` et `snooze_notification_id` aux prises déclarées. | Identifiant limité à 200 caractères, cohérence obligatoire entre statut et heure reportée, index partiel propriétaire sur les reports ; la RLS existante reste inchangée. | 9 |
 
 Le schéma documentaire prévoit également `user_roles` entre `profiles` et `user_consents`, mais aucune migration `user_roles` n’est présente dans le dépôt actuel. Cette différence doit rester visible avant toute implémentation d’administration ou de ressources éducatives. Les migrations déjà appliquées ne doivent jamais être modifiées : toute évolution passe par une nouvelle migration versionnée.
 

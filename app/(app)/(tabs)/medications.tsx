@@ -1,5 +1,6 @@
 // Onglet Médicaments : affiche les traitements prescrits saisis et les rappels du jour.
 import { useRouter, type Href } from 'expo-router';
+import { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
@@ -10,7 +11,7 @@ import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { MedicationCard } from '@/features/medications/components/MedicationCard';
 import { MedicationInfoCard } from '@/features/medications/components/MedicationInfoCard';
 import { ReminderCard } from '@/features/medications/components/ReminderCard';
-import { useMarkMedicationTakenMutation } from '@/features/medications/mutations';
+import { useMarkMedicationTakenMutation, useSkipMedicationMutation, useSnoozeMedicationMutation } from '@/features/medications/mutations';
 import { useMedicationDashboardQuery } from '@/features/medications/queries';
 import { buildTodayReminders } from '@/features/medications/status';
 import { useAuth } from '@/providers/auth-provider';
@@ -26,7 +27,23 @@ export default function MedicationsScreen() {
   const { user } = useAuth();
   const query = useMedicationDashboardQuery(user?.id);
   const markTaken = useMarkMedicationTakenMutation(user?.id);
+  const snooze = useSnoozeMedicationMutation(user?.id);
+  const skip = useSkipMedicationMutation(user?.id);
+  const actionLockRef = useRef(false);
   const date = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+
+  // Le verrou synchrone bloque un second appui avant même le prochain rendu React.
+  const handleReminderAction = async (actionFn: () => Promise<unknown>) => {
+    if (actionLockRef.current) return;
+    actionLockRef.current = true;
+    try {
+      await actionFn();
+    } catch {
+      // TanStack Query conserve l’erreur pour le message visuel ; on évite un rejet non géré côté UI.
+    } finally {
+      actionLockRef.current = false;
+    }
+  };
 
   // Le chargement et l’erreur sont traités avant de construire les rappels.
   if (query.isPending) return <LoadingState message="Chargement des traitements..." />;
@@ -34,6 +51,7 @@ export default function MedicationsScreen() {
 
   // Les rappels du jour sont préparés seulement avec des données disponibles.
   const reminders = buildTodayReminders(query.data.medications, query.data.reminders, query.data.intakes);
+  const actionLoading = markTaken.isPending || snooze.isPending || skip.isPending;
 
   // Le rendu principal affiche les rappels, les traitements et leurs états vides.
   return (
@@ -56,8 +74,10 @@ export default function MedicationsScreen() {
               <ReminderCard
                 item={item}
                 key={item.reminder.id}
-                loading={markTaken.isPending}
-                onTaken={() => markTaken.mutate({ medicationId: item.medication.id, scheduledAt: item.scheduledAt })}
+                loading={actionLoading}
+                onTaken={() => void handleReminderAction(() => markTaken.mutateAsync({ medicationId: item.medication.id, intakeId: item.intakeId, originalScheduledAt: item.originalScheduledAt, snoozeNotificationId: item.snoozeNotificationId, snoozedUntil: item.snoozedUntil }))}
+                onSnooze={() => void handleReminderAction(() => snooze.mutateAsync({ medicationId: item.medication.id, intakeId: item.intakeId, originalScheduledAt: item.originalScheduledAt, snoozeNotificationId: item.snoozeNotificationId, snoozedUntil: item.snoozedUntil }))}
+                onSkipped={() => void handleReminderAction(() => skip.mutateAsync({ medicationId: item.medication.id, intakeId: item.intakeId, originalScheduledAt: item.originalScheduledAt, snoozeNotificationId: item.snoozeNotificationId, snoozedUntil: item.snoozedUntil }))}
               />
             ))}
           </ScrollView>
@@ -67,6 +87,8 @@ export default function MedicationsScreen() {
         <AppText color="textSecondary">Aucun rappel actif aujourd’hui.</AppText>
       )}
       {markTaken.isError && <AppText color="sos">La prise ne peut pas être enregistrée pour le moment.</AppText>}
+      {snooze.isError && <AppText color="sos">Le rappel ne peut pas être reporté pour le moment.</AppText>}
+      {skip.isError && <AppText color="sos">Le rappel ne peut pas être ignoré pour le moment.</AppText>}
 
       <View style={styles.section}>
         <AppText variant="sectionTitle">Mes traitements</AppText>
@@ -74,7 +96,13 @@ export default function MedicationsScreen() {
           <EmptyState title="Aucun médicament ajouté" description="Ajoute uniquement les traitements prescrits que tu souhaites organiser dans DRÉPA." actionLabel="Ajouter un médicament" onAction={() => router.push(medicationFormRoute)} />
         ) : (
           <View style={styles.list}>
-            {query.data.medications.map((medication) => <MedicationCard key={medication.id} medication={medication} />)}
+            {query.data.medications.map((medication) => (
+              <MedicationCard
+                key={medication.id}
+                medication={medication}
+                onPress={() => router.push(`/(app)/medication/${medication.id}` as Href)}
+              />
+            ))}
           </View>
         )}
       </View>

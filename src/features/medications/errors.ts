@@ -1,5 +1,5 @@
 // Erreurs structurées du module Médicaments, nettoyées avant affichage à l’utilisateur.
-export type MedicationOperation = 'list' | 'detail' | 'create' | 'update' | 'delete' | 'intake';
+export type MedicationOperation = 'list' | 'detail' | 'create' | 'update' | 'delete' | 'intake' | 'activate' | 'snooze' | 'skip';
 export type MedicationErrorKind = 'session' | 'configuration' | 'network' | 'rls' | 'not_found' | 'supabase' | 'unknown';
 
 export class MedicationDataError extends Error {
