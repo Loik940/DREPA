@@ -24,11 +24,18 @@ export function configureMedicationNotificationPresentation() {
 // Notifications génériques : elles n’exposent aucun traitement et servent seulement à l’organisation des rappels.
 export async function ensureMedicationNotificationPermission() {
   if (Platform.OS === 'android') {
+    const existing = await Notifications.getNotificationChannelAsync(CHANNEL_ID);
+    // Migration unique : supprime l’ancien canal qui cherchait un fichier audio personnalisé incorrect.
+    if (existing?.sound === 'custom') {
+      await Notifications.deleteNotificationChannelAsync(CHANNEL_ID);
+    }
+
+    // Sans propriété sound, Android utilise le son système et Expo ne cherche aucun fichier personnalisé.
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'Rappels de traitements',
       importance: Notifications.AndroidImportance.HIGH,
-      sound: 'default',
       vibrationPattern: [0, 250, 250, 250],
+      enableVibrate: true,
     });
   }
 
