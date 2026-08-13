@@ -265,22 +265,59 @@ export type Database = {
             | 'other';
           details: string | null;
           status: 'pending' | 'reviewed' | 'dismissed';
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          resolution_note: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: Omit<
           Database['public']['Tables']['community_reports']['Row'],
-          'id' | 'post_id' | 'comment_id' | 'details' | 'status' | 'created_at' | 'updated_at'
+          | 'id'
+          | 'post_id'
+          | 'comment_id'
+          | 'details'
+          | 'status'
+          | 'reviewed_by'
+          | 'reviewed_at'
+          | 'resolution_note'
+          | 'created_at'
+          | 'updated_at'
         > & {
           id?: string;
           post_id?: string | null;
           comment_id?: string | null;
           details?: string | null;
           status?: 'pending' | 'reviewed' | 'dismissed';
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          resolution_note?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database['public']['Tables']['community_reports']['Insert']>;
+        Relationships: [];
+      };
+      // Cette table conserve l'historique système des décisions de modération.
+      community_moderation_actions: {
+        Row: {
+          id: string;
+          report_id: string | null;
+          moderator_id: string | null;
+          target_type: 'post' | 'comment';
+          target_id: string;
+          action: 'hide_post' | 'hide_comment' | 'dismiss_report' | 'restore_post' | 'restore_comment';
+          note: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database['public']['Tables']['community_moderation_actions']['Row'],
+          'id' | 'created_at'
+        > & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['community_moderation_actions']['Insert']>;
         Relationships: [];
       };
     };
@@ -321,6 +358,56 @@ export type Database = {
       is_admin: {
         Args: Record<string, never>;
         Returns: boolean;
+      };
+      get_community_moderation_queue: {
+        Args: {
+          target_status?: 'pending' | 'reviewed' | 'dismissed';
+          cursor_created_at?: string | null;
+          cursor_id?: string | null;
+          page_size?: number;
+        };
+        Returns: {
+          report_id: string;
+          target_type: 'post' | 'comment';
+          target_id: string;
+          reason:
+            | 'dangerous_medical_advice'
+            | 'harassment'
+            | 'misleading_information'
+            | 'scam_or_advertising'
+            | 'personal_data'
+            | 'other';
+          details: string | null;
+          status: 'pending' | 'reviewed' | 'dismissed';
+          report_created_at: string;
+          reviewed_at: string | null;
+          resolution_note: string | null;
+          author_alias: string | null;
+          content: string | null;
+          category: 'testimony' | 'question' | 'motivation' | 'daily_life' | 'resources' | null;
+          content_created_at: string | null;
+          is_hidden: boolean | null;
+        }[];
+      };
+      get_community_moderation_report: {
+        Args: { target_report_id: string };
+        Returns: Database['public']['Functions']['get_community_moderation_queue']['Returns'];
+      };
+      get_community_moderation_history: {
+        Args: { target_report_id: string };
+        Returns: {
+          action: 'hide_post' | 'hide_comment' | 'dismiss_report' | 'restore_post' | 'restore_comment';
+          note: string | null;
+          created_at: string;
+        }[];
+      };
+      moderate_community_report: {
+        Args: {
+          target_report_id: string;
+          decision: 'hide' | 'dismiss' | 'restore';
+          note?: string | null;
+        };
+        Returns: string;
       };
     };
     Enums: Record<string, never>;

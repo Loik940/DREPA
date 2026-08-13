@@ -57,7 +57,10 @@ app/
     ├── resources.tsx
     ├── community-post-form.tsx
     ├── community-post/[id].tsx
-    ├── moderation.tsx
+    ├── admin/
+    │   ├── _layout.tsx
+    │   ├── moderation.tsx
+    │   └── report/[id].tsx
     ├── sos.tsx
     └── (tabs)/
         ├── _layout.tsx
@@ -105,7 +108,8 @@ flowchart TB
         RESOURCES["Ressources"]
         POST["Publication"]
         POST_DETAIL["Détail d'une publication"]
-        MODERATION["Modération admin"]
+        MODERATION["File de modération admin"]
+        MODERATION_REPORT["Détail d'un signalement"]
         SOS["SOS"]
     end
 
@@ -133,6 +137,7 @@ flowchart TB
     PROFILE --> CONTACTS
     PROFILE --> CONSENT
     PROFILE --> MODERATION
+    MODERATION --> MODERATION_REPORT
 
     JOURNAL --> SOS
     MEDICATIONS --> SOS
@@ -156,7 +161,10 @@ Le layout `(app)` refuse tout accès sans session valide. Il ne se contente pas 
 - Avec les consentements mais sans prénom ou pseudonyme et pays, l'utilisateur est dirigé vers `complete-profile`.
 - Après complétion, les onglets et écrans métier deviennent accessibles.
 - Une révocation renvoie l'utilisateur vers le parcours de consentement.
-- `moderation` exige en plus un rôle `admin` vérifié côté Supabase ; une redirection mobile ne remplace pas la RLS.
+- `/(app)/admin/moderation` ouvre la file de modération, exposée sous `/admin/moderation` par Expo Router.
+- `/(app)/admin/report/[id]` ouvre le détail et l'historique d'un signalement, sous `/admin/report/[id]`.
+- Le layout `admin` applique un guard fondé sur le rôle propre au compte dans `user_roles`. Seul le rôle `admin` continue vers ces écrans.
+- Ce guard mobile ne remplace pas les contrôles `is_admin()` des RPC Supabase de modération.
 
 ## Onglets
 

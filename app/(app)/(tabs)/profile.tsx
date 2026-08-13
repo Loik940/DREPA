@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { useCurrentUserRoleQuery } from '@/features/moderation/queries';
 import { ProfileContactSection } from '@/features/profile/components/ProfileContactSection';
 import { ProfileHeader } from '@/features/profile/components/ProfileHeader';
 import { ProfileInfoCard } from '@/features/profile/components/ProfileInfoCard';
@@ -22,6 +23,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
 
 const profileEditRoute = '/(app)/profile-edit' as Href;
+const moderationRoute = '/(app)/admin/moderation' as Href;
 
 export default function ProfileScreen() {
   // Les hooks préparent la navigation, la session, la suppression et le profil privé.
@@ -30,6 +32,7 @@ export default function ProfileScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const profileQuery = useProfileQuery(user?.id);
+  const roleQuery = useCurrentUserRoleQuery(user?.id);
 
   // Le chargement, l’erreur et le profil absent ont chacun un rendu dédié.
   if (profileQuery.isPending) {
@@ -80,7 +83,12 @@ export default function ProfileScreen() {
       <ProfileHeader profile={profileQuery.data} />
       <ProfileInfoCard profile={profileQuery.data} />
       <ProfileContactSection />
-      <ProfileSettingsList onLegal={() => router.push('/(auth)/legal')} />
+      <ProfileSettingsList
+        onLegal={() => router.push('/(auth)/legal')}
+        onModeration={
+          roleQuery.data === 'admin' ? () => router.push(moderationRoute) : undefined
+        }
+      />
       <Button label="Se déconnecter" variant="ghost" onPress={() => void signOut()} />
       {deleteError && <AppText variant="caption" color="sos" align="center">{deleteError}</AppText>}
       <Button label="Supprimer mon compte" variant="danger" loading={isDeleting} onPress={confirmDelete} />

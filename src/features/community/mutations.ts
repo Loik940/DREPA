@@ -10,11 +10,7 @@ import { useAuth } from '@/providers/auth-provider';
 import type { Database } from '@/types/database.types';
 import { classifyCommunityError, CommunityDataError, type CommunityOperation } from './errors';
 import { buildCommunityCommentPayload, buildCommunityPostPayload } from './payload';
-import {
-  communityCommentsQueryKey,
-  communityPostDetailQueryKey,
-  type CommunityReport,
-} from './queries';
+import { communityCommentsQueryKey, communityPostDetailQueryKey } from './queries';
 import type { CommentValues, PostValues, ReportValues } from './schemas';
 
 type CommunityClient = NonNullable<typeof supabase>;
@@ -239,7 +235,13 @@ export function useReportMutation(userId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ target, values }: { target: CommunityReportTarget; values: ReportValues }): Promise<CommunityReport> => {
+    mutationFn: async ({
+      target,
+      values,
+    }: {
+      target: CommunityReportTarget;
+      values: ReportValues;
+    }): Promise<CreatedCommunityContent> => {
       const ownerId = requireUserId(sessionUserId, 'report');
       try {
         const payload: Database['public']['Tables']['community_reports']['Insert'] = {
@@ -252,10 +254,10 @@ export function useReportMutation(userId: string | undefined) {
         const { data, error } = await requireClient('report')
           .from('community_reports')
           .insert(payload)
-          .select()
+          .select('id')
           .single();
         if (error) throw error;
-        return data as CommunityReport;
+        return data;
       } catch (error) {
         throw classifyCommunityError(error, 'report');
       }

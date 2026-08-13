@@ -92,6 +92,11 @@ DREPA/
 │       │   ├── [id].tsx
 │       │   ├── new.tsx
 │       │   └── report.tsx
+│       ├── admin/
+│       │   ├── _layout.tsx
+│       │   ├── moderation.tsx
+│       │   └── report/
+│       │       └── [id].tsx
 │       ├── medication-form.tsx
 │       ├── medication/
 │       │   ├── [id].tsx
@@ -130,6 +135,19 @@ DREPA/
 │   │   │   ├── payload.ts
 │   │   │   ├── queries.ts
 │   │   │   └── schemas.ts
+│   │   ├── moderation/
+│   │   │   ├── components/
+│   │   │   │   ├── ModerationDecisionForm.tsx
+│   │   │   │   ├── ModerationEmptyState.tsx
+│   │   │   │   ├── ModerationHistoryList.tsx
+│   │   │   │   ├── ModerationReportCard.tsx
+│   │   │   │   └── ModerationStatusBadge.tsx
+│   │   │   ├── errors.ts
+│   │   │   ├── moderation.test.ts
+│   │   │   ├── mutations.ts
+│   │   │   ├── queries.ts
+│   │   │   ├── schemas.ts
+│   │   │   └── types.ts
 │   │   └── profile/
 │   │       └── components/
 │   │           └── ProfileForm.tsx
@@ -227,9 +245,12 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | `app/(app)/community/new.tsx` | `/community/new` | Formulaire de publication avec catégorie, texte limité à 2 000 caractères et acceptation obligatoire de la charte. | React Hook Form, Zod, `useCreatePostMutation` et session authentifiée. Un verrou synchrone bloque une double soumission. Le mobile envoie seulement `user_id`, catégorie et contenu ; le trigger Supabase impose `auth.uid()` et attribue l’alias communautaire stable. Après succès, la route ouvre la publication créée. |
 | `app/(app)/community/[id].tsx` | `/community/:id` | Détail réel d’une publication, soutien, commentaires paginés par lots de 20, ajout de commentaire et retrait confirmé de son propre contenu. | Queries et mutations Communauté, formulaire Zod et composants partagés. La propriété affichée vient de `is_own`, sans UUID de membre dans les vues. Un verrou synchrone bloque les doubles commentaires. Le retrait est un soft delete ; les autres membres peuvent signaler. |
 | `app/(app)/community/report.tsx` | `/community/report?postId=:id&commentId=:id?` | Formulaire de signalement d’une publication ou d’un commentaire, avec une cible unique, un motif contrôlé et des précisions facultatives limitées à 500 caractères. | Valide les paramètres, utilise `useReportMutation`, traite doublon et limite anti-spam, puis confirme la transmission à une modération humaine. Il ne décide ni ne masque un contenu dans le mobile. |
-| `app/(app)/(tabs)/profile.tsx` | Onglet profil | Présente l’identité, les informations de suivi, les paramètres disponibles, la déconnexion et la suppression sécurisée du compte. Le bouton `Modifier` ouvre `/profile-edit`. | Utilise `useProfileQuery`, les composants `src/features/profile/components/`, Expo Router et `useAuth`. La suppression passe par l’Edge Function après confirmation explicite. |
+| `app/(app)/admin/_layout.tsx` | Groupe protégé `/admin` | Ajoute un guard de rôle au groupe administrateur et bloque tout affichage privilégié avant la vérification fraîche du rôle. | Utilise `useCurrentUserRoleQuery`, `useAuth` et TanStack Query. Un compte non administrateur voit un accès refusé ; les caches `moderation-queue`, `moderation-report` et `moderation-history` sont supprimés sans toucher aux caches publics Communauté. Les RPC restent l’autorité réelle. |
+| `app/(app)/admin/moderation.tsx` | `/admin/moderation` | Affiche la file humaine des signalements avec les statuts `pending`, `reviewed` et `dismissed`, pagination stable et états chargement, erreur ou vide. | Utilise `useModerationQueueQuery` et les cartes de modération. Les données viennent de la RPC sûre et ne contiennent aucun `user_id`, e-mail ou donnée médicale. |
+| `app/(app)/admin/report/[id].tsx` | `/admin/report/:id` | Affiche le détail d’un signalement, permet une décision explicite masquer/rejeter/restaurer et présente l’historique. | Utilise les queries de détail/historique, `useModerateCommunityReportMutation` et les composants de modération. Le double envoi est verrouillé, les erreurs restent neutres et aucune décision n’est automatique. |
+| `app/(app)/(tabs)/profile.tsx` | Onglet profil | Présente l’identité, les informations de suivi, les paramètres disponibles, la déconnexion et la suppression sécurisée du compte. Le bouton `Modifier` ouvre `/profile-edit`. | Utilise `useProfileQuery`, `useCurrentUserRoleQuery`, les composants Profil, Expo Router et `useAuth`. L’entrée Administration est transmise aux paramètres uniquement lorsque la requête de rôle retourne `admin`. La suppression passe par l’Edge Function après confirmation explicite. |
 
-Les routes métier du SOS, des ressources éducatives et d’une interface d’administration restent absentes. Le premier lot Communauté est réel, mais la modération administrative et l’attribution du rôle `admin` restent uniquement côté Supabase, sans écran privilégié dans l’application mobile.
+Les routes métier du SOS et des ressources éducatives restent absentes. Le premier lot Communauté et son interface de modération administrative humaine sont désormais présents. L’attribution du rôle `admin` reste exclusivement côté Supabase et aucun formulaire mobile ne peut modifier un rôle.
 
 ## 7. Dossier `src/`
 
@@ -289,7 +310,7 @@ Les routes métier du SOS, des ressources éducatives et d’une interface d’a
 | `src/features/profile/components/ProfileForm.tsx` | Formulaire partagé entre finalisation de l’onboarding et édition du profil. Préremplit tous les champs existants, valide avec Zod et conserve les états de chargement et d’erreur. | `useAuth`, `useProfileQuery`, `useUpsertProfileMutation`, React Hook Form, `profileSchema` et composants UI. L’identité vient uniquement de la session ; les informations de suivi sont déclaratives et ne constituent pas un document médical. |
 | `src/features/profile/components/ProfileInfoCard.tsx` | Présente les informations de suivi et les valeurs facultatives avec `Non renseigné`. | `Profile`, Card et AppText. Le groupe sanguin est explicitement marqué comme déclaré, non validé médicalement. |
 | `src/features/profile/components/ProfileContactSection.tsx` | État visuel réservé aux futurs contacts d’urgence. | Aucun accès réseau et aucun contact fictif ; ne déclenche pas de SOS. |
-| `src/features/profile/components/ProfileSettingsList.tsx` | Liste des paramètres disponibles et différés, avec accès aux conditions d’utilisation. | Expo Router indirectement via callback. Les lignes différées restent non actionnables. |
+| `src/features/profile/components/ProfileSettingsList.tsx` | Liste des paramètres disponibles et différés, avec accès aux conditions d’utilisation et entrée Administration conditionnelle. | Reçoit ses callbacks de la route Profil. L’entrée Administration n’existe dans le rendu que si `useCurrentUserRoleQuery` a confirmé le rôle `admin`; les lignes différées restent non actionnables. |
 
 ### `src/features/dashboard/`
 
@@ -373,13 +394,34 @@ Le dossier contient actuellement sept composants partagés. Aucun huitième fich
 | `src/features/community/components/SupportButton.tsx` | Bouton accessible Soutenir/Soutenu avec compteur réel et état de chargement. | Tokens du thème ; `reaction_type` reste exclusivement `support`, sans like générique. |
 | `src/features/community/components/CommentCard.tsx` | Carte d’un commentaire avec pseudonyme, date, contenu et action Supprimer pour l’auteur ou Signaler pour les autres. | `format.ts`, design system et données de vue. La route transmet la propriété `is_own`; aucun UUID d’auteur n’est exposé et l’autorisation réelle reste imposée par RLS. |
 
+### `src/features/moderation/`
+
+| Fichier | Rôle | Dépendances, données et risques |
+|---|---|---|
+| `src/features/moderation/types.ts` | Définit `ModerationStatus`, `ModerationDecision`, la ligne sûre d’un signalement et l’élément minimal d’historique. | Dépend de `database.types.ts`. Le contrat ne doit jamais réintroduire `user_id`, e-mail, identifiant de modérateur ou donnée médicale. |
+| `src/features/moderation/schemas.ts` | Valide les décisions `hide`, `dismiss`, `restore`, borne la note facultative à 500 caractères et expose `canRestore`. | Zod et types de modération. Une restauration est proposée seulement pour un contenu présent, masqué et déjà traité ; la RPC vérifie à nouveau l’état réel. |
+| `src/features/moderation/errors.ts` | Classe les erreurs de rôle, liste, détail, historique et décision. | Transforme session, configuration, réseau, RLS, absence, conflit et erreur Supabase en messages neutres. Les codes techniques ne doivent pas révéler de données privées. |
+| `src/features/moderation/queries.ts` | Charge le rôle courant, la file paginée, le détail et l’historique avec des clés privées contenant `userId`. | Supabase, AuthProvider, TanStack Query et RPC administrateur. Le rôle est périmé immédiatement, relu au montage, à la reconnexion et toutes les 30 secondes. La file utilise un curseur stable date + identifiant. |
+| `src/features/moderation/mutations.ts` | Envoie une décision et sa note uniquement à `moderate_community_report`, puis invalide file, détail, historique et vues Communauté affectées. | Supabase, session et TanStack Query. Aucun `update` direct de table n’est permis ; le verrou serveur et l’invalidation globale des vues évitent une décision concurrente ou un contenu visible obsolète. |
+| `src/features/moderation/moderation.test.ts` | Vérifie le schéma, `canRestore` et les classifications RLS/conflit. | Jest, Zod et fonctions pures avec valeurs fictives. Aucun module natif, secret ou contenu médical réel n’est importé. |
+
+### `src/features/moderation/components/`
+
+| Fichier | Rôle | Dépendances, données et risques |
+|---|---|---|
+| `src/features/moderation/components/ModerationDecisionForm.tsx` | Présente uniquement les décisions permises, valide la note et rappelle que l’action sera enregistrée. | React Hook Form, Zod, `canRestore`, composants UI et `ChoiceChips`. Le formulaire ne décide jamais seul et ne remplace pas les contrôles RPC. |
+| `src/features/moderation/components/ModerationEmptyState.tsx` | Adapte l’état vide aux trois statuts de la file. | `EmptyState` et `ModerationStatus`. Il n’invente aucun signalement et ne déclenche aucune action. |
+| `src/features/moderation/components/ModerationHistoryList.tsx` | Affiche action, date et note de chaque décision sans identité administrative. | Formatage de date Communauté, Card et types d’historique. Les identifiants techniques et l’identité du modérateur restent absents. |
+| `src/features/moderation/components/ModerationReportCard.tsx` | Résume type, motif, pseudonyme public, date, statut et extrait du contenu signalé. | Catégories, formatage Communauté, badge et design system. Les identifiants servent seulement à la navigation et ne sont pas rendus ; le contenu peut être indisponible. |
+| `src/features/moderation/components/ModerationStatusBadge.tsx` | Rend le statut en texte et couleur accessible. | Thème clair et `ModerationStatus`. La couleur n’est jamais le seul moyen de transmettre l’état. |
+
 ### `src/lib/`
 
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
 | `src/lib/env.ts` | Valide les variables publiques d’environnement et retourne `null` si la configuration est incomplète. | Zod et `process.env`. Ne jamais ajouter de valeur réelle ou de clé privilégiée dans le dépôt. |
 | `src/lib/supabase.ts` | Crée le client Supabase typé avec l’URL publique, la clé anon publique et l’adaptateur SecureStore. | `@supabase/supabase-js`, polyfill URL, `secure-storage.ts`, `database.types.ts`. `service_role` est interdit dans l’application mobile. |
-| `src/lib/query-client.ts` | Instance globale TanStack Query avec retry limité, durée de fraîcheur de 30 secondes et liste des racines privées, dont `community-posts`, `community-post` et `community-comments`. | Utilisée par `QueryProvider`, les mutations et `AuthProvider`. Les caches Communauté dépendant du membre connecté sont purgés lors d’un changement de compte ou d’une déconnexion. |
+| `src/lib/query-client.ts` | Instance globale TanStack Query avec retry limité, durée de fraîcheur de 30 secondes et liste des racines privées, dont Communauté, `user-role` et les trois racines de modération. | Utilisée par `QueryProvider`, les mutations et `AuthProvider`. Les caches privés sont purgés lors d’un changement de compte ou d’une déconnexion ; le guard administrateur supprime seulement les caches de modération après un refus de rôle. |
 
 ### `src/providers/`
 
@@ -418,7 +460,7 @@ Le dossier contient actuellement sept composants partagés. Aucun huitième fich
 
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
-| `src/types/database.types.ts` | Types TypeScript pour les tables Communauté, `user_roles.community_alias`, les colonnes `deleted_at`, les vues `community_posts_feed` et `community_comments_feed`, leurs unions et la fonction `is_admin`. | Client Supabase et mutations/requêtes. Les vues exposent `is_own` sans UUID de membre ; les formes Insert gardent facultatifs les champs système gérés par triggers. Toute migration de schéma doit entraîner une régénération ou une mise à jour vérifiée de ces types. |
+| `src/types/database.types.ts` | Types TypeScript pour les tables et vues Communauté, `community_moderation_actions`, les champs de traitement de `community_reports`, `is_admin` et les quatre RPC de modération. | Client Supabase et modules Communauté/Modération. Les vues et lignes RPC destinées à l’interface n’exposent aucun UUID de membre, e-mail ou donnée médicale. Toute migration de schéma doit entraîner une régénération ou une mise à jour vérifiée de ces types. |
 | `src/types/domain.ts` | Type initial `ProfileCompletion` décrivant les indicateurs de complétude. | Disponible pour les futurs services d’onboarding. Garder ce type cohérent avec `completion.ts`. |
 
 ### Dossiers actuellement absents
@@ -454,10 +496,11 @@ Le dossier contient actuellement sept composants partagés. Aucun huitième fich
 | `supabase/migrations/20260811181300_create_community_post_reactions.sql` | Crée `community_post_reactions` avec une unique réaction `support` par membre et publication. | Les réactions sont privées : chaque membre lit uniquement les siennes, hors administration. La contrainte unique, `auth.uid()`, la visibilité du post et le trigger de compteur protègent ajout/retrait ; aucune mise à jour n’est accordée. | 13, après `community_posts` |
 | `supabase/migrations/20260811181400_create_community_reports.sql` | Crée `community_reports` avec une cible unique publication ou commentaire, motif, détails, statut et timestamps. | Unicité d’un signalement par membre et cible, statut initial `pending`, limite de 10 signalements par heure et identité imposée par trigger. RLS : lecture propriétaire/admin, insertion propriétaire vers une cible existante, mise à jour admin, aucune suppression. La décision reste une modération humaine côté Supabase. | 14, après publications et commentaires |
 | `supabase/migrations/20260811213000_harden_community_feed_views.sql` | Corrige les alertes Security Advisor `Security Definer View` de `community_posts_feed` et `community_comments_feed` avec les wrappers `read_community_posts_feed()` et `read_community_comments_feed()`. | Les fonctions `STABLE SECURITY DEFINER` à `search_path` vide appliquent directement les prédicats de visibilité, ne renvoient aucun `user_id` et sont exécutables uniquement par `authenticated`. Les vues recréées avec `security_invoker` et `security_barrier` ne révèlent aucun UUID de membre et restent en lecture authentifiée seulement, sans nouveau droit sur les tables. | 15, après toutes les migrations Communauté |
+| `supabase/migrations/20260813203000_add_community_moderation_audit.sql` | Ajoute `reviewed_by`, `reviewed_at` et `resolution_note` à `community_reports`, puis crée le journal `community_moderation_actions`. | Le journal est immuable depuis le mobile ; `report_id` et `moderator_id` utilisent `ON DELETE SET NULL` pour conserver action, cible et date. Les changements de visibilité sont audités. `get_community_moderation_queue`, `get_community_moderation_report`, `get_community_moderation_history` et `moderate_community_report` exposent file, détail, historique et décision sans donnée privée de membre. La mise à jour directe des signalements est révoquée au rôle `authenticated`. | 16, après le durcissement des vues |
 
-L’ordre 10 à 14 est obligatoire : `user_roles` fournit `is_admin()` et le `community_alias` stable avant les contenus. Les vues de fil ne révèlent aucun UUID de membre et utilisent `is_own`. Les réactions restent privées. Les soft deletes conservent les lignes dans les fenêtres anti-spam, sans privilège DELETE mobile : supprimer puis recréer ne réinitialise donc pas les limites. Les compteurs restent maintenus par triggers. Les migrations déjà appliquées ne doivent jamais être modifiées.
+L’ordre 10 à 16 est obligatoire : `user_roles` fournit `is_admin()` et le `community_alias` stable avant les contenus et la modération. Les vues de fil ne révèlent aucun UUID de membre et utilisent `is_own`. Les réactions restent privées. Les soft deletes conservent les lignes dans les fenêtres anti-spam, sans privilège DELETE mobile : supprimer puis recréer ne réinitialise donc pas les limites. Les compteurs et l’audit de visibilité restent maintenus par triggers. Les migrations déjà appliquées ne doivent jamais être modifiées.
 
-Le rôle `admin` est attribué et modifié côté Supabase uniquement. L’application React Native ne possède aucun formulaire de rôle, aucun écran de modération privilégié et aucune clé `service_role`. Les policies consultent `is_admin()` pour les opérations de modération autorisées ; un examen humain reste nécessaire avant toute action sur un signalement.
+Le rôle `admin` est attribué et modifié côté Supabase uniquement. L’application React Native possède désormais une interface de modération privilégiée, mais aucun formulaire de rôle ni clé `service_role`. Le rôle est revérifié au montage, à la reconnexion et toutes les 30 secondes. Un refus supprime les caches privés de modération. Les RPC contrôlent `is_admin()` et chaque décision reste humaine et auditée.
 
 L’Edge Function `delete-account` est présente et déployée pour la suppression sécurisée du compte authentifié.
 
@@ -640,11 +683,35 @@ signalement d’une publication ou d’un commentaire
     → reportSchema
     → useReportMutation
     → community_reports au statut pending
-    → examen humain côté Supabase
-    → action administrative autorisée par user_roles + is_admin()
+    → insertion relisant seulement l’identifiant créé
+
+accès depuis profile.tsx
+    → useCurrentUserRoleQuery avec revérification régulière
+    → entrée Administration seulement pour le rôle admin
+    → app/(app)/admin/_layout.tsx
+    → refus UI et purge des caches de modération si le rôle n’est pas admin
+
+examen humain
+    → app/(app)/admin/moderation.tsx
+    → get_community_moderation_queue par statut et curseur stable
+    → app/(app)/admin/report/[id].tsx
+    → get_community_moderation_report + get_community_moderation_history
+    → choix explicite masquer, rejeter ou restaurer avec note facultative
+    → moderate_community_report sous contrôle is_admin()
+    → verrou du signalement, changement de visibilité et audit de la décision
+    → invalidation des caches de modération et des vues Communauté
 ```
 
-Les publications et commentaires restent textuels et communautaires. Les lectures passent par des vues sans UUID de membre et les réactions propres restent privées. Le retrait d’un contenu est un soft delete qui ne réinitialise pas l’anti-spam. Ce premier lot ne contient aucun SOS, aucune image, aucun chat privé, aucun conseil médical et aucune donnée médicale privée. Les témoignages ne remplacent jamais l’avis d’un professionnel de santé. Le rôle `admin`, l’examen des signalements et les actions privilégiées restent côté Supabase uniquement.
+Les publications et commentaires restent textuels et communautaires. Les lectures passent par des vues sans UUID de membre et les réactions propres restent privées. Le retrait d’un contenu est un soft delete qui ne réinitialise pas l’anti-spam. Ce premier lot ne contient aucun SOS, aucune image, aucun chat privé, aucun conseil médical et aucune donnée médicale privée. Les témoignages ne remplacent jamais l’avis d’un professionnel de santé. L’interface administrateur est présente, mais les autorisations, verrous et écritures privilégiées restent exclusivement contrôlés par les RPC Supabase.
+
+### Sécurité de la modération
+
+- Un compte normal est refusé par le guard de l’interface et par chaque RPC administrateur.
+- Aucun UUID n’est affiché à l’administrateur : les identifiants de signalement et de cible restent internes à la navigation. Les RPC ne renvoient aucun `user_id`, UUID de membre, e-mail, identité de modérateur ou donnée médicale.
+- Chaque masquage, rejet ou restauration est une décision humaine explicite et enregistrée dans `community_moderation_actions` avec sa date et sa note éventuelle.
+- Le mobile ne met jamais directement à jour `community_reports` et ne peut pas écrire dans le journal d’audit.
+- Le rôle est revérifié régulièrement ; sa perte purge les caches `moderation-queue`, `moderation-report` et `moderation-history` sans supprimer les caches publics Communauté.
+- Aucune décision de modération, aucun déploiement et aucune mise en Production ne sont automatiques.
 
 ## 12. Matrice des dépendances
 
@@ -662,11 +729,14 @@ Les publications et commentaires restent textuels et communautaires. Les lecture
 | `app/(app)/consent.tsx` | `legal-versions`, `profile/schemas`, `profile/mutations`, `AuthProvider` | Utilisateur authentifié sans consentements courants. |
 | `app/(app)/complete-profile.tsx` | `ProfileForm`, Expo Router | Utilisateur authentifié avec consentements valides mais profil incomplet. |
 | `app/(app)/profile-edit.tsx` | `ProfileForm`, Expo Router | Utilisateur authentifié avec onboarding complet depuis l’onglet Profil. |
-| `app/(app)/(tabs)/profile.tsx` | `profile/queries`, composants Profil, `AuthProvider`, Expo Router | Utilisateur consultant son profil et route `/profile-edit`. |
+| `app/(app)/(tabs)/profile.tsx` | `profile/queries`, `moderation/queries`, composants Profil, `AuthProvider`, Expo Router | Utilisateur consultant son profil, route `/profile-edit` et entrée Administration si le rôle courant est `admin`. |
 | `app/(app)/(tabs)/community.tsx` | `community/queries`, `community/mutations`, composants Communauté, `AuthProvider`, Expo Router | Fil authentifié, filtres, pagination, soutien, publication, détail et signalement. |
 | `app/(app)/community/new.tsx` | `community/categories`, `community/schemas`, `community/mutations`, React Hook Form, Zod, `AuthProvider` | Création textuelle d’une publication puis route `/community/:id`. |
 | `app/(app)/community/[id].tsx` | `community/queries`, `community/mutations`, `community/schemas`, composants Communauté, React Hook Form, Zod | Détail, commentaires, soutien, suppression propriétaire et signalement. |
 | `app/(app)/community/report.tsx` | `community/categories`, `community/schemas`, `community/mutations`, React Hook Form, Zod, paramètres Expo Router | Signalement d’une publication ou d’un commentaire vers la modération humaine. |
+| `app/(app)/admin/_layout.tsx` | `moderation/queries`, `AuthProvider`, TanStack Query, Expo Router | Toutes les routes administrateur ; bloque le rendu avant contrôle du rôle et purge les caches de modération après refus. |
+| `app/(app)/admin/moderation.tsx` | `moderation/queries`, composants Modération, `AuthProvider`, Expo Router | Administrateur consultant les files `pending`, `reviewed` et `dismissed`. |
+| `app/(app)/admin/report/[id].tsx` | `moderation/queries`, `moderation/mutations`, `moderation/schemas`, composants Modération | Administrateur consultant un signalement, son historique et enregistrant une décision humaine. |
 | `src/features/profile/components/ProfileForm.tsx` | `profile/schemas`, `profile/queries`, `profile/mutations`, `AuthProvider`, React Hook Form, Zod, composants UI | `complete-profile.tsx`, `profile-edit.tsx`. |
 | `src/features/auth/auth-service.ts` | `src/lib/supabase.ts`, Expo Linking | `AuthProvider`, routes Auth et suppression de compte. |
 | `src/providers/auth-provider.tsx` | `supabase.ts`, `auth-service.ts`, `query-client.ts`, AppState | `app/_layout.tsx`, layouts Auth/App et profil. |
@@ -680,6 +750,12 @@ Les publications et commentaires restent textuels et communautaires. Les lecture
 | `src/features/community/queries.ts` | Supabase, `database.types.ts`, TanStack Query, `AuthProvider`, `errors.ts` | Onglet Communauté et détail d’une publication. |
 | `src/features/community/mutations.ts` | Supabase, `database.types.ts`, TanStack Query, `AuthProvider`, queries, schémas et erreurs | Routes Communauté pour publication, commentaire, soutien, suppression et signalement. |
 | `src/features/community/components/*.tsx` | Composants UI, thème, catégories, format et types de queries | Onglet Communauté, création et détail ; uniquement du texte, des compteurs et des actions autorisées. |
+| `src/features/moderation/types.ts` | `database.types.ts` et contrats RPC sûrs | Schémas, queries, mutations, composants et tests de modération. |
+| `src/features/moderation/schemas.ts` | Zod et types de modération | Formulaire de décision, règle de restauration et tests purs. |
+| `src/features/moderation/errors.ts` | Contrats d’erreurs Supabase | Queries, mutation et tests de classification. |
+| `src/features/moderation/queries.ts` | Supabase, `database.types.ts`, TanStack Query, `AuthProvider`, erreurs | Profil, guard admin, file, détail et historique. |
+| `src/features/moderation/mutations.ts` | RPC Supabase, TanStack Query, `AuthProvider`, query keys et schémas | Route de détail administrateur ; décision et invalidation des caches. |
+| `src/features/moderation/components/*.tsx` | Composants UI, thème, catégories/format Communauté, schémas et types Modération | Routes de file et de détail ; aucune autorisation n’est décidée dans les composants. |
 | `src/lib/supabase.ts` | `env.ts`, SecureStore, `database.types.ts`, Supabase JS | Services Auth, queries et mutations. |
 | `src/lib/env.ts` | Zod et variables `EXPO_PUBLIC_*` | `src/lib/supabase.ts`. |
 | `src/lib/query-client.ts` | TanStack Query | `QueryProvider`, `AuthProvider`, mutations. |
@@ -687,13 +763,14 @@ Les publications et commentaires restent textuels et communautaires. Les lecture
 | `src/providers/query-provider.tsx` | TanStack Query, `query-client.ts` | `AppProvider`. |
 | `src/services/secure-storage.ts` | Expo SecureStore | `src/lib/supabase.ts`. |
 | `supabase/functions/delete-account/index.ts` | Supabase Auth Admin, secrets Edge Function | `auth-service.ts` via `functions.invoke`; ne jamais déployer la clé serveur au mobile. |
-| `src/types/database.types.ts` | Schéma des migrations existantes, dont tables Communauté et `is_admin()` | Client Supabase, code profil, journal, médicaments et Communauté. |
+| `src/types/database.types.ts` | Schéma des migrations existantes, dont tables Communauté, audit de modération et RPC administrateur | Client Supabase, code profil, journal, médicaments, Communauté et Modération. |
 | `supabase/migrations/20260811181000_create_user_roles.sql` | PostgreSQL, `auth.users`, `set_updated_at()` | Policies RLS Communauté et contrôle administratif côté Supabase. |
 | `supabase/migrations/20260811181100_create_community_posts.sql` | `auth.users`, `profiles`, `user_roles`, PostgreSQL/RLS | Fil, détail et mutations des publications ; parent des commentaires, réactions et signalements. |
 | `supabase/migrations/20260811181200_create_community_comments.sql` | `community_posts`, `auth.users`, `profiles`, `user_roles`, PostgreSQL/RLS | Détail, commentaires, compteur de commentaires visibles et signalements. |
 | `supabase/migrations/20260811181300_create_community_post_reactions.sql` | `community_posts`, `auth.users`, `user_roles`, PostgreSQL/RLS | Soutien unique et compteur de soutiens. |
 | `supabase/migrations/20260811181400_create_community_reports.sql` | `community_posts`, `community_comments`, `auth.users`, `user_roles`, PostgreSQL/RLS | Signalement mobile et examen humain côté Supabase. |
 | `supabase/migrations/20260811213000_harden_community_feed_views.sql` | `community_posts`, `community_comments`, `auth.uid()`, PostgreSQL | Fonctions wrapper de lecture confidentielle et vues `security_invoker` répondant aux alertes Security Advisor, sans UUID de membre exposé. |
+| `supabase/migrations/20260813203000_add_community_moderation_audit.sql` | `community_reports`, contenus Communauté, `user_roles`, `auth.users`, triggers et RPC | File, détail, historique, décision humaine, audit de visibilité et révocation des mises à jour directes mobiles. |
 | `supabase/migrations/*.sql` | PostgreSQL et `auth.users` | Projet Supabase distant/local ; consommées par le client via RLS. |
 | `app.config.js` | Expo, DateTimePicker, Notifications et assets principaux | Expo CLI et EAS Build ; un nouveau build natif Android est requis après cette configuration. |
 | `eas.json` | EAS CLI | Profiles development, preview et production Android. |

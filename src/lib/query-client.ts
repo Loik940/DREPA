@@ -22,6 +22,10 @@ const privateQueryRoots = new Set([
   'community-posts',
   'community-post',
   'community-comments',
+  'user-role',
+  'moderation-queue',
+  'moderation-report',
+  'moderation-history',
 ]);
 
 // La purge retire du cache les données privées du compte ciblé ou de tous les comptes.

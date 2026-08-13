@@ -8,6 +8,7 @@ import { spacing } from '@/theme/spacing';
 
 type ProfileSettingsListProps = {
   onLegal: () => void;
+  onModeration?: () => void;
 };
 
 const settings = [
@@ -17,12 +18,25 @@ const settings = [
   { label: 'À propos de DRÉPA', value: 'Bientôt disponible', enabled: false },
 ] as const;
 
-export function ProfileSettingsList({ onLegal }: ProfileSettingsListProps) {
+export function ProfileSettingsList({ onLegal, onModeration }: ProfileSettingsListProps) {
   return (
     <View style={styles.section}>
       <AppText variant="sectionTitle">Paramètres</AppText>
       <Card>
         <View style={styles.list}>
+          {onModeration ? (
+            <Pressable
+              accessibilityHint="Ouvre l’espace de modération réservé."
+              accessibilityRole="button"
+              onPress={onModeration}
+              style={styles.pressable}
+            >
+              <View style={styles.row}>
+                <AppText>Administration</AppText>
+                <AppText variant="caption" color="textSecondary">→</AppText>
+              </View>
+            </Pressable>
+          ) : null}
           {settings.map((setting) => {
             const content = (
               <View style={styles.row}>
