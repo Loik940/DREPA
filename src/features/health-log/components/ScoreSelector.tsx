@@ -7,7 +7,7 @@ import { colors } from '@/theme/colors';
 import { radii } from '@/theme/radii';
 import { sizes } from '@/theme/sizes';
 import { spacing } from '@/theme/spacing';
-import { getScoreColor } from './score';
+import { getScoreTone } from './score';
 
 type ScoreSelectorProps = {
   label: string;
@@ -18,8 +18,10 @@ type ScoreSelectorProps = {
 // Composant déclaratif : le score choisi décrit un ressenti et ne constitue ni une mesure clinique ni un diagnostic.
 export function ScoreSelector({ label, value, onChange }: ScoreSelectorProps) {
   const [trackWidth, setTrackWidth] = useState(0);
-  const scoreColor = getScoreColor(value);
-  const scoreHex = colors[scoreColor];
+  const scoreTone = getScoreTone(value);
+  // Le niveau haut garde la couleur visuelle existante sans devenir un statut médical ou SOS.
+  const scoreColorKey = scoreTone === 'high' ? 'sos' : scoreTone;
+  const scoreHex = colors[scoreColorKey];
 
   const handleLayout = (event: LayoutChangeEvent) => {
     setTrackWidth(event.nativeEvent.layout.width);
@@ -35,7 +37,7 @@ export function ScoreSelector({ label, value, onChange }: ScoreSelectorProps) {
     <View style={styles.container}>
       <View style={styles.valueRow}>
         <AppText variant="label" color="textSecondary">{label}</AppText>
-        <AppText variant="display" color={scoreColor}>{value ?? '—'}</AppText>
+        <AppText variant="display" color={scoreColorKey}>{value ?? '—'}</AppText>
       </View>
       <Pressable
         accessibilityLabel={`${label}. Curseur de 0 à 10`}

@@ -16,6 +16,7 @@ function parseAuthParams(url: string) {
 export default function AuthCallbackScreen() {
   // Les hooks préparent la navigation, le suivi du lien et l’état d’erreur.
   const router = useRouter();
+  const incomingUrl = Linking.useURL();
   const handledUrl = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,11 +61,8 @@ export default function AuthCallbackScreen() {
       router.replace('/');
     };
 
-    void Linking.getInitialURL().then(handleUrl);
-    const subscription = Linking.addEventListener('url', ({ url }) => void handleUrl(url));
-
-    return () => subscription.remove();
-  }, [router]);
+    void handleUrl(incomingUrl);
+  }, [incomingUrl, router]);
 
   // Une erreur de confirmation propose un retour sûr vers la connexion.
   if (error) {
