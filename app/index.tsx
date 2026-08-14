@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
 import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { BrandedSplashScreen } from '@/components/ui/BrandedSplashScreen';
 import { useAuth } from '@/providers/auth-provider';
 
 export const WELCOME_SEEN_KEY = '@drepa/welcome-seen';
@@ -37,7 +38,7 @@ export default function HomeScreen() {
 
   // Les états de chargement et d’erreur bloquent toute redirection prématurée.
   if (!sessionReady || status === 'loading' || (!session && welcomeSeen === null)) {
-    return <ScreenPlaceholder title="Chargement" description="Restauration de la session." />;
+    return <BrandedSplashScreen />;
   }
 
   if (status === 'error') {

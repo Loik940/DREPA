@@ -176,7 +176,7 @@ DREPA/
 | `DREPA-Cahier.md` | Cahier des charges fonctionnel et technique de référence : public cible, MVP, limites médicales, sécurité, navigation et exigences métier. | Documentation, décisions d’architecture et futures implémentations. | Document de référence à préserver. Toute évolution fonctionnelle doit rester compatible avec ce cahier ou être documentée avant mise en œuvre. |
 | `package.json` | Manifeste Node : point d’entrée Expo Router, dépendances Expo/React Native/Supabase, DateTimePicker natif, AsyncStorage pour la préférence de bienvenue, scripts de développement, lint, tests, typecheck et builds EAS. | npm, Expo CLI, Jest, ESLint et EAS CLI. | Les versions Expo doivent rester alignées sur SDK 57. Les packages Expo doivent être installés avec `npx expo install`. L’override npm `uuid: 11.1.1` corrige la vulnérabilité transitive de `xcode` sans rétrograder Expo. |
 | `package-lock.json` | Verrouille l’arbre exact des dépendances npm. | npm install et les environnements CI/build. | Ne pas modifier manuellement. Une modification de `package.json` doit être suivie d’une régénération contrôlée du lockfile. |
-| `app.config.js` | Configuration Expo CommonJS : identité DRÉPA, plateforme Android, schéma de deep link, icône, permission `android.permission.SCHEDULE_EXACT_ALARM`, plugins dont DateTimePicker, splash screen, expériences et identifiant EAS. | Expo CLI, EAS CLI et les builds Android. | Conserver `name: DREPA`, `slug: drepa`, `scheme: drepa`, `platforms: ['android']`, `bj.drepa.app`, l’icône adaptative, les plugins et `extra.eas.projectId`. La permission et le plugin natifs exigent un nouveau build Android. Ne jamais y placer de secret. |
+| `app.config.js` | Configuration Expo CommonJS : identité DRÉPA, plateforme Android, schéma de deep link, icône, permission `android.permission.SCHEDULE_EXACT_ALARM`, plugins dont DateTimePicker, splash natif DRÉPA, expériences et identifiant EAS. | Expo CLI, EAS CLI et les builds Android. | Conserver `name: DREPA`, `slug: drepa`, `scheme: drepa`, `platforms: ['android']`, `bj.drepa.app`, l’icône adaptative, les plugins et `extra.eas.projectId`. Le splash natif utilise le fond bordeaux et `drepa-splash-icon.png`; toute modification exige un nouveau build Android. Ne jamais y placer de secret. |
 | `eas.json` | Profils EAS `development`, `preview` et `production`, tous configurés pour Android. | EAS Build. | Le profil development utilise `expo-dev-client` et produit un APK interne. Aucun secret ou identifiant Supabase ne doit être ajouté ici. |
 | `tsconfig.json` | Étend la configuration Expo, active le mode strict, les types Jest et les alias `@/*` vers `src/*` et `@/assets/*` vers `assets/*`. | TypeScript, Babel/Jest et l’éditeur. | Les alias doivent rester cohérents avec les imports. Ne pas désactiver `strict` pour masquer une erreur de contrat. |
 | `eslint.config.js` | Configuration ESLint flat basée sur `eslint-config-expo`, avec exclusion de `dist`. | `npm run lint`. | Toute règle désactivée doit être justifiée. Les fichiers générés ne doivent pas être ajoutés au lint sans nécessité. |
@@ -217,7 +217,7 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 | Fichier / route | URL ou groupe | Rôle | Accès, dépendances et états |
 |---|---|---|---|
 | `app/_layout.tsx` | Layout racine | Configure une fois la présentation sonore et visuelle des notifications au premier plan, puis monte `AppProvider` et le `Stack` Expo Router. | Point d’entrée de tous les écrans. Ne doit pas contenir une redirection concurrente avec les guards enfants ni exposer le contenu d’un traitement. |
-| `app/index.tsx` | `/` | Observe l’état Auth et redirige vers la connexion ou les onglets protégés. | Affiche chargement ou erreur de configuration avec `Réessayer`. La complétude du profil est ensuite décidée par `(app)/_layout.tsx`. |
+| `app/index.tsx` | `/` | Observe l’état Auth et redirige vers la bienvenue, la connexion ou les onglets protégés. | Affiche `BrandedSplashScreen` pendant la restauration réelle de la session et de la préférence de bienvenue, sans délai artificiel. L’erreur de configuration conserve son écran `Réessayer`. |
 | `app/+not-found.tsx` | Absent actuellement | Route de fallback prévue dans la documentation mais non créée dans le code actuel. | À créer avant d’exposer des routes supplémentaires ; toute page inconnue devrait proposer un retour sûr. |
 | `app/(auth)/_layout.tsx` | Groupe public `(auth)` | Protège les écrans publics contre une session déjà authentifiée et autorise le mode récupération. | Utilise `useAuth`, `Redirect`, `Stack` et `ScreenPlaceholder`. États de session `loading`, `error`, `authenticated` et récupération de mot de passe. |
 | `app/(auth)/welcome.tsx` | `/welcome` | Onboarding visuel local en trois étapes avant l’authentification. | Utilise AsyncStorage uniquement pour la préférence non sensible d’accueil déjà vu. Ne collecte aucune donnée médicale et ne crée aucune session. Le périmètre actif est en mode clair uniquement. |
@@ -265,6 +265,7 @@ Les routes métier du SOS et des ressources éducatives restent absentes. Le pre
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
 | `src/components/ui/AppText.tsx` | Texte typé avec variantes de typographie et couleur du thème actif. | `useAppTheme`, tokens typography. Ne pas utiliser de taille ou couleur locale sans justification. |
+| `src/components/ui/BrandedSplashScreen.tsx` | Relais React du splash natif avec identité DRÉPA, slogan et trois points animés. | `Animated`, `AccessibilityInfo`, `StatusBar`, `expo-symbols` et tokens du thème. Respecte la réduction des animations, ne crée aucun délai et ne charge aucune donnée. |
 | `src/components/ui/OnboardingIllustration.tsx` | Illustrations locales légères en formes React Native pour les trois slides de bienvenue. | `useAppTheme`, tokens de rayons. Aucun asset distant ou contenu médical réel ; conserver un rendu performant hors ligne. |
 | `src/components/ui/ScreenContainer.tsx` | Conteneur Safe Area avec variantes scroll et fond de thème. | `react-native-safe-area-context`, `useAppTheme`. Conserver le support du clavier et des petits écrans. |
 | `src/components/ui/Button.tsx` | Boutons primaire, brand, secondaire, ghost et danger avec chargement et accessibilité. | Tokens couleurs, tailles et rayons. Ne pas utiliser `danger` pour une action ordinaire. |
@@ -541,7 +542,7 @@ La documentation ne doit pas être dupliquée dans son intégralité ici. Chaque
 | `assets/images/android-icon-foreground.png` | Premier plan de l’icône adaptative Android. |
 | `assets/images/android-icon-background.png` | Arrière-plan de l’icône adaptative Android. |
 | `assets/images/android-icon-monochrome.png` | Variante monochrome de l’icône adaptative Android. |
-| `assets/images/splash-icon.png` | Image du splash screen Expo. |
+| `assets/images/drepa-splash-icon.png` | Médaillon ivoire et goutte bordeaux du splash natif Android. Asset transparent sans texte ni donnée personnelle. |
 
 ### Assets présents mais non référencés par les routes actuelles
 
@@ -550,6 +551,7 @@ La documentation ne doit pas être dupliquée dans son intégralité ici. Chaque
 - `assets/images/tutorial-web.png` ;
 - `assets/images/react-logo.png`, `react-logo@2x.png`, `react-logo@3x.png` ;
 - `assets/images/logo-glow.png` ;
+- `assets/images/splash-icon.png` (ancien asset Expo remplacé par l’identité DRÉPA) ;
 - `assets/images/favicon.png` ;
 - `assets/images/expo-logo.png`, `expo-badge.png`, `expo-badge-white.png` ;
 - `assets/expo.icon/icon.json`, `assets/expo.icon/Assets/grid.png` et `assets/expo.icon/Assets/expo-symbol 2.svg`.

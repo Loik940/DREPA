@@ -27,9 +27,9 @@ module.exports = {
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#208AEF',
-        image: './assets/images/splash-icon.png',
-        imageWidth: 76,
+        backgroundColor: '#7B1E1E',
+        image: './assets/images/drepa-splash-icon.png',
+        imageWidth: 174,
       },
     ],
   ],

@@ -3,6 +3,10 @@ export const colors = {
     // Identité principale et action d’urgence avec leurs couleurs de texte contrastées.
     brand: '#7B1E1E',
     onBrand: '#FFFFFF',
+    splashBackgroundDeep: '#641515',
+    splashText: '#FFF8F1',
+    splashTextMuted: '#E7B5AA',
+    splashAccent: '#E8A87C',
     sos: '#C0392B',
     onSos: '#FFFFFF',
     errorSoft: '#FCE9E7',
