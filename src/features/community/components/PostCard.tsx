@@ -66,7 +66,7 @@ export function PostCard({ post, onOpen, onSupport, onReport, supportLoading }: 
       {onOpen ? (
         <Pressable
           accessibilityHint="Ouvre la publication et ses commentaires."
-          accessibilityLabel={`Publication de ${post.author_alias}`}
+          accessibilityLabel={`Publication de ${post.author_alias}. ${getCommunityCategoryLabel(post.category)}. ${formatRelativeCommunityDate(post.created_at)}. ${post.content.slice(0, 160)}. ${commentsLabel}.`}
           accessibilityRole="button"
           onPress={onOpen}
           style={({ pressed }) => [styles.contentArea, { opacity: pressed ? 0.82 : 1 }]}

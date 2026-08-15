@@ -19,7 +19,7 @@ export function ProfileHeader({ profile }: { profile: Profile }) {
 
   return (
     <Card style={styles.card}>
-      <View style={styles.avatar} accessibilityLabel="Initiales du profil">
+      <View accessible style={styles.avatar} accessibilityLabel={`Initiales du profil : ${getInitials(profile)}`}>
         <AppText variant="sectionTitle" color="brand" align="center">{getInitials(profile)}</AppText>
       </View>
       <AppText variant="title" align="center">{profile.first_name || 'Mon profil'}</AppText>

@@ -13,6 +13,7 @@ import { signInSchema, type SignInValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
 import { useAppTheme } from '@/theme/use-app-theme';
 import { spacing } from '@/theme/spacing';
+import { fontFamilies } from '@/theme/typography';
 
 export default function LoginScreen() {
   // Les hooks initialisent la navigation, le thème et le formulaire validé.
@@ -80,7 +81,7 @@ export default function LoginScreen() {
           )}
         />
         <Link href="/(auth)/forgot-password" style={[styles.link, { color: colors.brand }]}>Mot de passe oublié ?</Link>
-        {formState.errors.root?.message && <AppText color="sos" align="center">{formState.errors.root.message}</AppText>}
+        {formState.errors.root?.message && <AppText accessibilityRole="alert" color="sos" align="center">{formState.errors.root.message}</AppText>}
         <Button label="Se connecter" loading={formState.isSubmitting} onPress={handleSubmit(onSubmit)} />
       </View>
 
@@ -98,5 +99,5 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxxl },
   form: { gap: spacing.lg },
   footer: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxxl },
-  link: { fontFamily: 'Inter', fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  link: { fontFamily: fontFamilies.semiBold, fontSize: 14, paddingVertical: 14, textAlign: 'center' },
 });

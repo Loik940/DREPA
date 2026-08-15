@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { StatusBanner } from '@/components/ui/StatusBanner';
 import { useHealthLogsQuery, type HealthLog } from '@/features/health-log/queries';
 import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
@@ -25,7 +26,7 @@ export default function JournalScreen() {
     return <LoadingState message="Chargement du journal..." />;
   }
 
-  if (query.isError) {
+  if (query.isError && !query.data) {
     return <ErrorState description={query.error.message} onRetry={() => void query.refetch()} />;
   }
 
@@ -61,13 +62,15 @@ export default function JournalScreen() {
           <Pressable
             key={entry.id}
             accessibilityRole="button"
-            accessibilityLabel="Ouvrir cette entrée du journal"
+            accessibilityLabel={getHealthLogAccessibilityLabel(entry)}
             onPress={() => router.push({ pathname: '/(app)/health-log/[id]', params: { id: entry.id } })}
           >
             <HealthLogCard entry={entry} />
           </Pressable>
         ))}
       </View>
+
+      {query.isFetchNextPageError ? <StatusBanner tone="error" message="Les entrées suivantes ne peuvent pas être chargées pour le moment." /> : null}
 
       {query.hasNextPage && (
         <Button
@@ -81,6 +84,13 @@ export default function JournalScreen() {
       <AppText variant="caption" color="textSecondary" align="center">Ce journal est un suivi personnel et ne constitue pas un diagnostic.</AppText>
     </ScreenContainer>
   );
+}
+
+function getHealthLogAccessibilityLabel(entry: HealthLog) {
+  const recordedAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(entry.recorded_at));
+  const symptomCount = entry.symptoms?.length ?? 0;
+  const symptomsLabel = symptomCount === 0 ? 'Aucun symptôme déclaré' : `${symptomCount} symptôme${symptomCount > 1 ? 's' : ''} déclaré${symptomCount > 1 ? 's' : ''}`;
+  return `Entrée du ${recordedAt}. Douleur ${entry.pain_level ?? 'non renseignée'} sur 10. Fatigue ${entry.fatigue_level ?? 'non renseignée'} sur 10. ${symptomsLabel}. Ouvrir le détail.`;
 }
 
 function HealthLogCard({ entry }: { entry: HealthLog }) {

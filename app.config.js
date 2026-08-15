@@ -2,7 +2,7 @@
 module.exports = {
   name: 'DREPA',
   slug: 'drepa',
-  version: '0.1.0',
+  version: '1.0.0',
   platforms: ['android'],
   orientation: 'portrait',
   scheme: 'drepa',
@@ -10,9 +10,11 @@ module.exports = {
   icon: './assets/images/icon.png',
   android: {
     package: 'bj.drepa.app',
+    versionCode: 1,
+    softwareKeyboardLayoutMode: 'resize',
     permissions: ['android.permission.SCHEDULE_EXACT_ALARM'],
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      backgroundColor: '#FFF8F1',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -23,13 +25,12 @@ module.exports = {
     'expo-secure-store',
     'expo-notifications',
     '@react-native-community/datetimepicker',
-    'expo-location',
     [
       'expo-splash-screen',
       {
         backgroundColor: '#7B1E1E',
         image: './assets/images/drepa-splash-icon.png',
-        imageWidth: 174,
+        imageWidth: 140,
       },
     ],
   ],

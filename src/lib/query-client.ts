@@ -10,6 +10,11 @@ export const queryClient = new QueryClient({
     },
   },
 });
+let privateCacheGeneration = 0;
+
+export function getPrivateCacheGeneration() {
+  return privateCacheGeneration;
+}
 
 // Seules ces racines peuvent contenir des données privées liées à un compte.
 const privateQueryRoots = new Set([
@@ -30,10 +35,16 @@ const privateQueryRoots = new Set([
 
 // La purge retire du cache les données privées du compte ciblé ou de tous les comptes.
 export function removePrivateQueries(userId?: string) {
+  privateCacheGeneration += 1;
+  void queryClient.cancelQueries({
+    predicate: ({ queryKey }) =>
+      privateQueryRoots.has(String(queryKey[0])) && (!userId || queryKey[1] === userId),
+  });
   queryClient.removeQueries({
     predicate: ({ queryKey }) =>
       privateQueryRoots.has(String(queryKey[0])) && (!userId || queryKey[1] === userId),
   });
+  queryClient.getMutationCache().clear();
 }
 
 // Après connexion, les données privées visibles sont invalidées pour être relues avec la session active.

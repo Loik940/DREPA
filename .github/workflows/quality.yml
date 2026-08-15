@@ -25,10 +25,13 @@ concurrency:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - name: Récupérer le dépôt
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
 
       - name: Configurer Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -39,6 +42,15 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
+      - name: Démarrer et vérifier Supabase local
+        run: |
+          npx supabase start
+          npx supabase db reset
+          npx supabase db lint --local
+
+      - name: Vérifier les espaces et fins de ligne
+        run: git diff --check HEAD^ HEAD
+
       - name: Vérifier TypeScript
         run: npm run typecheck
 
@@ -46,7 +58,7 @@ jobs:
         run: npm run lint
 
       - name: Exécuter les tests
-        run: npm test -- --testPathIgnorePatterns='[\\/]\.kilo[\\/]'
+        run: npm test -- --coverage --testPathIgnorePatterns='[\\/]\.kilo[\\/]'
 
       - name: Vérifier les versions Expo
         run: npx expo install --check
@@ -71,3 +83,7 @@ jobs:
           fi
 
           echo "Aucun motif de secret réel détecté."
+
+      - name: Arrêter Supabase local
+        if: always()
+        run: npx supabase stop --no-backup

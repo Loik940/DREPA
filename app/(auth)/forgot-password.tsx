@@ -3,10 +3,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { StatusBanner } from '@/components/ui/StatusBanner';
+import { TextField } from '@/components/ui/TextField';
 import { passwordResetRequestSchema, type PasswordResetRequestValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
+import { spacing } from '@/theme/spacing';
 
 export default function ForgotPasswordScreen() {
   // Les hooks initialisent l’authentification, l’état d’envoi et le formulaire validé.
@@ -29,43 +35,42 @@ export default function ForgotPasswordScreen() {
 
   // Le rendu principal affiche le formulaire et la confirmation d’envoi.
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Mot de passe oublié</Text>
-      <Text>Si un compte correspond à cette adresse, un lien sera envoyé.</Text>
+    <ScreenContainer scroll contentContainerStyle={styles.container}>
+      <View style={styles.header}>
+        <AppText variant="title">Mot de passe oublié</AppText>
+        <AppText color="textSecondary">Si un compte correspond à cette adresse, un lien sécurisé sera envoyé.</AppText>
+      </View>
       <Controller
         control={control}
         name="email"
         render={({ field, fieldState }) => (
-          <View>
-            <TextInput
+          <TextField
+              label="Adresse e-mail"
               autoCapitalize="none"
+              autoComplete="email"
+              error={fieldState.error?.message}
               keyboardType="email-address"
               onBlur={field.onBlur}
               onChangeText={field.onChange}
-              placeholder="E-mail"
-              style={styles.input}
+              placeholder="nom@exemple.com"
               value={field.value}
             />
-            {fieldState.error && <Text style={styles.error}>{fieldState.error.message}</Text>}
-          </View>
         )}
       />
-      {formState.errors.root?.message && <Text style={styles.error}>{formState.errors.root.message}</Text>}
-      {sent && <Text>Consultez votre messagerie pour continuer.</Text>}
-      <Pressable disabled={formState.isSubmitting} onPress={handleSubmit(onSubmit)} style={styles.button}>
-        <Text style={styles.buttonText}>{formState.isSubmitting ? 'Envoi...' : 'Envoyer le lien'}</Text>
-      </Pressable>
-      <Link href="/(auth)/login" style={styles.link}>Retour à la connexion</Link>
-    </View>
+      {formState.errors.root?.message && <StatusBanner message={formState.errors.root.message} tone="error" />}
+      {sent && <StatusBanner message="Consulte ta messagerie pour continuer." tone="success" />}
+      <Button disabled={sent} label={sent ? 'Lien envoyé' : 'Envoyer le lien'} loading={formState.isSubmitting} onPress={handleSubmit(onSubmit)} />
+      <Link asChild href="/(auth)/login">
+        <Pressable accessibilityRole="link" style={styles.link}>
+          <AppText variant="label" color="brand" align="center">Retour à la connexion</AppText>
+        </Pressable>
+      </Link>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', gap: 12, padding: 24 },
-  title: { fontSize: 28, fontWeight: '700', marginBottom: 12 },
-  input: { borderColor: '#A0A0A0', borderRadius: 8, borderWidth: 1, padding: 12 },
-  button: { alignItems: 'center', backgroundColor: '#208AEF', borderRadius: 8, padding: 14 },
-  buttonText: { color: '#FFFFFF', fontWeight: '700' },
-  error: { color: '#B00020' },
-  link: { color: '#1769AA', textAlign: 'center' },
+  container: { gap: spacing.xxl, justifyContent: 'center', minHeight: '100%' },
+  header: { gap: spacing.sm },
+  link: { alignSelf: 'center', justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.md },
 });

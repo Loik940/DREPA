@@ -18,15 +18,15 @@ export function StatusBanner({ message, tone = 'info' }: StatusBannerProps) {
   const palette = tone === 'success'
     ? { background: colors.backgroundMuted, text: colors.success }
     : tone === 'warning'
-      ? { background: colors.backgroundMuted, text: colors.warning }
+      ? { background: colors.warningSoft, text: colors.warningText }
       : tone === 'error'
         ? { background: colors.backgroundMuted, text: colors.sos }
         : { background: colors.backgroundMuted, text: colors.textPrimary };
 
   // Le rôle d’alerte permet aux technologies d’assistance d’annoncer le changement d’état.
   return (
-    <View accessibilityRole="alert" style={[styles.banner, { backgroundColor: palette.background, borderLeftColor: palette.text }]}>
-      <AppText color={palette.text === colors.success ? 'success' : palette.text === colors.warning ? 'warning' : palette.text === colors.sos ? 'sos' : 'textPrimary'}>{message}</AppText>
+    <View accessibilityLiveRegion={tone === 'error' ? 'assertive' : tone === 'success' ? 'polite' : 'none'} accessibilityRole={tone === 'error' ? 'alert' : undefined} style={[styles.banner, { backgroundColor: palette.background, borderLeftColor: palette.text }]}>
+      <AppText color={palette.text === colors.success ? 'success' : palette.text === colors.warningText ? 'warningText' : palette.text === colors.sos ? 'sos' : 'textPrimary'}>{message}</AppText>
     </View>
   );
 }

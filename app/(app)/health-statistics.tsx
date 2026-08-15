@@ -12,6 +12,7 @@ import { getChoiceLabel, symptomChoices, triggerChoices } from '@/features/healt
 import { useHealthLogStatisticsSourceQuery } from '@/features/health-log/queries';
 import { calculateHealthLogStatistics } from '@/features/health-log/statistics';
 import { useAuth } from '@/providers/auth-provider';
+import { colors } from '@/theme/colors';
 import { useAppTheme } from '@/theme/use-app-theme';
 import { radii } from '@/theme/radii';
 import { spacing } from '@/theme/spacing';
@@ -39,6 +40,7 @@ export default function HealthStatisticsScreen() {
       </View>
 
       <StatusBanner message="Ces statistiques décrivent uniquement les informations que tu as enregistrées. Elles ne constituent pas un diagnostic." />
+      {query.data.length >= 1000 ? <StatusBanner tone="warning" message="Le résumé est limité aux 1 000 entrées les plus récentes de cette période." /> : null}
 
       <View style={styles.grid}>
         <StatisticCard label="Entrées" value={statistics.entryCount.toString()} />
@@ -100,6 +102,6 @@ const styles = StyleSheet.create({
   section: { gap: spacing.md },
   frequency: { gap: spacing.sm },
   frequencyHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  track: { backgroundColor: '#E8D5C4', borderRadius: radii.full, height: 8, overflow: 'hidden' },
+  track: { backgroundColor: colors.border, borderRadius: radii.full, height: 8, overflow: 'hidden' },
   fill: { borderRadius: radii.full, height: '100%' },
 });

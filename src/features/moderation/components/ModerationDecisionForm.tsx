@@ -91,8 +91,8 @@ export function ModerationDecisionForm({
           />
         )}
       />
-      <View accessibilityRole="alert" style={styles.warning}>
-        <AppText color="warning">
+      <View style={styles.warning}>
+        <AppText color="warningText">
           Cette décision sera enregistrée dans l’historique de modération.
         </AppText>
       </View>

@@ -6,21 +6,30 @@ import { useAuth } from '@/providers/auth-provider';
 
 export default function AuthLayout() {
   // Les hooks lisent l’état d’authentification et la route publique courante.
-  const { status, isPasswordRecovery } = useAuth();
+  const { canRetrySessionRestore, isPasswordRecovery, retrySessionRestore, status } = useAuth();
   const segments = useSegments() as string[];
   const isCallbackRoute = segments.includes('callback');
+  const isLegalRoute = segments.includes('legal');
 
   // Le chargement et l’erreur empêchent d’afficher une route au mauvais moment.
   if (status === 'loading') {
-    return <ScreenPlaceholder title="Chargement" description="Vérification de la session." />;
+    return <ScreenPlaceholder loading title="Chargement" description="Vérification de la session." />;
   }
 
   if (status === 'error') {
-    return <ScreenPlaceholder title="Configuration indisponible" description="La connexion sécurisée ne peut pas être initialisée." />;
+    return (
+      <ScreenPlaceholder
+        accessibilityRole="alert"
+        title="Session indisponible"
+        description="La connexion sécurisée ne peut pas être restaurée pour le moment."
+        actionLabel={canRetrySessionRestore ? 'Réessayer' : undefined}
+        onAction={canRetrySessionRestore ? retrySessionRestore : undefined}
+      />
+    );
   }
 
   // Une personne déjà connectée quitte les écrans publics ordinaires.
-  if (status === 'authenticated' && !isPasswordRecovery && !isCallbackRoute) {
+  if (status === 'authenticated' && !isPasswordRecovery && !isCallbackRoute && !isLegalRoute) {
     return <Redirect href="/" />;
   }
 

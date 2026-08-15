@@ -1,34 +1,39 @@
 // Layout protégé : vérifie la session puis impose l’ordre consentements, profil et onglets.
-import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
+import { Redirect, Stack, useSegments } from 'expo-router';
+import { usePreventScreenCapture } from 'expo-screen-capture';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { useMedicationNotificationReconciliation } from '@/features/medications/reconciliation';
 import type { ProfileDataError } from '@/features/profile/completion';
 import { useOnboardingStatus } from '@/features/profile/use-onboarding-status';
 import { env } from '@/lib/env';
 import { useAuth } from '@/providers/auth-provider';
+import { colors } from '@/theme/colors';
 
 export default function ProtectedLayout() {
+  usePreventScreenCapture('drepa-protected-space');
   // Les hooks lisent la session, l’onboarding et la route protégée courante.
-  const router = useRouter();
-  const { session, sessionReady, status } = useAuth();
+  const { canRetrySessionRestore, retrySessionRestore, session, sessionReady, status } = useAuth();
   const onboarding = useOnboardingStatus();
+  useMedicationNotificationReconciliation(session?.user.id, onboarding.status === 'complete');
   const segments = useSegments() as string[];
   const isConsentRoute = segments.includes('consent');
   const isCompleteProfileRoute = segments.includes('complete-profile');
 
   // Les états de chargement et d’erreur bloquent la navigation protégée.
   if (!sessionReady || status === 'loading') {
-    return <ScreenPlaceholder title="Chargement" description="Restauration de la session." />;
+    return <ScreenPlaceholder loading title="Chargement" description="Restauration de la session." />;
   }
 
   if (status === 'error') {
     return (
       <ScreenPlaceholder
-        title="Configuration indisponible"
-        description="La connexion sécurisée ne peut pas être initialisée."
-        actionLabel="Réessayer"
-        onAction={() => router.replace('/')}
+        accessibilityRole="alert"
+        title="Session indisponible"
+        description="La connexion sécurisée ne peut pas être restaurée pour le moment."
+        actionLabel={canRetrySessionRestore ? 'Réessayer' : undefined}
+        onAction={canRetrySessionRestore ? retrySessionRestore : undefined}
       />
     );
   }
@@ -40,7 +45,7 @@ export default function ProtectedLayout() {
 
   // Le profil et les consentements doivent être chargés avant de poursuivre.
   if (onboarding.status === 'loading') {
-    return <ScreenPlaceholder title="Chargement" description="Lecture du profil et des consentements." />;
+    return <ScreenPlaceholder loading title="Chargement" description="Lecture du profil et des consentements." />;
   }
 
   if (onboarding.status === 'error') {
@@ -63,11 +68,23 @@ export default function ProtectedLayout() {
   }
 
   // Le rendu principal expose la pile protégée lorsque tous les contrôles passent.
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{
+      headerShadowVisible: false,
+      headerStyle: { backgroundColor: colors.backgroundPrimary },
+      headerTintColor: colors.brand,
+      headerTitle: '',
+    }}>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="consent" options={{ headerShown: false }} />
+      <Stack.Screen name="complete-profile" options={{ headerShown: false }} />
+      <Stack.Screen name="admin" options={{ headerShown: false }} />
+    </Stack>
+  );
 }
 
 function DataErrorScreen({ error, onRetry }: { error: ProfileDataError | null; onRetry: () => void }) {
-  const showDiagnostic = env?.EXPO_PUBLIC_APP_ENV === 'development' && error;
+  const showDiagnostic = __DEV__ && env?.EXPO_PUBLIC_APP_ENV === 'development' && error;
 
   // Le rendu d’erreur garde le diagnostic technique réservé au développement.
   return (

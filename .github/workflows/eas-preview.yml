@@ -19,11 +19,14 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     environment: preview
     steps:
       - name: Récupérer le dépôt
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
 
       - name: Configurer Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -33,6 +36,9 @@ jobs:
 
       - name: Installer les dépendances
         run: npm ci
+
+      - name: Vérifier les espaces et fins de ligne
+        run: git diff --check HEAD^ HEAD
 
       - name: Vérifier la présence du jeton Expo
         shell: bash
@@ -46,11 +52,22 @@ jobs:
 
           echo "Le secret EXPO_TOKEN est configuré."
 
+      - name: Vérifier TypeScript, ESLint et Jest
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test -- --runInBand
+
+      - name: Vérifier Expo
+        run: |
+          npx expo install --check
+          npm run doctor
+
       - name: Configurer Expo et EAS
         uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # v8
         with:
-          eas-version: latest
+          eas-version: 22.0.0
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Lancer le build Android Preview
-        run: npx eas-cli@latest build --platform android --profile preview --non-interactive --no-wait
+        run: eas build --platform android --profile preview --non-interactive

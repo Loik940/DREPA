@@ -11,7 +11,12 @@ export const healthLogSchema = z.object({
     .string()
     .trim()
     .max(5)
-    .refine((value) => value === '' || /^\d{1,2}([.,]\d)?$/.test(value), 'Saisis une température valide.'),
+    .refine((value) => value === '' || /^\d{1,2}([.,]\d)?$/.test(value), 'Saisis une température valide.')
+    .refine((value) => {
+      if (!value) return true;
+      const temperature = Number(value.replace(',', '.'));
+      return temperature >= 25 && temperature <= 45;
+    }, 'La température déclarée doit être comprise entre 25 et 45 °C.'),
   hydration_level: z.enum(['low', 'medium', 'good']).nullable(),
   fatigue_level: z.number().int().min(0).max(10).nullable(),
   symptoms: z.array(z.string().min(1).max(80)).max(12),

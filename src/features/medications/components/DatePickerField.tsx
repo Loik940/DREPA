@@ -4,7 +4,7 @@
 // Il ne stocke aucune donnée, ne fait aucun appel réseau et n’expose aucun secret.
 // Il facilite l’organisation d’un traitement sans fournir de conseil ou de décision médicale.
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
@@ -20,6 +20,7 @@ type DatePickerFieldProps = {
   value: string;
   onChange: (value: string) => void;
   minimumDate?: string;
+  maximumDate?: string;
   allowClear?: boolean;
   error?: string;
   helperText?: string;
@@ -31,9 +32,10 @@ const frenchDateFormatter = new Intl.DateTimeFormat('fr-FR', {
   year: 'numeric',
 });
 
-export function DatePickerField({ label, value, onChange, minimumDate, allowClear = false, error, helperText }: DatePickerFieldProps) {
+export function DatePickerField({ label, value, onChange, minimumDate, maximumDate, allowClear = false, error, helperText }: DatePickerFieldProps) {
   const { colors } = useAppTheme();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const errorId = `date-error-${useId().replace(/:/g, '')}`;
   const pickerValue = value ? parseLocalDate(value) : minimumDate ? parseLocalDate(minimumDate) : new Date();
   const displayedValue = value ? frenchDateFormatter.format(parseLocalDate(value)) : 'Sélectionner une date';
 
@@ -48,23 +50,26 @@ export function DatePickerField({ label, value, onChange, minimumDate, allowClea
       <AppText variant="label">{label}</AppText>
       <Pressable
         accessibilityHint="Ouvre le calendrier sans afficher le clavier."
+        aria-describedby={error ? errorId : undefined}
+        aria-invalid={Boolean(error)}
         accessibilityLabel={`${label}, ${displayedValue}`}
         accessibilityRole="button"
         accessibilityState={{ expanded: isPickerOpen }}
         onPress={() => setIsPickerOpen(true)}
         style={({ pressed }) => [
           styles.field,
-          { backgroundColor: colors.backgroundSurface, borderColor: error ? colors.sos : colors.border, opacity: pressed ? 0.82 : 1 },
+          { backgroundColor: colors.backgroundSurface, borderColor: error ? colors.sos : colors.borderStrong, opacity: pressed ? 0.82 : 1 },
         ]}
       >
         <AppText color={value ? 'textPrimary' : 'textSecondary'}>{displayedValue}</AppText>
       </Pressable>
       {allowClear && value ? <Button accessibilityLabel={`Effacer ${label.toLowerCase()}`} label="Effacer" onPress={() => onChange('')} variant="ghost" style={styles.clearButton} /> : null}
-      {error ? <AppText variant="caption" color="sos">{error}</AppText> : helperText ? <AppText variant="caption" color="textSecondary">{helperText}</AppText> : null}
+      {error ? <AppText accessibilityRole="alert" nativeID={errorId} variant="caption" color="sos">{error}</AppText> : helperText ? <AppText variant="caption" color="textSecondary">{helperText}</AppText> : null}
       {isPickerOpen ? (
         <DateTimePicker
           display="calendar"
           minimumDate={minimumDate ? parseLocalDate(minimumDate) : undefined}
+          maximumDate={maximumDate ? parseLocalDate(maximumDate) : undefined}
           mode="date"
           onChange={handlePickerChange}
           value={pickerValue}
@@ -77,5 +82,5 @@ export function DatePickerField({ label, value, onChange, minimumDate, allowClea
 const styles = StyleSheet.create({
   wrapper: { gap: spacing.sm },
   field: { borderRadius: radii.md, borderWidth: 1, justifyContent: 'center', minHeight: sizes.inputHeight, paddingHorizontal: spacing.lg },
-  clearButton: { alignSelf: 'flex-start', minHeight: sizes.touchTarget, paddingHorizontal: spacing.md },
+  clearButton: { alignSelf: 'flex-start', minHeight: sizes.buttonHeight, paddingHorizontal: spacing.md },
 });

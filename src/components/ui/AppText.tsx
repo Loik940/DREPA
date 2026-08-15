@@ -11,12 +11,14 @@ type AppTextProps = TextProps & {
   align?: TextStyle['textAlign'];
 };
 
-export function AppText({ variant = 'body', color = 'textPrimary', align, style, ...props }: AppTextProps) {
+export function AppText({ variant = 'body', color = 'textPrimary', align, style, accessibilityLiveRegion, accessibilityRole, ...props }: AppTextProps) {
   const { colors } = useAppTheme();
 
   return (
     <Text
       {...props}
+      accessibilityRole={accessibilityRole ?? (variant === 'title' ? 'header' : undefined)}
+      accessibilityLiveRegion={accessibilityRole === 'alert' ? 'assertive' : accessibilityLiveRegion}
       style={[typography[variant], styles.base, { color: colors[color], textAlign: align }, style]}
     />
   );

@@ -4,7 +4,7 @@
 // Il ne programme aucune notification et ne conserve aucune donnée sensible.
 // Les horaires sont déclarés par l’utilisateur sans conseil de prise ou de dosage.
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
@@ -27,6 +27,7 @@ type ReminderTimesFieldProps = {
 export function ReminderTimesField({ label, value, onChange, error, helperText }: ReminderTimesFieldProps) {
   const { colors } = useAppTheme();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const errorId = `time-error-${useId().replace(/:/g, '')}`;
   const [pickerValue, setPickerValue] = useState(() => new Date());
   const times = parseReminderTimes(value);
 
@@ -60,7 +61,7 @@ export function ReminderTimesField({ label, value, onChange, error, helperText }
               accessibilityRole="button"
               key={time}
               onPress={() => removeTime(time)}
-              style={({ pressed }) => [styles.chip, { backgroundColor: colors.backgroundMuted, borderColor: colors.border, opacity: pressed ? 0.82 : 1 }]}
+              style={({ pressed }) => [styles.chip, { backgroundColor: colors.backgroundMuted, borderColor: colors.borderStrong, opacity: pressed ? 0.82 : 1 }]}
             >
               <AppText variant="label">{time} · Retirer</AppText>
             </Pressable>
@@ -69,8 +70,8 @@ export function ReminderTimesField({ label, value, onChange, error, helperText }
       ) : (
         <AppText color="textSecondary">Aucune heure ajoutée.</AppText>
       )}
-      <Button label="Ajouter une heure" onPress={openPicker} variant="secondary" />
-      {error ? <AppText variant="caption" color="sos">{error}</AppText> : helperText ? <AppText variant="caption" color="textSecondary">{helperText}</AppText> : null}
+      <Button aria-describedby={error ? errorId : undefined} aria-invalid={Boolean(error)} label="Ajouter une heure" onPress={openPicker} variant="secondary" />
+      {error ? <AppText accessibilityRole="alert" nativeID={errorId} variant="caption" color="sos">{error}</AppText> : helperText ? <AppText variant="caption" color="textSecondary">{helperText}</AppText> : null}
       {isPickerOpen ? <DateTimePicker is24Hour mode="time" onChange={handlePickerChange} value={pickerValue} /> : null}
     </View>
   );

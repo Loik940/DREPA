@@ -49,6 +49,6 @@ export function ProfileInfoCard({ profile }: ProfileInfoCardProps) {
 const styles = StyleSheet.create({
   section: { gap: spacing.md },
   cardContent: { gap: spacing.lg },
-  row: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.lg, justifyContent: 'space-between' },
-  value: { flex: 1, gap: spacing.xs },
+  row: { alignItems: 'flex-start', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, justifyContent: 'space-between' },
+  value: { flex: 1, gap: spacing.xs, minWidth: 160 },
 });

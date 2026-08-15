@@ -2,6 +2,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/theme/spacing';
+import { useAppTheme } from '@/theme/use-app-theme';
 import { AppText } from './AppText';
 import { Button } from './Button';
 
@@ -12,9 +13,10 @@ type ErrorStateProps = {
 };
 
 export function ErrorState({ title = 'Impossible de charger ces informations', description, onRetry }: ErrorStateProps) {
+  const { colors } = useAppTheme();
   // Le rôle d’alerte signale l’erreur aux technologies d’assistance sans dépendre de sa couleur.
   return (
-    <View accessibilityRole="alert" style={styles.container}>
+    <View accessibilityRole="alert" style={[styles.container, { backgroundColor: colors.backgroundPrimary }]}>
       <AppText variant="sectionTitle" align="center">{title}</AppText>
       <AppText color="textSecondary" align="center">{description}</AppText>
       {onRetry && <Button label="Réessayer" onPress={onRetry} style={styles.button} />}
@@ -23,6 +25,6 @@ export function ErrorState({ title = 'Impossible de charger ces informations', d
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', gap: spacing.md, justifyContent: 'center', padding: spacing.xxl },
+  container: { alignItems: 'center', flex: 1, gap: spacing.md, justifyContent: 'center', padding: spacing.xxl },
   button: { alignSelf: 'stretch', marginTop: spacing.sm },
 });

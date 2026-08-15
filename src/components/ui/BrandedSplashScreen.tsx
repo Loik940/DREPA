@@ -1,12 +1,11 @@
 // Écran de lancement affiché pendant la restauration initiale de DRÉPA.
-// Il prolonge le splash natif pour éviter un écran blanc avant la navigation.
+// Il sert de repli bref si une préférence locale termine après la restauration Auth.
 // Le logo, le nom et le slogan présentent l’identité « Terre et Sang ».
 // Les trois points indiquent un vrai chargement, sans ajouter de délai artificiel.
 // Il ne lit ni donnée médicale, ni information personnelle, ni secret local.
-import { SymbolView } from 'expo-symbols';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { colors } from '@/theme/colors';
@@ -15,6 +14,7 @@ import { spacing } from '@/theme/spacing';
 import { fontFamilies, fontWeights } from '@/theme/typography';
 
 const DOT_KEYS = ['first', 'second', 'third'] as const;
+const splashIcon = require('../../../assets/images/drepa-splash-icon.png') as ImageSourcePropType;
 
 export function BrandedSplashScreen() {
   const reduceMotion = useReducedMotion();
@@ -52,15 +52,13 @@ export function BrandedSplashScreen() {
   }, [progress, reduceMotion]);
 
   return (
-    <View accessibilityLabel="DRÉPA démarre" style={styles.container}>
+    <View accessible accessibilityLabel="DRÉPA démarre" accessibilityLiveRegion="polite" accessibilityRole="progressbar" style={styles.container}>
       <StatusBar style="light" />
       <View pointerEvents="none" style={styles.glowTop} />
       <View pointerEvents="none" style={styles.glowBottom} />
 
       <View style={styles.identity}>
-        <View style={styles.logoCircle}>
-          <SymbolView name={{ android: 'water_drop' }} size={82} tintColor={colors.brand} />
-        </View>
+        <Image accessibilityIgnoresInvertColors accessible={false} source={splashIcon} style={styles.logo} />
         <Text style={styles.title}>DRÉPA</Text>
         <Text style={styles.slogan}>MA SANTÉ, MA FORCE, MA COMMUNAUTÉ.</Text>
       </View>
@@ -112,22 +110,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 560,
   },
-  identity: { alignItems: 'center', gap: spacing.lg, marginBottom: 130 },
-  logoCircle: {
-    alignItems: 'center',
-    backgroundColor: colors.splashText,
-    borderRadius: radii.full,
-    height: 174,
-    justifyContent: 'center',
-    width: 174,
-  },
+  identity: { alignItems: 'center', flexShrink: 1, gap: spacing.lg },
+  logo: { height: 140, width: 140 },
   title: {
     color: colors.splashText,
     fontFamily: fontFamilies.display,
-    fontSize: 64,
+    fontSize: 52,
     fontWeight: fontWeights.bold,
     letterSpacing: -1.2,
-    lineHeight: 72,
+    lineHeight: 62,
   },
   slogan: {
     color: colors.splashTextMuted,
@@ -138,6 +129,6 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     textAlign: 'center',
   },
-  dots: { bottom: 86, flexDirection: 'row', gap: spacing.md, position: 'absolute' },
+  dots: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.huge },
   dot: { backgroundColor: colors.splashAccent, borderRadius: radii.full, height: 18, width: 18 },
 });

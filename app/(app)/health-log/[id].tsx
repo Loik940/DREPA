@@ -80,7 +80,7 @@ export default function HealthLogDetailScreen() {
         </View>
       </Card>
 
-      {deleteMutation.isError && <AppText color="sos">{deleteMutation.error.message}</AppText>}
+      {deleteMutation.isError && <AppText accessibilityRole="alert" color="sos">{deleteMutation.error.message}</AppText>}
       <Button label="Modifier" onPress={() => router.push({ pathname: '/(app)/health-entry', params: { id } })} />
       <Button label="Supprimer" variant="danger" loading={deleteMutation.isPending} onPress={confirmDelete} />
       <Button label="Retour au journal" variant="ghost" onPress={() => router.replace('/(app)/(tabs)/journal')} />
@@ -112,6 +112,6 @@ const styles = StyleSheet.create({
   container: { gap: spacing.lg, paddingBottom: spacing.huge },
   header: { gap: spacing.sm },
   section: { gap: spacing.md },
-  row: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.lg, justifyContent: 'space-between' },
-  value: { flex: 1, textAlign: 'right' },
+  row: { alignItems: 'flex-start', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, justifyContent: 'space-between' },
+  value: { flex: 1, minWidth: 160, textAlign: 'right' },
 });

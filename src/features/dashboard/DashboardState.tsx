@@ -9,7 +9,7 @@ import { spacing } from '@/theme/spacing';
 
 export function DashboardLoadingState() {
   return (
-    <View accessibilityLabel="Chargement de l’accueil" style={styles.loading}>
+    <View accessibilityLabel="Chargement de l’accueil" accessibilityLiveRegion="polite" accessibilityRole="progressbar" style={styles.loading}>
       <ActivityIndicator color={colors.brand} size="large" />
       <AppText color="textSecondary">Chargement de ton espace...</AppText>
     </View>
@@ -18,7 +18,7 @@ export function DashboardLoadingState() {
 
 export function DashboardErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <Card style={styles.errorCard}>
+    <Card accessibilityRole="alert" style={styles.errorCard}>
       <AppText variant="sectionTitle">Accueil indisponible</AppText>
       <AppText color="textSecondary">{message}</AppText>
       <Pressable accessibilityRole="button" onPress={onRetry} style={styles.retry}>

@@ -14,6 +14,14 @@ export type HealthLogStatistics = {
   topTriggers: { value: string; count: number }[];
 };
 
+// La fenêtre commence au début local du premier jour inclus, et non un nombre fixe d’heures auparavant.
+export function getStatisticsWindowStart(days: number, now = new Date()) {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - Math.max(0, days - 1));
+  return start.toISOString();
+}
+
 // Ces calculs résument uniquement les déclarations enregistrées. Ils ne posent aucun diagnostic et ne prédisent pas une crise.
 function average(values: (number | null)[]) {
   const validValues = values.filter((value): value is number => value !== null);
@@ -34,10 +42,11 @@ function frequencies(values: (string[] | null)[]) {
 
 export function calculateHealthLogStatistics(entries: StatisticsEntry[]): HealthLogStatistics {
   const medicationEntries = entries.filter((entry) => entry.medication_taken !== null);
+  const trackedDays = new Set(entries.map((entry) => getLocalDayKey(entry.recorded_at)).filter(Boolean)).size;
 
   return {
     entryCount: entries.length,
-    trackedDays: new Set(entries.map((entry) => entry.recorded_at.slice(0, 10))).size,
+    trackedDays,
     averagePain: average(entries.map((entry) => entry.pain_level)),
     averageFatigue: average(entries.map((entry) => entry.fatigue_level)),
     medicationTakenCount: medicationEntries.filter((entry) => entry.medication_taken === true).length,
@@ -45,4 +54,10 @@ export function calculateHealthLogStatistics(entries: StatisticsEntry[]): Health
     topSymptoms: frequencies(entries.map((entry) => entry.symptoms)),
     topTriggers: frequencies(entries.map((entry) => entry.possible_triggers)),
   };
+}
+
+function getLocalDayKey(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }

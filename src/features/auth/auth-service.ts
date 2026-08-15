@@ -1,8 +1,11 @@
-// Service Auth : encapsule les opérations Supabase d’inscription, connexion et récupération.
+// Service Auth : encapsule les opérations Supabase d’inscription, connexion et récupération PKCE.
 import { supabase } from '@/lib/supabase';
+import { secureStorage } from '@/services/secure-storage';
 
 export const authCallbackUrl = 'drepa://auth/callback';
-export const passwordResetUrl = 'drepa://reset-password';
+export const passwordResetUrl = authCallbackUrl;
+const PASSWORD_RECOVERY_INTENT_KEY = '@drepa/password-recovery-intent';
+const PASSWORD_RECOVERY_INTENT_MAX_AGE_MS = 15 * 60 * 1000;
 
 export class AuthOperationError extends Error {
   constructor(message = 'Une erreur est survenue. Réessayez plus tard.') {
@@ -72,8 +75,10 @@ export async function signOut() {
   }
 }
 
-export async function deleteAccount() {
+export async function deleteAccount(email: string, password: string) {
   try {
+    const { error: reauthenticationError } = await requireSupabase().auth.signInWithPassword({ email, password });
+    if (reauthenticationError) throw reauthenticationError;
     // La suppression est confiée à la fonction sécurisée qui contrôle la session côté serveur.
     const { error } = await requireSupabase().functions.invoke('delete-account', { body: {} });
 
@@ -87,14 +92,23 @@ export async function deleteAccount() {
 
 export async function requestPasswordReset(email: string) {
   try {
+    await secureStorage.setItem(PASSWORD_RECOVERY_INTENT_KEY, String(Date.now()));
     const { error } = await requireSupabase().auth.resetPasswordForEmail(email, { redirectTo: passwordResetUrl });
 
     if (error) {
       throw error;
     }
   } catch (error) {
+    await secureStorage.removeItem(PASSWORD_RECOVERY_INTENT_KEY).catch(() => undefined);
     throw toAuthOperationError(error);
   }
+}
+
+export async function consumePasswordRecoveryIntent() {
+  const intent = await secureStorage.getItem(PASSWORD_RECOVERY_INTENT_KEY);
+  await secureStorage.removeItem(PASSWORD_RECOVERY_INTENT_KEY);
+  const createdAt = Number(intent);
+  return Number.isFinite(createdAt) && Date.now() - createdAt <= PASSWORD_RECOVERY_INTENT_MAX_AGE_MS;
 }
 
 export async function updatePassword(password: string) {

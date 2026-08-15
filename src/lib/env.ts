@@ -4,8 +4,18 @@ import { z } from 'zod';
 // Le schéma accepte uniquement les variables publiques attendues et les environnements connus.
 export const envSchema = z.object({
   EXPO_PUBLIC_SUPABASE_URL: z.string().url(),
-  EXPO_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20),
   EXPO_PUBLIC_APP_ENV: z.enum(['development', 'preview', 'production']),
+}).superRefine((values, context) => {
+  const url = new URL(values.EXPO_PUBLIC_SUPABASE_URL);
+  const localHost = url.hostname === '127.0.0.1' || url.hostname === 'localhost';
+  if (values.EXPO_PUBLIC_APP_ENV === 'development') {
+    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && localHost)) {
+      context.addIssue({ code: 'custom', path: ['EXPO_PUBLIC_SUPABASE_URL'], message: 'HTTP est réservé au Supabase local.' });
+    }
+  } else if (url.protocol !== 'https:') {
+    context.addIssue({ code: 'custom', path: ['EXPO_PUBLIC_SUPABASE_URL'], message: 'Supabase doit utiliser HTTPS hors développement.' });
+  }
 });
 
 // La validation est faite une seule fois au chargement pour empêcher la création d’un client mal configuré.

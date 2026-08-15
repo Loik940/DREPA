@@ -16,7 +16,7 @@ type ModerationStatusBadgeProps = {
 };
 
 const statusPresentation = {
-  pending: { label: 'En attente', textColor: 'warning', backgroundColor: 'warningSoft' },
+  pending: { label: 'En attente', textColor: 'warningText', backgroundColor: 'warningSoft' },
   reviewed: { label: 'Traité', textColor: 'success', backgroundColor: 'successSoft' },
   dismissed: { label: 'Rejeté', textColor: 'textSecondary', backgroundColor: 'backgroundMuted' },
 } as const;

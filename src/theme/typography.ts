@@ -1,7 +1,9 @@
 // Familles, poids et styles typographiques utilisés par les composants DRÉPA.
 export const fontFamilies = {
-  body: 'Inter',
-  display: 'Inter',
+  body: 'Inter_400Regular',
+  display: 'Inter_700Bold',
+  medium: 'Inter_500Medium',
+  semiBold: 'Inter_600SemiBold',
 } as const;
 
 export const fontWeights = {
@@ -46,20 +48,20 @@ export const typography = {
     lineHeight: 24,
   },
   label: {
-    fontFamily: fontFamilies.body,
+    fontFamily: fontFamilies.semiBold,
     fontSize: 13,
     fontWeight: fontWeights.semiBold,
     lineHeight: 20,
     letterSpacing: 0.1,
   },
   caption: {
-    fontFamily: fontFamilies.body,
+    fontFamily: fontFamilies.medium,
     fontSize: 12,
     fontWeight: fontWeights.medium,
     lineHeight: 18,
   },
   button: {
-    fontFamily: fontFamilies.body,
+    fontFamily: fontFamilies.semiBold,
     fontSize: 16,
     fontWeight: fontWeights.semiBold,
     lineHeight: 22,

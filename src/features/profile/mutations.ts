@@ -24,15 +24,15 @@ export function useUpsertProfileMutation(userId: string) {
         id: userId,
         first_name: values.first_name,
         country: values.country,
-        full_name: values.full_name ?? null,
-        date_of_birth: values.date_of_birth ?? null,
-        drepanocytosis_type: values.drepanocytosis_type ?? null,
-        city: values.city ?? null,
-        blood_group: values.blood_group ?? null,
-        allergies: values.allergies ?? null,
-        care_center: values.care_center ?? null,
-        doctor_name: values.doctor_name ?? null,
-        doctor_phone: values.doctor_phone ?? null,
+        full_name: values.full_name || null,
+        date_of_birth: values.date_of_birth || null,
+        drepanocytosis_type: values.drepanocytosis_type || null,
+        city: values.city || null,
+        blood_group: values.blood_group || null,
+        allergies: values.allergies || null,
+        care_center: values.care_center || null,
+        doctor_name: values.doctor_name || null,
+        doctor_phone: values.doctor_phone || null,
       };
       const { data, error } = await requireSupabase()
         .from('profiles')
@@ -78,6 +78,26 @@ export function useAcceptConsentMutation(userId: string) {
     },
     onSuccess: async () => {
       // Seul le cache des consentements de cette session est invalidé après la mutation.
+      await queryClient.invalidateQueries({ queryKey: consentQueryKey(userId) });
+    },
+  });
+}
+
+export function useRevokeConsentMutation(userId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await requireSupabase()
+        .from('user_consents')
+        .update({ revoked_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .is('revoked_at', null)
+        .select('id');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: consentQueryKey(userId) });
     },
   });

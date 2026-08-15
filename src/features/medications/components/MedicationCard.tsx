@@ -1,5 +1,4 @@
 // Carte d’un traitement saisi par l’utilisateur, sans recommandation ni dosage automatique.
-import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
@@ -7,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { colors } from '@/theme/colors';
 import { radii } from '@/theme/radii';
 import { spacing } from '@/theme/spacing';
+import { DashboardIcon } from '@/features/dashboard/DashboardIcon';
 import type { Medication } from '../queries';
 
 // Composant d’affichage : il restitue le traitement saisi sans recommandation ni interprétation médicale.
@@ -14,14 +14,14 @@ export function MedicationCard({ medication, onPress }: { medication: Medication
   return (
     <Pressable
       accessibilityHint="Ouvre le détail de ce traitement."
-      accessibilityLabel={`${medication.name}, ${medication.is_active ? 'actif' : 'arrêté'}`}
+      accessibilityLabel={`${medication.name}, ${medication.dosage}, ${medication.frequency}, ${medication.is_active ? 'actif dans DRÉPA' : 'arrêté dans DRÉPA'}`}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.pressable, { opacity: pressed ? 0.82 : 1 }]}
     >
       <Card style={styles.card}>
         <View style={styles.icon}>
-          <SymbolView name={{ android: 'medication' }} size={28} tintColor={colors.brand} />
+          <DashboardIcon color={colors.brand} name="medication" />
         </View>
         <View style={styles.content}>
           <AppText variant="label">{medication.name}</AppText>
@@ -30,7 +30,7 @@ export function MedicationCard({ medication, onPress }: { medication: Medication
         <View style={styles.status}>
           <AppText variant="caption" color={medication.is_active ? 'brand' : 'textSecondary'}>{medication.is_active ? 'Actif' : 'Arrêté'}</AppText>
         </View>
-        <SymbolView name={{ android: 'chevron_right' }} size={22} tintColor={colors.textSecondary} />
+        <AppText color="textSecondary">→</AppText>
       </Card>
     </Pressable>
   );

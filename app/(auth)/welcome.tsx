@@ -1,5 +1,4 @@
 // Onboarding visuel de bienvenue : présente DRÉPA avant l’inscription ou la connexion.
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -8,10 +7,10 @@ import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { OnboardingIllustration } from '@/components/ui/OnboardingIllustration';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { useStartup } from '@/providers/startup-provider';
 import { radii } from '@/theme/radii';
 import { spacing } from '@/theme/spacing';
 import { useAppTheme } from '@/theme/use-app-theme';
-import { WELCOME_SEEN_KEY } from '../index';
 
 const slides = [
   {
@@ -38,12 +37,13 @@ export default function WelcomeScreen() {
   // Les hooks initialisent la navigation, le thème et l’étape affichée.
   const router = useRouter();
   const { colors } = useAppTheme();
+  const { markWelcomeSeen } = useStartup();
   const [index, setIndex] = useState(0);
   const slide = slides[index];
 
   // La fin du parcours mémorise la bienvenue avant la redirection choisie.
   const finish = async (destination: '/(auth)/login' | '/(auth)/register') => {
-    await AsyncStorage.setItem(WELCOME_SEEN_KEY, 'true');
+    await markWelcomeSeen();
     router.replace(destination);
   };
 
@@ -71,14 +71,14 @@ export default function WelcomeScreen() {
         <OnboardingIllustration variant={slide.shape} />
       </View>
 
-      <View style={styles.copy}>
+      <View accessibilityLiveRegion="polite" style={styles.copy}>
         <AppText variant="label" color="brand" align="center">{slide.eyebrow}</AppText>
         <AppText variant="title" align="center">{slide.title}</AppText>
         <AppText color="textSecondary" align="center" style={styles.description}>{slide.description}</AppText>
       </View>
 
       <View style={styles.footer}>
-        <View accessibilityLabel={`Étape ${index + 1} sur ${slides.length}`} style={styles.dots}>
+        <View accessible accessibilityLabel={`Étape ${index + 1} sur ${slides.length}`} style={styles.dots}>
           {slides.map((item, itemIndex) => (
             <View key={item.eyebrow} style={[styles.dot, { backgroundColor: itemIndex === index ? colors.brand : colors.border }]} />
           ))}
@@ -89,7 +89,7 @@ export default function WelcomeScreen() {
             <AppText variant="label" color="brand" align="center">J’ai déjà un compte</AppText>
           </Pressable>
         ) : (
-          <Link href="/(auth)/login" onPress={() => void AsyncStorage.setItem(WELCOME_SEEN_KEY, 'true')} style={styles.accountLink}>
+          <Link href="/(auth)/login" onPress={() => void markWelcomeSeen()} style={styles.accountLink}>
             <AppText variant="label" color="textSecondary" align="center">J’ai déjà un compte</AppText>
           </Link>
         )}

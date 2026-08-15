@@ -1,20 +1,28 @@
 // État générique d’attente, d’erreur ou de fonctionnalité différée avec action optionnelle.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type AccessibilityRole } from 'react-native';
+
+import { colors } from '@/theme/colors';
+import { radii } from '@/theme/radii';
+import { sizes } from '@/theme/sizes';
+import { spacing } from '@/theme/spacing';
+import { typography } from '@/theme/typography';
 
 type ScreenPlaceholderProps = {
   title: string;
   description: string;
   actionLabel?: string;
+  accessibilityRole?: AccessibilityRole;
+  loading?: boolean;
   onAction?: () => void;
 };
 
-export function ScreenPlaceholder({ title, description, actionLabel, onAction }: ScreenPlaceholderProps) {
+export function ScreenPlaceholder({ title, description, actionLabel, accessibilityRole, loading = false, onAction }: ScreenPlaceholderProps) {
   return (
-    <View style={styles.container}>
+    <View accessibilityLiveRegion={loading ? 'polite' : 'none'} accessibilityRole={loading ? 'progressbar' : accessibilityRole} style={styles.container}>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
       {actionLabel && onAction && (
-        <Pressable onPress={onAction} style={styles.action}>
+        <Pressable accessibilityRole="button" onPress={onAction} style={styles.action}>
           <Text style={styles.actionText}>{actionLabel}</Text>
         </Pressable>
       )}
@@ -24,27 +32,30 @@ export function ScreenPlaceholder({ title, description, actionLabel, onAction }:
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: colors.backgroundPrimary,
     flex: 1,
     justifyContent: 'center',
-    padding: 24,
-    gap: 12,
+    padding: spacing.xxl,
+    gap: spacing.md,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    ...typography.title,
+    color: colors.textPrimary,
   },
   description: {
-    fontSize: 16,
-    lineHeight: 24,
+    ...typography.body,
+    color: colors.textSecondary,
   },
   action: {
     alignItems: 'center',
-    backgroundColor: '#208AEF',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: colors.actionBg,
+    borderRadius: radii.lg,
+    justifyContent: 'center',
+    minHeight: sizes.buttonHeight,
+    padding: spacing.md,
   },
   actionText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    ...typography.button,
+    color: colors.actionText,
   },
 });

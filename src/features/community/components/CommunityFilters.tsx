@@ -36,7 +36,7 @@ export function CommunityFilters({ value, onChange }: CommunityFiltersProps) {
               styles.pill,
               {
                 backgroundColor: selected ? colors.actionBg : colors.backgroundSurface,
-                borderColor: selected ? colors.actionBg : colors.border,
+                borderColor: selected ? colors.actionBg : colors.borderStrong,
                 opacity: pressed ? 0.82 : 1,
               },
             ]}

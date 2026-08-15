@@ -7,18 +7,24 @@ import { classifyMedicationError, MedicationDataError, type MedicationOperation 
 import { filterByNotificationIds } from './notification-ids';
 import {
   cancelNotificationIds,
+  buildSnoozeNotificationId,
   ensureMedicationNotificationPermission,
   NotificationCancellationError,
+  NotificationSchedulingError,
   scheduleMedicationReminder,
   scheduleMedicationSnooze,
+  scheduleMedicationSnoozeAt,
 } from './notifications';
 import {
   medicationDetailQueryKey,
   medicationsQueryKey,
+  type Medication,
   type MedicationIntake,
   type MedicationReminder,
 } from './queries';
 import { parseReminderTimes, type MedicationValues } from './schemas';
+import { assertMedicationNotificationBudget, buildMedicationNotificationSchedule } from './notification-schedule';
+import { runMedicationOperation } from './operation-lock';
 
 type MedicationIntakeAction = 'taken' | 'skipped' | 'snoozed';
 type MedicationIntakeUpdate = Pick<Database['public']['Tables']['medication_intakes']['Update'], 'status' | 'taken_at' | 'snoozed_until' | 'snooze_notification_id'>;
@@ -67,6 +73,41 @@ function classifyWithCompensation(error: unknown, operation: MedicationOperation
   );
 }
 
+// Une série partiellement programmée est recherchée par son préfixe déterministe avant toute suppression serveur.
+async function cleanupFailedSchedule(error: unknown) {
+  if (!(error instanceof NotificationSchedulingError)) return false;
+  try {
+    await cancelNotificationIds([error.seriesId]);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+async function preserveScheduleTraces(
+  client: MedicationClient,
+  userId: string,
+  medicationId: string,
+  traces: readonly { seriesId: string; time: string }[],
+) {
+  let failed = false;
+  for (const trace of traces) {
+    try {
+      const { error } = await client.from('medication_reminders').upsert({
+        user_id: userId,
+        medication_id: medicationId,
+        reminder_time: trace.time,
+        is_enabled: false,
+        notification_id: trace.seriesId,
+      }, { onConflict: 'medication_id,reminder_time' });
+      if (error) failed = true;
+    } catch {
+      failed = true;
+    }
+  }
+  return failed;
+}
+
 async function cancelBeforeMutation(
   ids: readonly (string | null | undefined)[],
   operation: MedicationOperation,
@@ -97,8 +138,15 @@ async function cancelBeforeMutation(
 async function restoreReminderNotifications(
   client: MedicationClient,
   userId: string,
+  medication: Medication,
   reminders: readonly MedicationReminder[],
 ) {
+  assertMedicationNotificationBudget(
+    medication.id,
+    reminders.filter((reminder) => reminder.is_enabled).map((reminder) => reminder.reminder_time.slice(0, 5)),
+    medication.start_date,
+    medication.end_date,
+  );
   let failed = false;
   for (const reminder of reminders) {
     if (!reminder.notification_id) continue;
@@ -115,18 +163,49 @@ async function restoreReminderNotifications(
     }
     let replacementId: string | null = null;
     try {
-      replacementId = await scheduleMedicationReminder(reminder.reminder_time.slice(0, 5));
+      const time = reminder.reminder_time.slice(0, 5);
+      const seriesId = buildMedicationNotificationSchedule(
+        medication.id,
+        time,
+        medication.start_date,
+        medication.end_date,
+      ).seriesId;
+      const { data: traced, error: traceError } = await client.from('medication_reminders').update({
+        is_enabled: false,
+        notification_id: seriesId,
+      }).eq('id', reminder.id).eq('user_id', userId).select('id').maybeSingle();
+      if (traceError) throw traceError;
+      if (!traced) throw new Error('Le rappel à restaurer est introuvable.');
+
+      replacementId = await scheduleMedicationReminder(
+        time,
+        medication.id,
+        medication.start_date,
+        medication.end_date,
+      );
       const { data, error } = await client.from('medication_reminders').update({
         is_enabled: true,
         notification_id: replacementId,
       }).eq('id', reminder.id).eq('user_id', userId).select('id').maybeSingle();
       if (error) throw error;
       if (!data) throw new Error('Le rappel à restaurer est introuvable.');
-    } catch {
+    } catch (error) {
       failed = true;
+      let residualPossible = await cleanupFailedSchedule(error);
       if (replacementId) {
         try {
           await cancelNotificationIds([replacementId]);
+        } catch {
+          residualPossible = true;
+        }
+      }
+      if (!residualPossible) {
+        try {
+          const { error: clearError } = await client.from('medication_reminders').update({
+            is_enabled: false,
+            notification_id: null,
+          }).eq('id', reminder.id).eq('user_id', userId);
+          if (clearError) throw clearError;
         } catch {
           failed = true;
         }
@@ -175,7 +254,7 @@ async function restoreSnoozeNotifications(
     }
     let replacementId: string | null = null;
     try {
-      replacementId = await scheduleMedicationSnooze(remainingMinutes);
+      replacementId = await scheduleMedicationSnooze(remainingMinutes, intake.snooze_notification_id);
       const { data, error } = await client.from('medication_intakes').update({
         status: intake.status,
         taken_at: intake.taken_at,
@@ -201,6 +280,7 @@ async function restoreSnoozeNotifications(
 async function restoreCancelledSnapshots(
   client: MedicationClient,
   userId: string,
+  medication: Medication,
   reminders: readonly MedicationReminder[],
   intakes: readonly SnoozeIntakeSnapshot[],
   cancelledIds: readonly string[],
@@ -208,7 +288,7 @@ async function restoreCancelledSnapshots(
   const cancelledReminders = filterByNotificationIds(reminders, cancelledIds, (reminder) => reminder.notification_id);
   const cancelledIntakes = filterByNotificationIds(intakes, cancelledIds, (intake) => intake.snooze_notification_id);
   const failed = await runCompensationSteps([
-    () => restoreReminderNotifications(client, userId, cancelledReminders),
+    () => restoreReminderNotifications(client, userId, medication, cancelledReminders),
     () => restoreSnoozeNotifications(client, userId, cancelledIntakes),
   ]);
   if (failed) throw new Error('La restauration des annulations partielles est incomplète.');
@@ -218,9 +298,10 @@ export function useCreateMedicationMutation(userId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (values: MedicationValues) => {
+    mutationFn: (values: MedicationValues) => runMedicationOperation(async () => {
       if (!userId) throw new MedicationDataError('create', 'session', 'La session utilisateur est indisponible.');
       const times = values.reminders_enabled ? parseReminderTimes(values.reminder_times) : [];
+      assertMedicationNotificationBudget('new-medication', times, values.start_date, values.end_date || null);
       if (times.length) await ensureMedicationNotificationPermission();
 
       const client = requireClient('create');
@@ -244,20 +325,33 @@ export function useCreateMedicationMutation(userId: string | undefined) {
       // Compensation locale : tout rappel créé est annulé si la base refuse la suite de la création.
       const scheduledIds: string[] = [];
       try {
-        for (const time of times) scheduledIds.push(await scheduleMedicationReminder(time));
         if (times.length) {
-          const { error } = await client.from('medication_reminders').insert(times.map((time, index) => ({
+          const { error } = await client.from('medication_reminders').insert(times.map((time) => ({
             user_id: userId,
             medication_id: medication.id,
             reminder_time: time,
-            is_enabled: true,
-            notification_id: scheduledIds[index],
+            is_enabled: false,
+            notification_id: buildMedicationNotificationSchedule(
+              medication.id,
+              time,
+              medication.start_date,
+              medication.end_date,
+            ).seriesId,
           })));
+          if (error) throw error;
+        }
+        for (const time of times) {
+          scheduledIds.push(await scheduleMedicationReminder(time, medication.id, medication.start_date, medication.end_date));
+        }
+        if (times.length) {
+          const { error } = await client.from('medication_reminders').update({ is_enabled: true })
+            .eq('medication_id', medication.id)
+            .eq('user_id', userId);
           if (error) throw error;
         }
         return medication;
       } catch (error) {
-        let compensationFailed = false;
+        let compensationFailed = await cleanupFailedSchedule(error);
         try {
           await cancelNotificationIds(scheduledIds);
         } catch {
@@ -271,7 +365,7 @@ export function useCreateMedicationMutation(userId: string | undefined) {
         }
         throw classifyWithCompensation(error, 'create', compensationFailed);
       }
-    },
+    }),
     onSuccess: async () => {
       if (userId) await invalidateMedicationQueries(queryClient, userId);
     },
@@ -282,7 +376,7 @@ export function useUpdateMedicationMutation(userId: string | undefined, medicati
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (values: MedicationValues) => {
+    mutationFn: (values: MedicationValues) => runMedicationOperation(async () => {
       if (!userId || !medicationId) throw new MedicationDataError('update', 'session', 'La session utilisateur est indisponible.');
       const client = requireClient('update');
       const [medicationResult, remindersResult, intakesResult] = await Promise.all([
@@ -299,6 +393,7 @@ export function useUpdateMedicationMutation(userId: string | undefined, medicati
       const existingReminders = (remindersResult.data ?? []) as MedicationReminder[];
       const snoozeIntakes = (intakesResult.data ?? []) as SnoozeIntakeSnapshot[];
       const requestedTimes = values.reminders_enabled ? parseReminderTimes(values.reminder_times) : [];
+      assertMedicationNotificationBudget(medicationId, requestedTimes, values.start_date, values.end_date || null);
       const existingByTime = new Map(existingReminders.map((reminder) => [reminder.reminder_time.slice(0, 5), reminder]));
       const addedTimes = requestedTimes.filter((time) => !existingByTime.has(time));
       const removedReminders = existingReminders.filter((reminder) => !requestedTimes.includes(reminder.reminder_time.slice(0, 5)));
@@ -307,7 +402,15 @@ export function useUpdateMedicationMutation(userId: string | undefined, medicati
         : [];
       const existingTimes = [...existingByTime.keys()].sort();
       const scheduleChanged = existingTimes.join(',') !== requestedTimes.join(',');
-      const shouldCancelSnoozes = scheduleChanged || !values.reminders_enabled;
+      const datesChanged = previousMedication.start_date !== values.start_date
+        || (previousMedication.end_date ?? '') !== (values.end_date ?? '');
+      if (datesChanged && previousMedication.is_active) {
+        remindersToReprogram.push(...existingReminders.filter((reminder) => (
+          requestedTimes.includes(reminder.reminder_time.slice(0, 5))
+          && !remindersToReprogram.some((item) => item.id === reminder.id)
+        )));
+      }
+      const shouldCancelSnoozes = scheduleChanged || datesChanged || !values.reminders_enabled;
       const remindersBeingCancelled = [...removedReminders, ...remindersToReprogram];
       if (previousMedication.is_active && (addedTimes.length || remindersToReprogram.length)) {
         await ensureMedicationNotificationPermission();
@@ -321,6 +424,7 @@ export function useUpdateMedicationMutation(userId: string | undefined, medicati
       ], 'update', (partiallyCancelledIds) => restoreCancelledSnapshots(
         client,
         userId,
+        previousMedication,
         remindersBeingCancelled,
         shouldCancelSnoozes ? snoozeIntakes : [],
         partiallyCancelledIds,
@@ -329,6 +433,16 @@ export function useUpdateMedicationMutation(userId: string | undefined, medicati
       const newNotificationIds: string[] = [];
       const insertedReminderIds: string[] = [];
       const notificationIdByTime = new Map<string, string>();
+      if (previousMedication.is_active) {
+        for (const time of [...addedTimes, ...remindersToReprogram.map((reminder) => reminder.reminder_time.slice(0, 5))]) {
+          notificationIdByTime.set(time, buildMedicationNotificationSchedule(
+            medicationId,
+            time,
+            values.start_date,
+            values.end_date || null,
+          ).seriesId);
+        }
+      }
       try {
         if (shouldCancelSnoozes && snoozeIntakes.length) {
           const { error } = await client.from('medication_intakes').update({
@@ -343,17 +457,48 @@ export function useUpdateMedicationMutation(userId: string | undefined, medicati
           if (error) throw error;
         }
 
+        if (addedTimes.length) {
+          const { data: inserted, error: insertError } = await client
+            .from('medication_reminders')
+            .insert(addedTimes.map((time) => ({
+              user_id: userId,
+              medication_id: medicationId,
+              reminder_time: time,
+              is_enabled: false,
+              notification_id: notificationIdByTime.get(time) ?? null,
+            })))
+            .select('id');
+          if (insertError) throw insertError;
+          insertedReminderIds.push(...(inserted ?? []).map((item) => item.id));
+        }
+
+        for (const reminder of remindersToReprogram) {
+          const { error } = await client.from('medication_reminders').update({
+            is_enabled: false,
+            notification_id: notificationIdByTime.get(reminder.reminder_time.slice(0, 5)) ?? null,
+          }).eq('id', reminder.id).eq('user_id', userId);
+          if (error) throw error;
+        }
+
         if (previousMedication.is_active) {
           for (const time of addedTimes) {
-            const notificationId = await scheduleMedicationReminder(time);
+            const notificationId = await scheduleMedicationReminder(
+              time,
+              medicationId,
+              values.start_date,
+              values.end_date || null,
+            );
             newNotificationIds.push(notificationId);
-            notificationIdByTime.set(time, notificationId);
           }
           for (const reminder of remindersToReprogram) {
             const time = reminder.reminder_time.slice(0, 5);
-            const notificationId = await scheduleMedicationReminder(time);
+            const notificationId = await scheduleMedicationReminder(
+              time,
+              medicationId,
+              values.start_date,
+              values.end_date || null,
+            );
             newNotificationIds.push(notificationId);
-            notificationIdByTime.set(time, notificationId);
           }
         }
 
@@ -373,19 +518,11 @@ export function useUpdateMedicationMutation(userId: string | undefined, medicati
           .single();
         if (medicationError) throw medicationError;
 
-        if (addedTimes.length) {
-          const { data: inserted, error: insertError } = await client
-            .from('medication_reminders')
-            .insert(addedTimes.map((time) => ({
-              user_id: userId,
-              medication_id: medicationId,
-              reminder_time: time,
-              is_enabled: previousMedication.is_active,
-              notification_id: notificationIdByTime.get(time) ?? null,
-            })))
-            .select('id');
-          if (insertError) throw insertError;
-          insertedReminderIds.push(...(inserted ?? []).map((item) => item.id));
+        if (previousMedication.is_active && insertedReminderIds.length) {
+          const { error } = await client.from('medication_reminders').update({ is_enabled: true })
+            .eq('user_id', userId)
+            .in('id', insertedReminderIds);
+          if (error) throw error;
         }
 
         for (const reminder of remindersToReprogram) {
@@ -409,10 +546,25 @@ export function useUpdateMedicationMutation(userId: string | undefined, medicati
         return medication;
       } catch (error) {
         // Les nouvelles notifications doivent être annulées avant de restaurer des identifiants précédents.
+        let cancellationFailed = await cleanupFailedSchedule(error);
         try {
           await cancelNotificationIds(newNotificationIds);
         } catch {
-          throw classifyWithCompensation(error, 'update', true);
+          cancellationFailed = true;
+        }
+
+        if (cancellationFailed) {
+          const traces = [...notificationIdByTime.entries()].map(([time, seriesId]) => ({ seriesId, time }));
+          if (error instanceof NotificationSchedulingError) {
+            traces.push({ seriesId: error.seriesId, time: error.time });
+          }
+          if (await preserveScheduleTraces(client, userId, medicationId, traces)) cancellationFailed = true;
+          if (remindersBeingCancelled.length) {
+            const { error: disableError } = await client.from('medication_reminders').update({ is_enabled: false })
+              .eq('user_id', userId)
+              .in('id', remindersBeingCancelled.map((reminder) => reminder.id));
+            if (disableError) cancellationFailed = true;
+          }
         }
 
         // Compensation serveur : restaure les lignes, puis recrée uniquement les notifications annulées.
@@ -429,12 +581,12 @@ export function useUpdateMedicationMutation(userId: string | undefined, medicati
             if (restoreError) throw restoreError;
           },
           async () => {
-            if (!insertedReminderIds.length) return;
+            if (cancellationFailed || !insertedReminderIds.length) return;
             const { error: cleanupError } = await client.from('medication_reminders').delete().eq('user_id', userId).in('id', insertedReminderIds);
             if (cleanupError) throw cleanupError;
           },
           async () => {
-            if (!existingReminders.length) return;
+            if (cancellationFailed || !existingReminders.length) return;
             const restoredReminders = existingReminders.map((reminder) => ({
               ...reminder,
               notification_id: reminder.is_enabled ? reminder.notification_id : null,
@@ -445,14 +597,15 @@ export function useUpdateMedicationMutation(userId: string | undefined, medicati
           () => restoreCancelledSnapshots(
             client,
             userId,
-            remindersBeingCancelled,
-            shouldCancelSnoozes ? snoozeIntakes : [],
-            cancelledIds,
+            previousMedication,
+            cancellationFailed ? [] : remindersBeingCancelled,
+            cancellationFailed || !shouldCancelSnoozes ? [] : snoozeIntakes,
+            cancellationFailed ? [] : cancelledIds,
           ),
         ]);
-        throw classifyWithCompensation(error, 'update', compensationFailed);
+        throw classifyWithCompensation(error, 'update', cancellationFailed || compensationFailed);
       }
-    },
+    }),
     onSuccess: async () => {
       if (userId && medicationId) await invalidateMedicationQueries(queryClient, userId, medicationId);
     },
@@ -463,7 +616,7 @@ export function useSetMedicationActiveMutation(userId: string | undefined, medic
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (active: boolean) => {
+    mutationFn: (active: boolean) => runMedicationOperation(async () => {
       if (!userId || !medicationId) throw new MedicationDataError('activate', 'session', 'La session utilisateur est indisponible.');
       const client = requireClient('activate');
       const [medicationResult, remindersResult, intakesResult] = await Promise.all([
@@ -480,6 +633,14 @@ export function useSetMedicationActiveMutation(userId: string | undefined, medic
 
       const reminders = (remindersResult.data ?? []) as MedicationReminder[];
       const snoozeIntakes = (intakesResult.data ?? []) as SnoozeIntakeSnapshot[];
+      if (active) {
+        assertMedicationNotificationBudget(
+          medication.id,
+          reminders.map((reminder) => reminder.reminder_time.slice(0, 5)),
+          medication.start_date,
+          medication.end_date,
+        );
+      }
       if (!active) {
         // L’arrêt ne modifie la base qu’après annulation confirmée de tous les rappels et reports connus.
         const cancelledIds = await cancelBeforeMutation([
@@ -488,6 +649,7 @@ export function useSetMedicationActiveMutation(userId: string | undefined, medic
         ], 'activate', (partiallyCancelledIds) => restoreCancelledSnapshots(
           client,
           userId,
+          medication,
           reminders,
           snoozeIntakes,
           partiallyCancelledIds,
@@ -527,7 +689,7 @@ export function useSetMedicationActiveMutation(userId: string | undefined, medic
               const { error: restoreError } = await client.from('medication_reminders').upsert(restoredReminders);
               if (restoreError) throw restoreError;
             },
-            () => restoreCancelledSnapshots(client, userId, reminders, snoozeIntakes, cancelledIds),
+            () => restoreCancelledSnapshots(client, userId, medication, reminders, snoozeIntakes, cancelledIds),
           ]);
           throw classifyWithCompensation(error, 'activate', compensationFailed);
         }
@@ -541,6 +703,7 @@ export function useSetMedicationActiveMutation(userId: string | undefined, medic
       ], 'activate', (partiallyCancelledIds) => restoreCancelledSnapshots(
         client,
         userId,
+        medication,
         reminders,
         snoozeIntakes,
         partiallyCancelledIds,
@@ -559,7 +722,27 @@ export function useSetMedicationActiveMutation(userId: string | undefined, medic
         if (intakeResetError) throw intakeResetError;
 
         for (const reminder of reminders) {
-          notificationIds.push(await scheduleMedicationReminder(reminder.reminder_time.slice(0, 5)));
+          const time = reminder.reminder_time.slice(0, 5);
+          const seriesId = buildMedicationNotificationSchedule(
+            medication.id,
+            time,
+            medication.start_date,
+            medication.end_date,
+          ).seriesId;
+          const { error: traceError } = await client.from('medication_reminders').update({
+            is_enabled: false,
+            notification_id: seriesId,
+          }).eq('id', reminder.id).eq('user_id', userId);
+          if (traceError) throw traceError;
+        }
+
+        for (const reminder of reminders) {
+          notificationIds.push(await scheduleMedicationReminder(
+            reminder.reminder_time.slice(0, 5),
+            medication.id,
+            medication.start_date,
+            medication.end_date,
+          ));
         }
         for (const [index, reminder] of reminders.entries()) {
           const { error } = await client.from('medication_reminders').update({
@@ -579,11 +762,23 @@ export function useSetMedicationActiveMutation(userId: string | undefined, medic
         return data;
       } catch (error) {
         // Une nouvelle notification doit être annulée avant que son identifiant soit retiré de la base.
-        let cancellationFailed = false;
+        let cancellationFailed = await cleanupFailedSchedule(error);
         try {
           await cancelNotificationIds(notificationIds);
         } catch {
           cancellationFailed = true;
+        }
+
+
+        if (cancellationFailed) {
+          const traces = notificationIds.map((seriesId, index) => ({
+            seriesId,
+            time: reminders[index]?.reminder_time.slice(0, 5) ?? '',
+          })).filter((trace) => trace.time);
+          if (error instanceof NotificationSchedulingError) {
+            traces.push({ seriesId: error.seriesId, time: error.time });
+          }
+          if (await preserveScheduleTraces(client, userId, medicationId, traces)) cancellationFailed = true;
         }
 
         const compensationSteps: (() => Promise<void>)[] = [async () => {
@@ -610,13 +805,13 @@ export function useSetMedicationActiveMutation(userId: string | undefined, medic
                 .eq('status', 'snoozed');
               if (intakeError) throw intakeError;
             },
-            () => restoreCancelledSnapshots(client, userId, [], snoozeIntakes, cancelledIds),
+            () => restoreCancelledSnapshots(client, userId, medication, [], snoozeIntakes, cancelledIds),
           );
         }
         const compensationFailed = await runCompensationSteps(compensationSteps);
         throw classifyWithCompensation(error, 'activate', cancellationFailed || compensationFailed);
       }
-    },
+    }),
     onSuccess: async () => {
       if (userId && medicationId) await invalidateMedicationQueries(queryClient, userId, medicationId);
     },
@@ -627,15 +822,19 @@ export function useDeleteMedicationMutation(userId: string | undefined, medicati
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: () => runMedicationOperation(async () => {
       if (!userId || !medicationId) throw new MedicationDataError('delete', 'session', 'La session utilisateur est indisponible.');
       const client = requireClient('delete');
-      const [remindersResult, intakesResult] = await Promise.all([
+      const [medicationResult, remindersResult, intakesResult] = await Promise.all([
+        client.from('medications').select('*').eq('id', medicationId).eq('user_id', userId).maybeSingle(),
         client.from('medication_reminders').select('*').eq('medication_id', medicationId).eq('user_id', userId),
         client.from('medication_intakes').select('id,status,taken_at,snoozed_until,snooze_notification_id').eq('medication_id', medicationId).eq('user_id', userId),
       ]);
+      if (medicationResult.error) throw classifyMedicationError(medicationResult.error, 'delete');
       if (remindersResult.error) throw classifyMedicationError(remindersResult.error, 'delete');
       if (intakesResult.error) throw classifyMedicationError(intakesResult.error, 'delete');
+      if (!medicationResult.data) throw new MedicationDataError('delete', 'not_found', 'Ce traitement est introuvable.');
+      const medication = medicationResult.data as Medication;
       const reminders = (remindersResult.data ?? []) as MedicationReminder[];
       const snoozeIntakes = (intakesResult.data ?? []) as SnoozeIntakeSnapshot[];
 
@@ -646,6 +845,7 @@ export function useDeleteMedicationMutation(userId: string | undefined, medicati
       ], 'delete', (partiallyCancelledIds) => restoreCancelledSnapshots(
         client,
         userId,
+        medication,
         reminders,
         snoozeIntakes,
         partiallyCancelledIds,
@@ -664,7 +864,7 @@ export function useDeleteMedicationMutation(userId: string | undefined, medicati
       } catch (error) {
         // Si la suppression serveur échoue, les notifications annulées sont recréées sans masquer l’échec initial.
         const compensationFailed = await runCompensationSteps([
-          () => restoreCancelledSnapshots(client, userId, reminders, snoozeIntakes, cancelledIds),
+          () => restoreCancelledSnapshots(client, userId, medication, reminders, snoozeIntakes, cancelledIds),
         ]);
         const classified = classifyWithCompensation(error, 'delete', compensationFailed);
         throw new MedicationDataError(
@@ -673,7 +873,7 @@ export function useDeleteMedicationMutation(userId: string | undefined, medicati
           `Le traitement n’a pas été supprimé. ${classified.message}`,
         );
       }
-    },
+    }),
     onSuccess: async () => {
       if (userId) await invalidateMedicationQueries(queryClient, userId);
     },
@@ -685,7 +885,7 @@ function useMedicationIntakeMutation(userId: string | undefined, action: Medicat
   const operation: MedicationOperation = action === 'snoozed' ? 'snooze' : action === 'skipped' ? 'skip' : 'intake';
 
   return useMutation({
-    mutationFn: async (payload: MedicationIntakePayload) => {
+    mutationFn: (payload: MedicationIntakePayload) => runMedicationOperation(async () => {
       if (!userId) throw new MedicationDataError(operation, 'session', 'La session utilisateur est indisponible.');
       const client = requireClient(operation);
       let newSnoozeNotificationId: string | null = null;
@@ -693,20 +893,37 @@ function useMedicationIntakeMutation(userId: string | undefined, action: Medicat
 
       try {
         // Un report précédent est annulé avant de programmer ou d’écrire la nouvelle action.
-        const cancelledIds = await cancelBeforeMutation([payload.snoozeNotificationId], operation);
+        const cancelledIds = await cancelBeforeMutation(
+          [payload.snoozeNotificationId],
+          operation,
+          async (partiallyCancelledIds) => {
+            if (!payload.intakeId || !payload.snoozeNotificationId || !payload.snoozedUntil
+              || !partiallyCancelledIds.includes(payload.snoozeNotificationId)) return;
+            await restoreSnoozeNotifications(client, userId, [{
+              id: payload.intakeId,
+              status: 'snoozed',
+              taken_at: null,
+              snoozed_until: payload.snoozedUntil,
+              snooze_notification_id: payload.snoozeNotificationId,
+            }]);
+          },
+        );
         oldSnoozeCancelled = Boolean(
           payload.snoozeNotificationId && cancelledIds.includes(payload.snoozeNotificationId),
         );
-        if (action === 'snoozed') newSnoozeNotificationId = await scheduleMedicationSnooze(10);
         const actionAt = new Date();
         const snoozedUntil = action === 'snoozed' ? new Date(actionAt.getTime() + 10 * 60 * 1000).toISOString() : null;
+        const plannedSnoozeId = action === 'snoozed'
+          ? buildSnoozeNotificationId(payload.medicationId, payload.originalScheduledAt, snoozedUntil as string)
+          : null;
         const intakeUpdate: MedicationIntakeUpdate = {
           status: action,
           taken_at: action === 'taken' ? actionAt.toISOString() : null,
           snoozed_until: snoozedUntil,
-          snooze_notification_id: newSnoozeNotificationId,
+          snooze_notification_id: plannedSnoozeId,
         };
 
+        // Le report est d’abord tracé en base ; la réconciliation pourra ainsi réparer une interruption Android.
         const result = payload.intakeId
           ? await client.from('medication_intakes').update(intakeUpdate)
             .eq('id', payload.intakeId)
@@ -721,6 +938,10 @@ function useMedicationIntakeMutation(userId: string | undefined, action: Medicat
             ...intakeUpdate,
           }, { onConflict: 'medication_id,scheduled_at' }).select().single();
         if (result.error) throw result.error;
+        if (action === 'snoozed' && plannedSnoozeId) {
+          newSnoozeNotificationId = plannedSnoozeId;
+          await scheduleMedicationSnoozeAt(new Date(snoozedUntil as string), plannedSnoozeId);
+        }
         return result.data;
       } catch (error) {
         // Si l’écriture échoue, la nouvelle notification est annulée avant de perdre son identifiant local.
@@ -750,10 +971,27 @@ function useMedicationIntakeMutation(userId: string | undefined, action: Medicat
           } else {
             compensationFailed = true;
           }
+        } else if (!compensationFailed && action === 'snoozed') {
+          try {
+            const resetResult = payload.intakeId
+              ? await client.from('medication_intakes').update({
+                status: 'pending',
+                taken_at: null,
+                snoozed_until: null,
+                snooze_notification_id: null,
+              }).eq('id', payload.intakeId).eq('user_id', userId)
+              : await client.from('medication_intakes').delete()
+                .eq('medication_id', payload.medicationId)
+                .eq('user_id', userId)
+                .eq('scheduled_at', payload.originalScheduledAt);
+            if (resetResult.error) compensationFailed = true;
+          } catch {
+            compensationFailed = true;
+          }
         }
         throw classifyWithCompensation(error, operation, compensationFailed);
       }
-    },
+    }),
     onSuccess: async () => {
       if (userId) await invalidateMedicationQueries(queryClient, userId);
     },

@@ -85,7 +85,7 @@ export function MedicationForm({ title, description, defaultValues, submitLabel,
           <MedicationField control={control} name="notes" label="Notes personnelles (facultatif)" multiline />
         </View>
       </Card>
-      {formState.errors.root?.message ? <AppText color="sos">{formState.errors.root.message}</AppText> : null}
+      {formState.errors.root?.message ? <AppText accessibilityRole="alert" color="sos">{formState.errors.root.message}</AppText> : null}
       <Button label={submitLabel} loading={formState.isSubmitting || loading} onPress={handleSubmit(submit)} />
     </ScreenContainer>
   );

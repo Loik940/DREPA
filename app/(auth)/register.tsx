@@ -13,6 +13,7 @@ import { signUpSchema, type SignUpValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
 import { useAppTheme } from '@/theme/use-app-theme';
 import { spacing } from '@/theme/spacing';
+import { fontFamilies } from '@/theme/typography';
 
 export default function RegisterScreen() {
   // Les hooks initialisent la navigation, le thème et le formulaire validé.
@@ -97,7 +98,7 @@ export default function RegisterScreen() {
             />
           )}
         />
-        {formState.errors.root?.message && <AppText color="sos" align="center">{formState.errors.root.message}</AppText>}
+        {formState.errors.root?.message && <AppText accessibilityRole="alert" color="sos" align="center">{formState.errors.root.message}</AppText>}
         <Button label="Créer mon compte" loading={formState.isSubmitting} onPress={handleSubmit(onSubmit)} />
       </View>
 
@@ -115,5 +116,5 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxxl },
   form: { gap: spacing.lg },
   footer: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxxl },
-  link: { fontFamily: 'Inter', fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  link: { fontFamily: fontFamilies.semiBold, fontSize: 14, paddingVertical: 14, textAlign: 'center' },
 });

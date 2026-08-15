@@ -27,6 +27,7 @@ export function Button({ label, variant = 'primary', loading = false, disabled, 
   return (
     <Pressable
       {...props}
+      accessibilityLabel={props.accessibilityLabel ?? label}
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}

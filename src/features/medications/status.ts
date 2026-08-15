@@ -24,10 +24,15 @@ export function getTodayBounds(date = new Date()) {
 }
 
 export function buildTodayReminders(medications: Medication[], reminders: MedicationReminder[], intakes: MedicationIntake[], now = new Date()): TodayReminder[] {
+  const localDay = formatLocalDay(now);
+
   return reminders
     .filter((reminder) => reminder.is_enabled)
     .flatMap((reminder) => {
-      const medication = medications.find((item) => item.id === reminder.medication_id && item.is_active);
+      const medication = medications.find((item) => item.id === reminder.medication_id
+        && item.is_active
+        && item.start_date <= localDay
+        && (!item.end_date || item.end_date >= localDay));
       if (!medication) return [];
       const [hour, minute] = reminder.reminder_time.slice(0, 5).split(':').map(Number);
       const scheduled = new Date(now);
@@ -53,6 +58,13 @@ export function buildTodayReminders(medications: Medication[], reminders: Medica
       }];
     })
     .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+}
+
+function formatLocalDay(date: Date) {
+  const year = String(date.getFullYear()).padStart(4, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function sameMinute(value: string, expected: Date) {

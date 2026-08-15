@@ -13,7 +13,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { StatusBanner } from '@/components/ui/StatusBanner';
-import { ChoiceChips } from '@/features/health-log/components/ChoiceChips';
+import { SingleChoiceChips } from '@/features/health-log/components/ChoiceChips';
 import { ModerationEmptyState } from '@/features/moderation/components/ModerationEmptyState';
 import { ModerationReportCard } from '@/features/moderation/components/ModerationReportCard';
 import { useModerationQueueQuery } from '@/features/moderation/queries';
@@ -34,8 +34,8 @@ export default function ModerationScreen() {
   const queueQuery = useModerationQueueQuery(user?.id, status);
   const reports = queueQuery.data?.pages.flat() ?? [];
 
-  const updateStatus = (values: string[]) => {
-    const nextStatus = filterChoices.find(({ value }) => value === values.at(-1))?.value;
+  const updateStatus = (value: string | null) => {
+    const nextStatus = filterChoices.find((choice) => choice.value === value)?.value;
     if (nextStatus) setStatus(nextStatus);
   };
 
@@ -48,10 +48,10 @@ export default function ModerationScreen() {
         </AppText>
       </View>
 
-      <ChoiceChips choices={filterChoices} selected={[status]} onChange={updateStatus} />
+      <SingleChoiceChips choices={filterChoices} selected={status} onChange={updateStatus} />
 
       {queueQuery.isPending ? <LoadingState message="Chargement des signalements..." /> : null}
-      {queueQuery.isError ? (
+      {queueQuery.isError && !queueQuery.data ? (
         <ErrorState
           description="Les signalements ne peuvent pas être chargés pour le moment."
           onRetry={() => void queueQuery.refetch()}

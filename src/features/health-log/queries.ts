@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 import type { Database } from '@/types/database.types';
 import { classifyHealthLogError, HealthLogDataError } from './errors';
+import { getStatisticsWindowStart } from './statistics';
 
 export type HealthLog = Database['public']['Tables']['health_logs']['Row'];
 export const HEALTH_LOG_PAGE_SIZE = 20;
@@ -21,16 +22,23 @@ function requireClient(operation: 'list' | 'detail' | 'statistics') {
   return supabase;
 }
 
-async function fetchHealthLogsPage(userId: string, page: number) {
+type HealthLogCursor = { recordedAt: string; id: string } | null;
+
+async function fetchHealthLogsPage(userId: string, cursor: HealthLogCursor) {
   try {
-    const from = page * HEALTH_LOG_PAGE_SIZE;
-    const to = from + HEALTH_LOG_PAGE_SIZE - 1;
-    const { data, error } = await requireClient('list')
+    let query = requireClient('list')
       .from('health_logs')
       .select('*')
       .eq('user_id', userId)
       .order('recorded_at', { ascending: false })
-      .range(from, to);
+      .order('id', { ascending: false })
+      .limit(HEALTH_LOG_PAGE_SIZE);
+
+    if (cursor) {
+      query = query.or(`recorded_at.lt.${cursor.recordedAt},and(recorded_at.eq.${cursor.recordedAt},id.lt.${cursor.id})`);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return (data ?? []) as HealthLog[];
@@ -58,14 +66,14 @@ async function fetchHealthLog(userId: string, entryId: string) {
 
 async function fetchStatisticsSource(userId: string, days: number) {
   try {
-    const fromDate = new Date(Date.now() - days * 86_400_000).toISOString();
+    const fromDate = getStatisticsWindowStart(days);
     const { data, error } = await requireClient('statistics')
       .from('health_logs')
       .select('id, pain_level, fatigue_level, symptoms, possible_triggers, medication_taken, recorded_at')
       .eq('user_id', userId)
       .gte('recorded_at', fromDate)
       .order('recorded_at', { ascending: false })
-      .limit(500);
+      .limit(1000);
 
     if (error) throw error;
     return data ?? [];
@@ -85,8 +93,13 @@ export function useHealthLogsQuery(userId: string | undefined) {
   return useInfiniteQuery({
     queryKey: userId ? healthLogsQueryKey(userId) : ['health-logs', 'anonymous'],
     queryFn: ({ pageParam }) => fetchHealthLogsPage(userId as string, pageParam),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, pages) => lastPage.length === HEALTH_LOG_PAGE_SIZE ? pages.length : undefined,
+    initialPageParam: null as HealthLogCursor,
+    getNextPageParam: (lastPage) => {
+      const lastEntry = lastPage.at(-1);
+      return lastPage.length === HEALTH_LOG_PAGE_SIZE && lastEntry
+        ? { recordedAt: lastEntry.recorded_at, id: lastEntry.id }
+        : undefined;
+    },
     enabled,
   });
 }

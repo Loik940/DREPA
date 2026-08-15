@@ -33,7 +33,7 @@ export function SupportButton({ supported, count, loading, onPress }: SupportBut
         styles.button,
         {
           backgroundColor: supported ? colors.backgroundMuted : colors.backgroundSurface,
-          borderColor: supported ? colors.brand : colors.border,
+          borderColor: supported ? colors.brand : colors.borderStrong,
           opacity: loading ? 0.55 : pressed ? 0.82 : 1,
         },
       ]}

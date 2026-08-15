@@ -5,6 +5,7 @@ import {
   NotificationCancellationError,
   uniqueNotificationIds,
 } from './notification-ids';
+import { assertMedicationNotificationBudget, buildMedicationNotificationSchedule } from './notification-schedule';
 import type { Medication, MedicationIntake, MedicationReminder } from './queries';
 import { medicationDefaults, medicationSchema, parseReminderTimes } from './schemas';
 import { buildTodayReminders } from './status';
@@ -45,6 +46,58 @@ describe('medication contracts', () => {
     const values = { ...medicationDefaults, name: 'Traitement', dosage: 'Prescrit', frequency: 'Quotidien' };
     expect(medicationSchema.safeParse(values).success).toBe(true);
     expect(medicationSchema.safeParse({ ...values, reminders_enabled: true }).success).toBe(false);
+  });
+
+  it('accepts a future reminder series without making it infinite', () => {
+    const future = new Date();
+    future.setDate(future.getDate() + 2);
+    const futureDate = `${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}-${String(future.getDate()).padStart(2, '0')}`;
+    const values = {
+      ...medicationDefaults,
+      name: 'Traitement',
+      dosage: 'Prescrit',
+      frequency: 'Quotidien',
+      start_date: futureDate,
+      reminder_times: '08:00',
+      reminders_enabled: true,
+    };
+
+    expect(medicationSchema.safeParse(values).success).toBe(true);
+    expect(medicationSchema.safeParse({ ...values, end_date: futureDate }).success).toBe(true);
+  });
+
+  it('returns validation errors for impossible calendar dates', () => {
+    const values = {
+      ...medicationDefaults,
+      name: 'Traitement',
+      dosage: 'Prescrit',
+      frequency: 'Quotidien',
+      start_date: '2026-02-31',
+    };
+
+    expect(() => medicationSchema.safeParse(values)).not.toThrow();
+    expect(medicationSchema.safeParse(values).success).toBe(false);
+  });
+
+  it('builds bounded dated occurrences and a rolling thirty-day series', () => {
+    const now = new Date(2026, 7, 7, 7, 0, 0);
+    const dated = buildMedicationNotificationSchedule('medication-a', '08:00', '2026-08-06', '2026-08-08', now);
+    const rolling = buildMedicationNotificationSchedule('medication-a', '08:00', '2026-08-01', null, now);
+
+    expect(dated.mode).toBe('dated');
+    expect(dated.occurrences.map((item) => item.date.getDate())).toEqual([7, 8]);
+    expect(new Set(dated.occurrences.map((item) => item.identifier)).size).toBe(2);
+    expect(rolling.mode).toBe('dated');
+    expect(rolling.occurrences).toHaveLength(30);
+    expect(buildMedicationNotificationSchedule('medication-a', '08:00', '2026-08-08', null, now).occurrences).toHaveLength(29);
+    expect(() => buildMedicationNotificationSchedule('medication-a', '08:00', '2026-08-07', '2027-08-08', now)).toThrow();
+    expect(() => assertMedicationNotificationBudget(
+      'medication-a',
+      ['08:00', '20:00'],
+      '2026-08-07',
+      '2027-02-07',
+      now,
+    )).toThrow();
   });
 
   it('classifies 403 as an RLS error', () => {
@@ -97,6 +150,17 @@ describe('medication contracts', () => {
     expect(taken?.status).toBe('taken');
     expect(taken?.intakeId).toBe('intake-a');
     expect(taken?.originalScheduledAt).toBe(late[0]?.scheduledAt);
+  });
+
+  it('keeps reminders only inside the declared treatment dates', () => {
+    const now = new Date(2026, 7, 7, 12, 0, 0);
+    const future = { ...medication, start_date: '2026-08-08' };
+    const ended = { ...medication, end_date: '2026-08-06' };
+    const endingToday = { ...medication, end_date: '2026-08-07' };
+
+    expect(buildTodayReminders([future], [reminder], [], now)).toHaveLength(0);
+    expect(buildTodayReminders([ended], [reminder], [], now)).toHaveLength(0);
+    expect(buildTodayReminders([endingToday], [reminder], [], now)).toHaveLength(1);
   });
 
   it('keeps a snoozed reminder snoozed before its effective time then marks it late', () => {

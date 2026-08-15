@@ -57,7 +57,8 @@ export default function NewCommunityPostScreen() {
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <AppText variant="title">Nouvelle publication</AppText>
-      <CommunitySafetyBanner />
+      <CommunitySafetyBanner onOpenCharter={() => router.push('/(auth)/legal')} />
+      <AppText color="textSecondary">Ne publie ni nom complet, contact, adresse, document médical ou autre information permettant de reconnaître une personne.</AppText>
 
       <View style={styles.fieldGroup}>
         <AppText variant="label">Catégorie</AppText>
@@ -73,7 +74,7 @@ export default function NewCommunityPostScreen() {
                   if (value) field.onChange(value);
                 }}
               />
-              {fieldState.error?.message ? <AppText variant="caption" color="sos">{fieldState.error.message}</AppText> : null}
+              {fieldState.error?.message ? <AppText accessibilityRole="alert" variant="caption" color="sos">{fieldState.error.message}</AppText> : null}
             </>
           )}
         />

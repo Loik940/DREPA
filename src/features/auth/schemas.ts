@@ -3,11 +3,16 @@ import { z } from 'zod';
 
 // Ces règles Zod normalisent les saisies et limitent leur taille avant toute opération d'authentification.
 const email = z.string().trim().toLowerCase().email('Saisissez une adresse e-mail valide.').max(254);
-const password = z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères.').max(128);
+const password = z.string()
+  .min(8, 'Le mot de passe doit contenir au moins 8 caractères.')
+  .max(128)
+  .regex(/[a-z]/, 'Ajoute au moins une lettre minuscule.')
+  .regex(/[A-Z]/, 'Ajoute au moins une lettre majuscule.')
+  .regex(/\d/, 'Ajoute au moins un chiffre.');
 
 export const signInSchema = z.object({
   email,
-  password: z.string().min(1, 'Saisissez votre mot de passe.'),
+  password: z.string().min(1, 'Saisissez votre mot de passe.').max(128),
 });
 
 export const signUpSchema = z

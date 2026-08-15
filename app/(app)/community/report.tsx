@@ -111,7 +111,7 @@ export default function CommunityReportScreen() {
                   if (value) field.onChange(value);
                 }}
               />
-              {fieldState.error?.message ? <AppText variant="caption" color="sos">{fieldState.error.message}</AppText> : null}
+              {fieldState.error?.message ? <AppText accessibilityRole="alert" variant="caption" color="sos">{fieldState.error.message}</AppText> : null}
             </>
           )}
         />

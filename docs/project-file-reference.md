@@ -48,7 +48,7 @@ DRÉPA est une application mobile Android francophone destinée à l’accompagn
 - **Expo SecureStore** conserve localement la session Supabase ; il ne doit pas servir à stocker des données médicales.
 - **Expo Notifications** présente et programme les rappels locaux génériques, y compris au premier plan.
 - **React Native Community DateTimePicker** fournit les calendriers et sélecteurs d’heure natifs sans saisie clavier.
-- **Expo Location** est installé pour les parcours futurs nécessitant une localisation avec consentement.
+- **Expo Screen Capture** protège les écrans authentifiés contre les captures, enregistrements et aperçus Android récents.
 - **EAS Build** produit les development builds et APK Android.
 
 ## 4. Arborescence documentée
@@ -176,20 +176,21 @@ DREPA/
 | `DREPA-Cahier.md` | Cahier des charges fonctionnel et technique de référence : public cible, MVP, limites médicales, sécurité, navigation et exigences métier. | Documentation, décisions d’architecture et futures implémentations. | Document de référence à préserver. Toute évolution fonctionnelle doit rester compatible avec ce cahier ou être documentée avant mise en œuvre. |
 | `package.json` | Manifeste Node : point d’entrée Expo Router, dépendances Expo/React Native/Supabase, DateTimePicker natif, AsyncStorage pour la préférence de bienvenue, scripts de développement, lint, tests, typecheck et builds EAS. | npm, Expo CLI, Jest, ESLint et EAS CLI. | Les versions Expo doivent rester alignées sur SDK 57. Les packages Expo doivent être installés avec `npx expo install`. L’override npm `uuid: 11.1.1` corrige la vulnérabilité transitive de `xcode` sans rétrograder Expo. |
 | `package-lock.json` | Verrouille l’arbre exact des dépendances npm. | npm install et les environnements CI/build. | Ne pas modifier manuellement. Une modification de `package.json` doit être suivie d’une régénération contrôlée du lockfile. |
-| `app.config.js` | Configuration Expo CommonJS : identité DRÉPA, plateforme Android, schéma de deep link, icône, permission `android.permission.SCHEDULE_EXACT_ALARM`, plugins dont DateTimePicker, splash natif DRÉPA, expériences et identifiant EAS. | Expo CLI, EAS CLI et les builds Android. | Conserver `name: DREPA`, `slug: drepa`, `scheme: drepa`, `platforms: ['android']`, `bj.drepa.app`, l’icône adaptative, les plugins et `extra.eas.projectId`. Le splash natif utilise le fond bordeaux et `drepa-splash-icon.png`; toute modification exige un nouveau build Android. Ne jamais y placer de secret. |
-| `eas.json` | Profils EAS `development`, `preview` et `production`, tous configurés pour Android. | EAS Build. | Le profil development utilise `expo-dev-client` et produit un APK interne. Aucun secret ou identifiant Supabase ne doit être ajouté ici. |
+| `app.config.js` | Configuration Expo CommonJS : identité DRÉPA, plateforme Android, schéma de deep link, icône, permission `android.permission.SCHEDULE_EXACT_ALARM`, plugins dont DateTimePicker, splash natif DRÉPA, expériences et identifiant EAS. | Expo CLI, EAS CLI et les builds Android. | Conserver `name: DREPA`, `slug: drepa`, `scheme: drepa`, `platforms: ['android']`, `bj.drepa.app`, l’icône adaptative, les plugins et `extra.eas.projectId`. Le splash natif utilise le fond bordeaux et le médaillon local `drepa-splash-icon.png` sur une largeur de 140 px pour éviter un visuel surdimensionné ; toute modification exige un nouveau build Android. Ne jamais y placer de secret. |
+| `eas.json` | Profils Android `development`, `preview` et `production`, avec `EXPO_PUBLIC_APP_ENV` explicite. | EAS Build et source distante du numéro de version. | Preview produit un APK interne ; Production auto-incrémente sa version distante. Les URL/clé publiques Supabase restent dans les environnements EAS, jamais dans Git. |
 | `tsconfig.json` | Étend la configuration Expo, active le mode strict, les types Jest et les alias `@/*` vers `src/*` et `@/assets/*` vers `assets/*`. | TypeScript, Babel/Jest et l’éditeur. | Les alias doivent rester cohérents avec les imports. Ne pas désactiver `strict` pour masquer une erreur de contrat. |
 | `eslint.config.js` | Configuration ESLint flat basée sur `eslint-config-expo`, avec exclusion de `dist`. | `npm run lint`. | Toute règle désactivée doit être justifiée. Les fichiers générés ne doivent pas être ajoutés au lint sans nécessité. |
 | `expo-env.d.ts` | Référence automatique aux types Expo. | TypeScript et l’éditeur. | Fichier généré à ne pas éditer manuellement. Il est ignoré par Git selon `.gitignore`. |
 | `.env.example` | Noms vides des variables publiques attendues : `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` et `EXPO_PUBLIC_APP_ENV`. | Configuration locale et documentation de l’environnement. | Ne contient aucune valeur réelle. Les fichiers `.env` et `.env.local` restent ignorés et ne doivent jamais être lus ou commités dans cette référence. |
 | `.gitignore` | Exclut dépendances, builds, environnements locaux, secrets, certificats, logs, caches et fichiers Expo générés. | Git. | Toute nouvelle source de secret ou de fichier généré doit être ajoutée ici sans ignorer des fichiers source utiles. |
+| `.gitattributes` | Stabilise les fichiers texte en LF et marque les images comme binaires. | Git sur Windows et Linux. | Évite les diffs CRLF/LF parasites entre poste local et CI. |
 
 ### Automatisation GitHub
 
 | Fichier | Rôle et déclenchement | Dépendances | Sécurité, limites et validation humaine |
 |---|---|---|---|
 | `.github/workflows/quality.yml` | CI « Qualité et sécurité » lancée sur les push vers `main`, les pull requests ciblant `main` et à la demande. Elle exécute l'installation déterministe, TypeScript, ESLint, Jest hors `.kilo`, les contrôles Expo et l'audit critique des dépendances de production. | GitHub Actions, `actions/checkout` et `actions/setup-node` épinglées sur des SHA immuables avec commentaires de tag `v4`, Node.js 22, npm et les scripts de `package.json`. | Permissions limitées à `contents: read`, aucun secret Supabase requis et concurrence annulant les anciens contrôles d'une même référence. Le scan Git exclut `package-lock.json`, recherche seulement des motifs longs de clés réelles ou une affectation non vide de `SUPABASE_SERVICE_ROLE_KEY`, puis n'affiche que le chemin et la ligne. L'audit bloque au niveau critique afin de ne pas casser la CI sur l'advisory `high` Metro/`image-size` sans correctif compatible Expo SDK 57. Une personne reste responsable de l'analyse des échecs et de la fusion. |
-| `.github/workflows/eas-preview.yml` | CD manuel « Build Android Preview » lancé uniquement avec `workflow_dispatch`. Il soumet à EAS un build Android utilisant le profil `preview` et retourne immédiatement avec `--no-wait`. | GitHub Actions, `actions/checkout`, `actions/setup-node` et `expo/expo-github-action` épinglées sur des SHA immuables avec commentaires de tags `v4`, `v4` et `v8`, Node.js 22, npm, EAS CLI et le profil `preview` d'`eas.json`. | Le secret GitHub `EXPO_TOKEN` est obligatoire dans l'environnement `preview`; sa présence est vérifiée sans afficher sa valeur. Les builds d'un même groupe ne sont pas annulés. Une protection d'environnement GitHub peut imposer une approbation avant accès au secret. Le résultat EAS doit être contrôlé et testé humainement. Aucun build ou déploiement Production n'est automatique. |
+| `.github/workflows/eas-preview.yml` | CD manuel « Build Android Preview » lancé uniquement avec `workflow_dispatch`. Il exécute TypeScript, ESLint, Jest, Expo Doctor et attend le résultat du build Android `preview`. | Actions épinglées sur SHA, Node.js 22 et EAS CLI `22.0.0` explicitement versionné. | `EXPO_TOKEN` est obligatoire sans être affiché. Le job attend l’artefact EAS avant succès ; aucun build Production n’est automatique. |
 | `.github/dependabot.yml` | Planifie chaque lundi à 06:00, fuseau `Africa/Porto-Novo`, les propositions de mise à jour npm et GitHub Actions. | Service GitHub Dependabot, manifeste et lockfile npm, références d'actions dans `.github/workflows/`. | Limite les pull requests ouvertes à 5 pour npm et 3 pour GitHub Actions, avec des labels dédiés. Aucun automerge n'est configuré : chaque mise à jour doit passer par la CI, une revue et une fusion humaines. |
 
 Flux CI et CD :
@@ -204,7 +205,7 @@ lancement manuel du workflow Preview
     → approbation éventuelle de l'environnement preview
     → vérification de EXPO_TOKEN
     → eas-preview.yml
-    → build EAS Android preview non bloquant
+    → validations locales CI puis build EAS Android preview attendu
     → téléchargement, recette et décision humaines
 ```
 
@@ -216,27 +217,27 @@ Les groupes entre parenthèses d’Expo Router organisent les écrans sans appar
 
 | Fichier / route | URL ou groupe | Rôle | Accès, dépendances et états |
 |---|---|---|---|
-| `app/_layout.tsx` | Layout racine | Configure une fois la présentation sonore et visuelle des notifications au premier plan, puis monte `AppProvider` et le `Stack` Expo Router. | Point d’entrée de tous les écrans. Ne doit pas contenir une redirection concurrente avec les guards enfants ni exposer le contenu d’un traitement. |
-| `app/index.tsx` | `/` | Observe l’état Auth et redirige vers la bienvenue, la connexion ou les onglets protégés. | Affiche `BrandedSplashScreen` pendant la restauration réelle de la session et de la préférence de bienvenue, sans délai artificiel. L’erreur de configuration conserve son écran `Réessayer`. |
-| `app/+not-found.tsx` | Absent actuellement | Route de fallback prévue dans la documentation mais non créée dans le code actuel. | À créer avant d’exposer des routes supplémentaires ; toute page inconnue devrait proposer un retour sûr. |
+| `app/_layout.tsx` | Layout racine | Configure une fois la présentation sonore et visuelle des notifications au premier plan, monte `AppProvider` et le `Stack`, puis masque le splash natif lorsque la session et la préférence de bienvenue sont toutes deux prêtes. | `expo-splash-screen`, AuthProvider, StartupProvider et Expo Router. Le splash cède aussi la place aux états d’erreur bornés ; aucune redirection ne concurrence les guards enfants et aucun contenu de traitement n’est exposé. |
+| `app/index.tsx` | `/` | Observe les états Auth et Startup partagés puis redirige vers la bienvenue, la connexion ou les onglets protégés. | Le splash natif couvre normalement tout le démarrage ; `BrandedSplashScreen` reste un repli sans symbole distant ni délai artificiel. L’erreur de configuration conserve son écran `Réessayer`. |
+| `app/+not-found.tsx` | Route de secours | Intercepte un lien inconnu ou obsolète et propose un retour neutre vers l’entrée. | N’affiche aucune donnée privée. |
 | `app/(auth)/_layout.tsx` | Groupe public `(auth)` | Protège les écrans publics contre une session déjà authentifiée et autorise le mode récupération. | Utilise `useAuth`, `Redirect`, `Stack` et `ScreenPlaceholder`. États de session `loading`, `error`, `authenticated` et récupération de mot de passe. |
-| `app/(auth)/welcome.tsx` | `/welcome` | Onboarding visuel local en trois étapes avant l’authentification. | Utilise AsyncStorage uniquement pour la préférence non sensible d’accueil déjà vu. Ne collecte aucune donnée médicale et ne crée aucune session. Le périmètre actif est en mode clair uniquement. |
+| `app/(auth)/welcome.tsx` | `/welcome` | Onboarding visuel local en trois étapes avant l’authentification. | Utilise `StartupProvider` pour mémoriser dans AsyncStorage la préférence non sensible d’accueil déjà vu avant la navigation. Ne collecte aucune donnée médicale et ne crée aucune session. Le périmètre actif est en mode clair uniquement. |
 | `app/(auth)/login.tsx` | `/login` | Formulaire de connexion par e-mail et mot de passe. | React Hook Form, Zod, `useAuth`, `signIn` et redirection vers `/`. Erreurs d’authentification affichées sans token ni détail sensible. |
 | `app/(auth)/register.tsx` | `/register` | Formulaire d’inscription et confirmation du mot de passe. | React Hook Form, Zod, `useAuth.signUp`. Si Supabase exige une confirmation e-mail, l’écran affiche une instruction et n’ouvre pas les routes protégées sans session. |
 | `app/(auth)/forgot-password.tsx` | `/forgot-password` | Demande de récupération par e-mail. | Utilise `requestPasswordReset`, `expo-linking` via le service Auth et une réponse neutre pour ne pas révéler l’existence d’un compte. |
 | `app/(auth)/reset-password.tsx` | `/reset-password` | Formulaire de nouveau mot de passe dans le contexte `PASSWORD_RECOVERY`. | Utilise le schéma Zod, `updatePassword`, SecureStore via Supabase Auth et retour à la connexion après succès. |
-| `app/(auth)/legal.tsx` | `/legal` | Placeholder pour les documents légaux et les consentements versionnés. | Ne doit pas enregistrer un consentement avant identification. Les versions effectives sont centralisées dans `src/constants/legal-versions.ts`. |
-| `app/(auth)/auth/callback.tsx` | `/auth/callback` | Échange les paramètres du deep link de confirmation contre une session Supabase puis revient au routeur d’onboarding. | Utilise `Linking.useURL()` pour recevoir le lien initial et les liens suivants avec abonnement et nettoyage gérés par Expo, conserve le garde anti-double traitement, masque les erreurs techniques et évite les doubles redirections du layout public. |
-| `app/(app)/_layout.tsx` | Groupe protégé `(app)` | Vérifie la session puis le statut d’onboarding. | Utilise `useAuth`, `useOnboardingStatus`, `useSegments` et `ScreenPlaceholder`. Priorité : consentements, profil, onglets. Les erreurs de données proposent `Réessayer`. |
+| `app/(auth)/legal.tsx` | `/legal` | Présente les informations produit versionnées sur utilisation, confidentialité et communauté avant consentement. | Les textes sont consultables mais nécessitent encore une validation juridique externe avant diffusion publique. |
+| `app/(auth)/auth/callback.tsx` | `/auth/callback` | Valide la cible exacte, accepte uniquement un code PKCE puis oriente confirmation ou récupération. | Refuse fragments, jetons directs et autres schémas/hôtes ; timeout borné et retour sûr en cas d’échec. |
+| `app/(app)/_layout.tsx` | Groupe protégé `(app)` | Vérifie la session et l’onboarding puis active la réconciliation locale des notifications. | La réconciliation ne charge les traces privées qu’après consentements et profil complets. La reprise Auth est réelle et les guards restent prioritaires. |
 | `app/(app)/consent.tsx` | `/consent` | Enregistre l’acceptation des versions courantes des CGU, de la politique de confidentialité et de la charte communautaire. | Protégé par session. Utilise React Hook Form, Zod, `legalVersions` et `useAcceptConsentMutation`. Après succès, la requête est invalidée et l’utilisateur va vers `complete-profile`. |
 | `app/(app)/complete-profile.tsx` | `/complete-profile` | Wrapper d’onboarding qui configure le formulaire partagé pour créer le profil requis puis ouvre les onglets. | Protégé par session et réservé au profil incomplet par le guard. Utilise `ProfileForm`; les données et la sauvegarde restent gérées dans le composant partagé. |
 | `app/(app)/profile-edit.tsx` | `/profile-edit` | Wrapper d’édition qui configure le formulaire partagé puis revient à l’onglet Profil après sauvegarde. | Protégé par session et accessible lorsque l’onboarding est complet. Utilise `ProfileForm`; un profil incomplet est toujours redirigé vers `complete-profile` par le guard existant. |
 | `app/(app)/health-entry.tsx` | `/health-entry` | Formulaire de nouvelle entrée du journal avec champs facultatifs et brouillon mémoire. | Protégé par session. Utilise React Hook Form, Zod et `useCreateHealthLogMutation`. Ne persiste aucune donnée médicale localement et conserve les valeurs en cas d’erreur réseau. |
 | `app/(app)/health-log/[id].tsx` | `/health-log/:id` | Détail privé d’une entrée avec modification et suppression confirmée. | Charge avec `id + user_id`, affiche uniquement des données déclaratives et utilise des mutations filtrées par propriétaire. |
 | `app/(app)/health-statistics.tsx` | `/health-statistics` | Statistiques descriptives des 30 derniers jours. | Charge uniquement les colonnes nécessaires, limite à 500 lignes et n’affiche aucun diagnostic, prédiction ou niveau de danger. |
-| `app/(app)/(tabs)/_layout.tsx` | Groupe protégé `(app)/(tabs)` | Déclare les onglets principaux. | Accessible après session, consentements et profil complet. |
-| `app/(app)/(tabs)/index.tsx` | Onglet accueil | Dashboard scalable : identité, action d’enregistrement, raccourcis, résumé conditionnel du journal et dernière activité. | Réutilise le cache Profil et la requête des entrées des 7 derniers jours. N’invente aucune donnée, n’ajoute pas de SOS et ne produit aucune interprétation médicale. |
-| `app/(app)/(tabs)/journal.tsx` | Onglet journal | Affiche l’état vide ou les 50 entrées récentes et ouvre le formulaire de saisie. | Utilise `useHealthLogsQuery`, les états UI partagés et des données privées filtrées par `session.user.id`. Les informations restent descriptives. |
+| `app/(app)/(tabs)/_layout.tsx` | Groupe protégé `(app)/(tabs)` | Déclare les onglets principaux avec des pictogrammes React Native locaux. | Accessible après session, consentements et profil complet. Les icônes ne dépendent pas du chargement d’une police Android. |
+| `app/(app)/(tabs)/index.tsx` | Onglet accueil | Dashboard hiérarchisé : identité, action d’enregistrement, aperçu du jour, raccourcis, résumé hebdomadaire et dernière activité. | Réutilise les requêtes privées Profil, Journal sur 7 jours et Médicaments. L’heure est recalculée chaque minute et les sources sont rafraîchies au focus ainsi qu’au changement de jour local. Une erreur Médicaments reste partielle ; aucune donnée, prise ou interprétation médicale n’est inventée. |
+| `app/(app)/(tabs)/journal.tsx` | Onglet journal | Affiche l’état vide ou les entrées paginées par curseur stable, 20 par page. | Données filtrées par `session.user.id`; une erreur de page suivante conserve les entrées déjà affichées. |
 | `app/(app)/medication-form.tsx` | `/medication-form` | Wrapper de création qui relie le formulaire partagé à la session et revient à la liste après succès. | `useAuth`, `MedicationForm` et mutation de création compensatoire ; aucun accès direct aux champs natifs ou à Supabase dans le formulaire partagé. |
 | `app/(app)/medication/[id].tsx` | `/medication/:id` | Affiche les informations déclarées, les horaires et les actions Modifier, Arrêter/Réactiver et Supprimer. | Lecture `id + user_id`, confirmations d’arrêt et de suppression, cascade en base puis annulation des notifications locales. Aucun conseil médical. |
 | `app/(app)/medication/[id]/edit.tsx` | `/medication/:id/edit` | Construit les valeurs initiales depuis le traitement et ses rappels puis synchronise les modifications. | États loading, erreur et absence structurée ; le succès revient au détail. Les horaires inchangés conservent leur ligne et leur notification. |
@@ -258,19 +259,20 @@ Les routes métier du SOS et des ressources éducatives restent absentes. Le pre
 
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
-| `src/components/screen-placeholder.tsx` | Composant d’état neutre pour les écrans de chargement, erreur ou fonctionnalité différée. Il accepte une action optionnelle comme `Réessayer`. | React Native uniquement. Conserver l’absence de données métier et ne pas y afficher de secret ou de diagnostic médical. |
+| `src/components/screen-placeholder.tsx` | Composant d’état neutre pour les écrans de chargement, erreur ou fonctionnalité différée. Il accepte une action optionnelle comme `Réessayer` et un rôle d’accessibilité. | React Native uniquement. Les erreurs de démarrage utilisent `alert` et les actions sont annoncées comme boutons ; ne pas afficher de secret ou de diagnostic médical. |
 
 ### `src/components/ui/`
 
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
 | `src/components/ui/AppText.tsx` | Texte typé avec variantes de typographie et couleur du thème actif. | `useAppTheme`, tokens typography. Ne pas utiliser de taille ou couleur locale sans justification. |
-| `src/components/ui/BrandedSplashScreen.tsx` | Relais React du splash natif avec identité DRÉPA, slogan et trois points animés. | `Animated`, `AccessibilityInfo`, `StatusBar`, `expo-symbols` et tokens du thème. Respecte la réduction des animations, ne crée aucun délai et ne charge aucune donnée. |
+| `src/components/ui/BrandedSplashScreen.tsx` | Repli React du splash natif avec le même médaillon local, l’identité DRÉPA, le slogan et trois points animés. | `Image`, `Animated`, `StatusBar`, réduction des mouvements Android et tokens du thème. L’asset local évite une icône absente avant le chargement des symboles ; le composant ne crée aucun délai et ne charge aucune donnée. |
 | `src/components/ui/OnboardingIllustration.tsx` | Illustrations locales légères en formes React Native pour les trois slides de bienvenue. | `useAppTheme`, tokens de rayons. Aucun asset distant ou contenu médical réel ; conserver un rendu performant hors ligne. |
 | `src/components/ui/ScreenContainer.tsx` | Conteneur Safe Area avec variantes scroll et fond de thème. | `react-native-safe-area-context`, `useAppTheme`. Conserver le support du clavier et des petits écrans. |
 | `src/components/ui/Button.tsx` | Boutons primaire, brand, secondaire, ghost et danger avec chargement et accessibilité. | Tokens couleurs, tailles et rayons. Ne pas utiliser `danger` pour une action ordinaire. |
 | `src/components/ui/TextField.tsx` | Champ texte partagé avec label, erreur, aide et élément à droite. | React Native, thème. Ne jamais afficher de valeur sensible dans les erreurs ou logs. |
 | `src/components/ui/PasswordField.tsx` | Champ mot de passe avec affichage/masquage local et accessibilité. | `TextField`, React state. Ne pas persister ni loguer la valeur. |
+| `src/components/ui/VisibilityIcon.tsx` | Dessine localement l’œil et l’œil barré du mot de passe. | Aucune police d’icônes ni ressource distante ; le bouton parent porte le libellé TalkBack. |
 | `src/components/ui/CheckboxRow.tsx` | Case à cocher accessible avec label et erreur. | Thème et React Native. Utilisé pour les consentements ; ne doit pas accepter silencieusement un consentement non visible. |
 | `src/components/ui/Card.tsx` | Surface standard pour regrouper des informations. | Thème et ombres légères. Ne pas y placer des données fictives présentées comme réelles. |
 | `src/components/ui/StatusBanner.tsx` | Bandeau d’information, succès, avertissement ou erreur. | Tokens sémantiques. Ne pas transmettre un diagnostic par la couleur seule. |
@@ -288,16 +290,17 @@ Les routes métier du SOS et des ressources éducatives restent absentes. Le pre
 
 | Fichier | Rôle | Dépendances, données et risques |
 |---|---|---|
-| `src/features/auth/auth-service.ts` | Encapsule `signUp`, `signIn`, `signOut`, la demande de récupération et la mise à jour du mot de passe. | Dépend de `expo-linking` et `src/lib/supabase.ts`. Ne retourne jamais de secret à l’interface et conserve les messages d’erreur génériques. |
-| `src/features/auth/schemas.ts` | Schémas Zod pour connexion, inscription, récupération et nouveau mot de passe. La politique locale impose au moins 8 caractères. | Utilisé par les routes `(auth)`. Ne pas loguer les valeurs des champs. |
-| `src/features/auth/schemas.test.ts` | Tests unitaires des e-mails, mots de passe et confirmations. | Jest/Babel ; utilise uniquement des valeurs de test non réelles assemblées à l'exécution afin d'éviter les faux positifs du scanner. |
+| `src/features/auth/auth-service.ts` | Encapsule inscription, connexion, récupération PKCE, réauthentification et suppression. | Callback exact `drepa://auth/callback`; la suppression réauthentifie par mot de passe avant l’Edge Function. |
+| `src/features/auth/callback.ts` | Valide de façon pure le schéma, l’hôte, le chemin, l’absence de fragment et les paramètres PKCE. | Refuse les jetons directs et callbacks étrangers ; utilisé par la route et ses tests. |
+| `src/features/auth/schemas.ts` | Schémas Zod Auth alignés sur la politique serveur : 8–128 caractères, majuscule, minuscule et chiffre. | Utilisé par les routes `(auth)`. Ne pas loguer les valeurs. |
+| `src/features/auth/schemas.test.ts` | Tests e-mail, mot de passe, confirmation et callbacks PKCE hostiles. | Valeurs synthétiques non réelles pour éviter secrets et faux positifs. |
 
 ### `src/features/profile/`
 
 | Fichier | Rôle | Dépendances, données et risques |
 |---|---|---|
 | `src/features/profile/queries.ts` | Requêtes TanStack Query pour `profiles` et `user_consents`. `profiles` utilise `maybeSingle()` afin que l’absence de ligne retourne `null`. Les erreurs sont classées en configuration, réseau, RLS, Supabase ou inconnues. | Dépend de Supabase et `database.types.ts`. Les identifiants viennent de `auth.users.id`; aucune requête ne doit utiliser un identifiant fourni par l’utilisateur. |
-| `src/features/profile/mutations.ts` | `upsert` du profil et insertion des consentements versionnés. Invalide les clés TanStack Query correspondantes après succès. | Dépend de Supabase, `legal-versions`, `queries` et des schémas. La RLS reste l’autorité d’accès. |
+| `src/features/profile/mutations.ts` | `upsert` normalisé du profil, acceptation versionnée et révocation des consentements. | Les chaînes facultatives vides deviennent `null`; chaque succès invalide uniquement le cache propriétaire. |
 | `src/features/profile/completion.ts` | Calcule `needs-consent`, `needs-profile`, `complete` et `error`. Une liste vide de consentements ou un profil `null` sont des états d’onboarding normaux. | Dépend des versions légales et des types de consentement. Ne doit pas effectuer de requête réseau. |
 | `src/features/profile/use-onboarding-status.ts` | Combine l’utilisateur Auth, les requêtes profil/consentements, l’état de chargement, l’erreur structurée et le `refetch`. | Utilisé par `app/(app)/_layout.tsx`. La priorité est toujours `needs-consent → needs-profile → complete`. |
 | `src/features/profile/schemas.ts` | Valide les champs de profil et les trois consentements obligatoires. | React Hook Form et Zod. Les champs facultatifs restent bornés avant envoi à PostgreSQL. |
@@ -308,7 +311,7 @@ Les routes métier du SOS et des ressources éducatives restent absentes. Le pre
 | Fichier | Rôle | Dépendances, données et risques |
 |---|---|---|
 | `src/features/profile/components/ProfileHeader.tsx` | Carte d’identité du profil avec initiales dérivées, nom d’affichage et localisation disponible. | `Profile`, composants UI et tokens. Ne doit jamais utiliser de nom ou de localisation fictifs. |
-| `src/features/profile/components/ProfileForm.tsx` | Formulaire partagé entre finalisation de l’onboarding et édition du profil. Préremplit tous les champs existants, valide avec Zod et conserve les états de chargement et d’erreur. | `useAuth`, `useProfileQuery`, `useUpsertProfileMutation`, React Hook Form, `profileSchema` et composants UI. L’identité vient uniquement de la session ; les informations de suivi sont déclaratives et ne constituent pas un document médical. |
+| `src/features/profile/components/ProfileForm.tsx` | Formulaire partagé entre onboarding et édition, avec date de naissance choisie au calendrier et bornée à aujourd’hui. | Les informations facultatives restent déclaratives ; aucune donnée vide n’est envoyée comme date SQL. |
 | `src/features/profile/components/ProfileInfoCard.tsx` | Présente les informations de suivi et les valeurs facultatives avec `Non renseigné`. | `Profile`, Card et AppText. Le groupe sanguin est explicitement marqué comme déclaré, non validé médicalement. |
 | `src/features/profile/components/ProfileContactSection.tsx` | État visuel réservé aux futurs contacts d’urgence. | Aucun accès réseau et aucun contact fictif ; ne déclenche pas de SOS. |
 | `src/features/profile/components/ProfileSettingsList.tsx` | Liste des paramètres disponibles et différés, avec accès aux conditions d’utilisation et entrée Administration conditionnelle. | Reçoit ses callbacks de la route Profil. L’entrée Administration n’existe dans le rendu que si `useCurrentUserRoleQuery` a confirmé le rôle `admin`; les lignes différées restent non actionnables. |
@@ -318,14 +321,16 @@ Les routes métier du SOS et des ressources éducatives restent absentes. Le pre
 | Fichier | Rôle | Dépendances, données et risques |
 |---|---|---|
 | `src/features/dashboard/index.ts` | Exporte les composants visuels du dashboard. | Utilisé par l’Accueil ; ne contient pas de requête ou de donnée fictive. |
-| `src/features/dashboard/dashboard.ts` | Fonctions pures pour aplatir les pages du journal, sélectionner l’activité récente, calculer le résumé et formater les valeurs non déclarées. | Réutilise les statistiques health-log ; aucun accès réseau. |
-| `src/features/dashboard/DashboardHeader.tsx` | En-tête DRÉPA avec salutation, date et avatar dérivé du profil. | Tokens du thème et `AppText` ; ne doit pas afficher l’e-mail ou une identité inventée. |
-| `src/features/dashboard/FeelingPromptCard.tsx` | Carte « Comment te sens-tu aujourd’hui ? » qui ouvre le Journal existant. | Expo Router et composants UI ; ne crée aucune entrée seule. |
-| `src/features/dashboard/DashboardShortcuts.tsx` | Grille 2×2 vers Journal, Médicaments, Communauté et Profil. | Expo Router, Card et tokens ; les fonctions futures sont explicitement indiquées. |
-| `src/features/dashboard/DashboardWeeklySummary.tsx` | Résumé descriptif des entrées réelles des 7 derniers jours. | Statistiques health-log ; `null` devient `—`, aucune interprétation médicale. |
-| `src/features/dashboard/DashboardRecentActivity.tsx` | Dernière activité réellement enregistrée dans le Journal. | Données `health_logs` uniquement ; aucune activité fictive si la liste est vide. |
+| `src/features/dashboard/dashboard.ts` | Fonctions pures pour aplatir les pages du journal, sélectionner l’activité récente ou celle du jour local, calculer le résumé et formater les valeurs non déclarées. | Réutilise les statistiques health-log ; aucun accès réseau. La date du jour suit le fuseau du téléphone. |
+| `src/features/dashboard/DashboardHeader.tsx` | En-tête DRÉPA avec salutation, date, accès direct aux rappels et avatar dérivé du profil. | Expo Router, pictogrammes locaux, tokens du thème et `AppText` ; le bouton cloche ouvre les rappels Médicaments et ne simule pas un centre de notifications. |
+| `src/features/dashboard/FeelingPromptCard.tsx` | Carte principale bordeaux « Comment te sens-tu aujourd’hui ? » avec formes organiques, asset DRÉPA et action vers la nouvelle entrée du Journal. | Expo Router, asset local et composants UI ; ne crée aucune entrée seule et n’interprète pas l’état déclaré. |
+| `src/features/dashboard/DashboardIcon.tsx` | Dessine les pictogrammes Accueil, Journal, Médicaments, Communauté, notifications et profil avec des vues React Native locales. | Aucun asset distant ni police d’icônes. Utilisé aussi par la barre d’onglets ; les boutons parents conservent les libellés TalkBack complets. |
+| `src/features/dashboard/DashboardTodayOverview.tsx` | Deux cartes du jour vers le Journal et les Médicaments, alimentées par l’entrée locale du jour et les rappels réellement chargés. | Expo Router, `TodayReminder`, pictogrammes locaux et composants UI. Les mises à jour Médicaments sont annoncées poliment à TalkBack ; aucun rappel ou statut de prise n’est inventé. |
+| `src/features/dashboard/DashboardShortcuts.tsx` | Grille 2×2 illustrée vers Journal, Médicaments, Communauté et Profil. | Expo Router, pictogrammes locaux, Card et tokens ; tous les libellés décrivent désormais les fonctions réellement disponibles. |
+| `src/features/dashboard/DashboardWeeklySummary.tsx` | Résumé descriptif des entrées réelles des 7 derniers jours, ou état vide structuré lorsque le journal ne fournit encore aucune donnée. | Statistiques health-log ; `null` devient `—`, les sept repères vides ne représentent aucune fausse activité et aucune interprétation médicale n’est produite. |
+| `src/features/dashboard/DashboardRecentActivity.tsx` | Dernière activité réellement enregistrée dans le Journal, ou état vide explicite. | Données `health_logs` uniquement ; l’absence reste normale et aucune activité fictive n’est créée. |
 | `src/features/dashboard/DashboardState.tsx` | États chargement/erreur du dashboard avec action `Réessayer`. | React Native, Card et tokens ; messages utilisateur neutres. |
-| `src/features/dashboard/dashboard.test.ts` | Tests des calculs, pages vides, dernière entrée et valeurs non déclarées. | Jest/Babel ; données synthétiques sans donnée médicale réelle. |
+| `src/features/dashboard/dashboard.test.ts` | Tests des calculs, pages vides, dernière entrée, entrée du jour local et valeurs non déclarées. | Jest/Babel ; données synthétiques sans donnée médicale réelle. |
 
 ### `src/features/health-log/`
 
@@ -335,37 +340,39 @@ Les routes métier du SOS et des ressources éducatives restent absentes. Le pre
 | `src/features/health-log/schemas.test.ts` | Tests unitaires du contrat du journal. | Jest/Babel. Utilise uniquement des valeurs fictives et vérifie entrée partielle, bornes, date et longueur. |
 | `src/features/health-log/errors.ts` | Erreurs structurées du journal : session, réseau, RLS, absence, Supabase et configuration. | Nettoie JWT, tokens et secrets avant tout diagnostic de développement. |
 | `src/features/health-log/errors.test.ts` | Tests de classification et de nettoyage des erreurs. | Vérifie 401, 403, 42501, réseau, absence et masquage de secrets. |
-| `src/features/health-log/queries.ts` | Historique paginé, détail propriétaire et source statistique limitée. | Supabase, TanStack Query, AuthProvider. Attend une session prête, inclut `user.id` dans les query keys et filtre par `user_id`. |
+| `src/features/health-log/queries.ts` | Historique paginé, détail propriétaire et source statistique limitée. | Supabase, TanStack Query, AuthProvider. Attend une session prête, inclut `user.id` dans les query keys, filtre par `user_id` et commence la fenêtre statistique au début local du premier jour inclus. |
 | `src/features/health-log/mutations.ts` | Crée, modifie et supprime une entrée avec invalidation ciblée du cache. | Supabase et TanStack Query. Injecte `session.user.id` et filtre update/delete par `id + user_id`. |
 | `src/features/health-log/options.ts` | Libellés stables des symptômes, facteurs, hydratation et prise déclarée. | Utilisé par le formulaire, le détail et les statistiques. N’ajoute aucune interprétation médicale. |
 | `src/features/health-log/payload.ts` | Normalisation pure du payload Supabase. | Convertit champs vides en `null`, température décimale et préserve `false`. |
 | `src/features/health-log/payload.test.ts` | Tests de normalisation du payload. | Vérifie valeurs vides, décimales, booléens et date explicite. |
-| `src/features/health-log/statistics.ts` | Calcule moyennes descriptives, jours suivis et fréquences. | Fonction pure sans accès réseau ni conclusion médicale. |
-| `src/features/health-log/statistics.test.ts` | Tests des statistiques descriptives. | Vérifie moyennes, fréquences, jours uniques et historique vide. |
-| `src/features/health-log/components/ScoreSelector.tsx` | Sélecteur accessible de score facultatif de 0 à 10. | Composants UI et thème clair. Le token logique `high` est mappé vers la couleur `sos` existante uniquement au rendu ; la valeur ne constitue pas un niveau de danger médical. |
+| `src/features/health-log/statistics.ts` | Calcule moyennes descriptives, jours suivis locaux, fréquences et début calendaire d’une fenêtre. | Fonction pure sans accès réseau ni conclusion médicale ; les jours suivent le fuseau local du téléphone plutôt qu’une découpe UTC. |
+| `src/features/health-log/statistics.test.ts` | Tests des statistiques descriptives et des bornes calendaires locales. | Vérifie moyennes, fréquences, jours uniques, fenêtre de sept jours et historique vide. |
+| `src/features/health-log/components/ScoreSelector.tsx` | Sélecteur accessible et neutre de score facultatif de 0 à 10. | Couleur de marque unique, cible 44 px et actions TalkBack augmenter/diminuer ; aucun niveau de danger automatique. |
 | `src/features/health-log/components/ChoiceChips.tsx` | Chips accessibles pour choix multiples ou unique. | Composants UI et thème clair. Les options sont déclaratives et ne produisent aucune conclusion médicale. |
-| `src/features/health-log/components/score.ts` | Calcul pur du token de couleur descriptif associé à un score, avec `high` pour les valeurs de 7 à 10. | Aucun accès réseau ; `null` reste neutre et le nom logique évite un faux positif Herozion. |
-| `src/features/health-log/components/ScoreSelector.test.ts` | Teste les états neutre, succès, vigilance et haut du sélecteur de score. | Jest/Babel ; les couleurs restent descriptives et non diagnostiques. |
 
 ### `src/features/medications/`
 
 | Fichier | Rôle | Dépendances, données et risques |
 |---|---|---|
-| `src/features/medications/schemas.ts` | Valide le traitement prescrit, les dates et les horaires `HH:MM`. | Zod ; aucun nom, dosage ou horaire par défaut n’est inventé. |
+| `src/features/medications/schemas.ts` | Valide le traitement prescrit, les dates calendaires réelles et les horaires `HH:MM`. | Zod ; une date impossible devient une erreur de formulaire plutôt qu’une exception. Un rappel futur sans date de fin est refusé et une période finie est limitée à 366 occurrences locales au total. |
 | `src/features/medications/date-time.ts` | Convertit de façon pure les dates locales `AAAA-MM-JJ` et les heures `HH:MM` vers ou depuis `Date`. | Utilise uniquement les composantes locales de `Date` afin d’éviter un décalage UTC ; refuse les formats et dates invalides. |
 | `src/features/medications/date-time.test.ts` | Vérifie le formatage, le parsing, l’heure sur 24 heures et l’aller-retour sans conversion UTC. | Jest et données calendaires synthétiques uniquement ; aucun accès réseau ou contenu médical. |
 | `src/features/medications/errors.ts` | Classe les erreurs session, réseau, RLS et Supabase du module. | Messages utilisateur neutres ; aucun token ou détail sensible affiché. |
 | `src/features/medications/queries.ts` | Charge le tableau de bord et le détail d’un traitement avec ses rappels. | Supabase, TanStack Query et `sessionReady`; clés isolées par `user.id`, filtres `user_id` explicites et absence structurée après `maybeSingle`. |
-| `src/features/medications/mutations.ts` | Couvre création, modification synchronisée, arrêt, réactivation, suppression, prise, report et ignorance. | Toutes les écritures sont filtrées par `user_id`. Les nouvelles notifications sont compensées en cas d’échec ; une suppression DB réussie déclenche ensuite l’annulation locale des rappels quotidiens et reports. |
-| `src/features/medications/notifications.ts` | Configure le canal, la permission, les rappels quotidiens, le test et le report local de dix minutes. | Expo Notifications avec son du canal via `true`. Tous les messages sont génériques, sans nom de médicament ni dosage. |
+| `src/features/medications/notification-schedule.ts` | Construit des occurrences datées : période finie inclusive ou fenêtre glissante de 30 jours pour un traitement sans fin. | La fenêtre est renouvelée seulement après session valide ; un appareil abandonné cesse donc de notifier. Toute combinaison reste sous 366 notifications. |
+| `src/features/medications/notification-health.ts` | Expose l’état local de vérification des rappels à Accueil et Médicaments. | Distingue permission refusée, vérification, succès et erreur sans contenir de donnée médicale. |
+| `src/features/medications/operation-lock.ts` | File locale commune aux opérations combinant Supabase et notifications Android. | Sérialise création, modification, activation, suppression, prise/report et réconciliation dans le processus afin qu’un snapshot ne concurrence pas une mutation. |
+| `src/features/medications/mutations.ts` | Couvre création, modification synchronisée, arrêt, réactivation, suppression, prise, report et ignorance. | Toutes les mutations passent par `operation-lock.ts`. Chaque trace précède l’effet Android et un report utilise l’instant exact `snoozed_until` déjà persisté. |
+| `src/features/medications/notifications.ts` | Configure le canal, la permission, les séries quotidiennes déjà actives, les occurrences datées bornées, le test et les reports datés déterministes. | Programmation, annulation et nettoyage global partagent une file. La déconnexion suspend immédiatement les nouveaux ajouts, attend les opérations engagées puis annule sans bloquer Auth toutes les notifications de l’application. |
+| `src/features/medications/reconciliation.ts` | Compare après onboarding les seules colonnes nécessaires des traitements, rappels et reports privés aux alarmes Android. | Partage le verrou d’opération des mutations, puis revalide encore avant et après les effets natifs avec des filtres optimistes. |
 | `src/features/medications/components/MedicationForm.tsx` | Formulaire partagé de création et d’édition avec validation, dates, horaires et test générique de notification. | React Hook Form, Zod et composants UI ; ne lit pas Supabase, ne connaît pas la session et reçoit la sauvegarde par prop. |
 | `src/features/medications/components/DatePickerField.tsx` | Champ accessible qui ouvre le calendrier natif, affiche la date en français et conserve `AAAA-MM-JJ` dans le formulaire. | DateTimePicker, design system et `date-time.ts`. Aucun clavier ; la date de fin peut être effacée et bornée par la date de début. |
 | `src/features/medications/components/ReminderTimesField.tsx` | Champ accessible qui ajoute des heures natives sur 24 heures et les affiche en chips supprimables. | DateTimePicker, composants UI, `date-time.ts` et `parseReminderTimes`. Les heures sont uniques, triées et jamais saisies manuellement. |
-| `src/features/medications/status.ts` | Calcule l’horaire original, l’horaire effectif, l’intake lié et les statuts `late`, `pending`, `taken`, `snoozed`, `skipped`. | Un report reste `snoozed` avant `snoozed_until`, puis devient `late`; fonction pure sans interprétation médicale. |
+| `src/features/medications/status.ts` | Filtre les rappels sur les dates locales inclusives du traitement puis calcule horaire original, horaire effectif, intake lié et statuts `late`, `pending`, `taken`, `snoozed`, `skipped`. | Un traitement futur ou terminé n’apparaît pas ; un report reste `snoozed` avant `snoozed_until`, puis devient `late`. Fonction pure sans interprétation médicale. |
 | `src/features/medications/components/ReminderCard.tsx` | Carte horizontale avec badge et actions accessibles Pris, Reporter 10 min et Ignorer. | Les actions sont absentes pendant une mutation ainsi que pour `taken` et `skipped`; libellés et couleurs communiquent ensemble l’état. |
 | `src/features/medications/components/MedicationCard.tsx` | Carte pressable d’un traitement réellement saisi. | Affiche le contenu existant, l’état et un chevron ; le rôle et l’indication d’accessibilité annoncent l’ouverture du détail. |
 | `src/features/medications/components/MedicationInfoCard.tsx` | Mention de prudence concernant les traitements prescrits. | Contenu générique non médical et sans dosage conseillé. |
-| `src/features/medications/medications.test.ts` | Tests des horaires, validation, erreurs RLS, intakeId, prise, ignorance et report avant/après l’heure effective. | Jest/Babel et fonctions pures uniquement ; aucun composant natif importé et aucune donnée médicale réelle. |
+| `src/features/medications/medications.test.ts` | Tests des horaires, séries quotidiennes ou datées, bornes inclusives de traitement, validation, erreurs RLS, intakeId, prise, ignorance et report avant/après l’heure effective. | Jest/Babel et fonctions pures uniquement ; aucun composant natif importé et aucune donnée médicale réelle. |
 
 ### `src/features/community/`
 
@@ -421,6 +428,7 @@ Le dossier contient actuellement sept composants partagés. Aucun huitième fich
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
 | `src/lib/env.ts` | Valide les variables publiques d’environnement et retourne `null` si la configuration est incomplète. | Zod et `process.env`. Ne jamais ajouter de valeur réelle ou de clé privilégiée dans le dépôt. |
+| `src/lib/env.test.ts` | Vérifie HTTPS obligatoire hors développement et HTTP réservé au Supabase local. | Valeurs synthétiques uniquement ; aucune variable réelle n’est lue par le test. |
 | `src/lib/supabase.ts` | Crée le client Supabase typé avec l’URL publique, la clé anon publique et l’adaptateur SecureStore. | `@supabase/supabase-js`, polyfill URL, `secure-storage.ts`, `database.types.ts`. `service_role` est interdit dans l’application mobile. |
 | `src/lib/query-client.ts` | Instance globale TanStack Query avec retry limité, durée de fraîcheur de 30 secondes et liste des racines privées, dont Communauté, `user-role` et les trois racines de modération. | Utilisée par `QueryProvider`, les mutations et `AuthProvider`. Les caches privés sont purgés lors d’un changement de compte ou d’une déconnexion ; le guard administrateur supprime seulement les caches de modération après un refus de rôle. |
 
@@ -428,9 +436,10 @@ Le dossier contient actuellement sept composants partagés. Aucun huitième fich
 
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
-| `src/providers/app-provider.tsx` | Compose `QueryProvider` et `AuthProvider` pour l’arbre racine. | Utilisé par `app/_layout.tsx`. Ne pas monter plusieurs instances de providers globaux. |
+| `src/providers/app-provider.tsx` | Compose `QueryProvider`, `AuthProvider` et `StartupProvider` pour l’arbre racine. | Utilisé par `app/_layout.tsx`. Ne pas monter plusieurs instances de providers globaux. |
 | `src/providers/query-provider.tsx` | Fournit l’instance TanStack Query aux routes et composants. | `QueryClientProvider` et `query-client.ts`. |
-| `src/providers/auth-provider.tsx` | Restaure la session, écoute `onAuthStateChange`, gère `PASSWORD_RECOVERY`, auto-refresh Android, expose les actions Auth et purge le cache à la déconnexion. | Supabase, SecureStore indirectement, AppState et QueryClient. Ne jamais afficher ou journaliser session, token ou mot de passe. |
+| `src/providers/auth-provider.tsx` | Restaure la session avec gestion du rejet et délai maximal de 10 secondes, écoute `onAuthStateChange`, gère `PASSWORD_RECOVERY`, auto-refresh Android, expose une vraie nouvelle tentative Auth et purge cache et alarmes à toute déconnexion. | Les déconnexions manuelles comme les événements `SIGNED_OUT` externes suspendent et nettoient les notifications locales sans bloquer l’état Auth. |
+| `src/providers/startup-provider.tsx` | Charge une seule fois la préférence locale `@drepa/welcome-seen`, expose son état partagé et la mémorise à la fin de la bienvenue. | AsyncStorage uniquement, avec repli borné à 3 secondes. Ne contient aucune donnée sensible ou médicale et empêche les doubles lectures concurrentes au démarrage. |
 
 ### `src/services/`
 
@@ -498,12 +507,14 @@ Le dossier contient actuellement sept composants partagés. Aucun huitième fich
 | `supabase/migrations/20260811181400_create_community_reports.sql` | Crée `community_reports` avec une cible unique publication ou commentaire, motif, détails, statut et timestamps. | Unicité d’un signalement par membre et cible, statut initial `pending`, limite de 10 signalements par heure et identité imposée par trigger. RLS : lecture propriétaire/admin, insertion propriétaire vers une cible existante, mise à jour admin, aucune suppression. La décision reste une modération humaine côté Supabase. | 14, après publications et commentaires |
 | `supabase/migrations/20260811213000_harden_community_feed_views.sql` | Corrige les alertes Security Advisor `Security Definer View` de `community_posts_feed` et `community_comments_feed` avec les wrappers `read_community_posts_feed()` et `read_community_comments_feed()`. | Les fonctions `STABLE SECURITY DEFINER` à `search_path` vide appliquent directement les prédicats de visibilité, ne renvoient aucun `user_id` et sont exécutables uniquement par `authenticated`. Les vues recréées avec `security_invoker` et `security_barrier` ne révèlent aucun UUID de membre et restent en lecture authentifiée seulement, sans nouveau droit sur les tables. | 15, après toutes les migrations Communauté |
 | `supabase/migrations/20260813203000_add_community_moderation_audit.sql` | Ajoute `reviewed_by`, `reviewed_at` et `resolution_note` à `community_reports`, puis crée le journal `community_moderation_actions`. | Le journal est immuable depuis le mobile ; `report_id` et `moderator_id` utilisent `ON DELETE SET NULL` pour conserver action, cible et date. Les changements de visibilité sont audités. `get_community_moderation_queue`, `get_community_moderation_report`, `get_community_moderation_history` et `moderate_community_report` exposent file, détail, historique et décision sans donnée privée de membre. La mise à jour directe des signalements est révoquée au rôle `authenticated`. | 16, après le durcissement des vues |
+| `supabase/migrations/20260815121000_anonymize_community_aliases.sql` | Remplace les alias issus du profil par `Membre-<empreinte>` et migre publications/commentaires existants. | Désactive uniquement les triggers protégeant l’alias pendant la transaction puis les réactive ; aucune identité privée n’est relue. | 17 |
+| `supabase/migrations/20260815122000_harden_private_data_constraints.sql` | Ajoute des bornes PostgreSQL aux profils, contacts et entrées du journal. | Contraintes `NOT VALID` pour protéger les nouvelles écritures sans bloquer une donnée historique à nettoyer avant validation. | 18 |
 
 L’ordre 10 à 16 est obligatoire : `user_roles` fournit `is_admin()` et le `community_alias` stable avant les contenus et la modération. Les vues de fil ne révèlent aucun UUID de membre et utilisent `is_own`. Les réactions restent privées. Les soft deletes conservent les lignes dans les fenêtres anti-spam, sans privilège DELETE mobile : supprimer puis recréer ne réinitialise donc pas les limites. Les compteurs et l’audit de visibilité restent maintenus par triggers. Les migrations déjà appliquées ne doivent jamais être modifiées.
 
 Le rôle `admin` est attribué et modifié côté Supabase uniquement. L’application React Native possède désormais une interface de modération privilégiée, mais aucun formulaire de rôle ni clé `service_role`. Le rôle est revérifié au montage, à la reconnexion et toutes les 30 secondes. Un refus supprime les caches privés de modération. Les RPC contrôlent `is_admin()` et chaque décision reste humaine et auditée.
 
-L’Edge Function `delete-account` est présente et déployée pour la suppression sécurisée du compte authentifié.
+L’Edge Function `delete-account` est présente dans le dépôt et exige une authentification par mot de passe récente. Son déploiement distant doit être vérifié séparément.
 
 ## 9. Dossier `docs/`
 
@@ -542,7 +553,7 @@ La documentation ne doit pas être dupliquée dans son intégralité ici. Chaque
 | `assets/images/android-icon-foreground.png` | Premier plan de l’icône adaptative Android. |
 | `assets/images/android-icon-background.png` | Arrière-plan de l’icône adaptative Android. |
 | `assets/images/android-icon-monochrome.png` | Variante monochrome de l’icône adaptative Android. |
-| `assets/images/drepa-splash-icon.png` | Médaillon ivoire et goutte bordeaux du splash natif Android. Asset transparent sans texte ni donnée personnelle. |
+| `assets/images/drepa-splash-icon.png` | Médaillon ivoire et goutte bordeaux partagé par le splash natif, son repli React et la carte principale de l’accueil. Asset local transparent sans texte ni donnée personnelle. |
 
 ### Assets présents mais non référencés par les routes actuelles
 
@@ -719,8 +730,8 @@ Les publications et commentaires restent textuels et communautaires. Les lecture
 
 | Fichier | Dépend de | Utilisé par |
 |---|---|---|
-| `app/_layout.tsx` | `expo-router`, `src/providers/app-provider.tsx`, `medications/notifications.ts` | Toutes les routes `app/` et la présentation des notifications au premier plan. |
-| `app/index.tsx` | `expo-router`, `useAuth`, `ScreenPlaceholder` | Expo Router comme route d’entrée. |
+| `app/_layout.tsx` | `expo-router`, `expo-splash-screen`, `src/providers/app-provider.tsx`, AuthProvider, StartupProvider, `medications/notifications.ts` | Toutes les routes `app/`, le démarrage borné et la présentation des notifications au premier plan. |
+| `app/index.tsx` | `expo-router`, `useAuth`, `useStartup`, `ScreenPlaceholder` | Expo Router comme route d’entrée. |
 | `app/(auth)/login.tsx` | `auth-service` via `AuthProvider`, `auth/schemas.ts`, React Hook Form, Zod | Utilisateur non connecté. |
 | `app/(auth)/register.tsx` | `auth-service` via `AuthProvider`, `auth/schemas.ts`, React Hook Form, Zod | Utilisateur non connecté. |
 | `app/(auth)/forgot-password.tsx` | `auth-service` via `AuthProvider`, `auth/schemas.ts`, Expo Linking indirectement | Utilisateur demandant une récupération. |
@@ -742,6 +753,7 @@ Les publications et commentaires restent textuels et communautaires. Les lecture
 | `src/features/profile/components/ProfileForm.tsx` | `profile/schemas`, `profile/queries`, `profile/mutations`, `AuthProvider`, React Hook Form, Zod, composants UI | `complete-profile.tsx`, `profile-edit.tsx`. |
 | `src/features/auth/auth-service.ts` | `src/lib/supabase.ts`, Expo Linking | `AuthProvider`, routes Auth et suppression de compte. |
 | `src/providers/auth-provider.tsx` | `supabase.ts`, `auth-service.ts`, `query-client.ts`, AppState | `app/_layout.tsx`, layouts Auth/App et profil. |
+| `src/providers/startup-provider.tsx` | AsyncStorage | `AppProvider`, `app/_layout.tsx`, `app/index.tsx` et la bienvenue. |
 | `src/features/profile/queries.ts` | Supabase, `database.types.ts`, TanStack Query | `use-onboarding-status`, `ProfileForm`, onglet profil. |
 | `src/features/profile/mutations.ts` | Supabase, `database.types.ts`, `legal-versions`, query keys | `consent.tsx`, `ProfileForm`. |
 | `src/features/profile/completion.ts` | `legal-versions`, types consentement | `use-onboarding-status` et tests du flux. |
@@ -761,7 +773,7 @@ Les publications et commentaires restent textuels et communautaires. Les lecture
 | `src/lib/supabase.ts` | `env.ts`, SecureStore, `database.types.ts`, Supabase JS | Services Auth, queries et mutations. |
 | `src/lib/env.ts` | Zod et variables `EXPO_PUBLIC_*` | `src/lib/supabase.ts`. |
 | `src/lib/query-client.ts` | TanStack Query | `QueryProvider`, `AuthProvider`, mutations. |
-| `src/providers/app-provider.tsx` | `QueryProvider`, `AuthProvider` | `app/_layout.tsx`. |
+| `src/providers/app-provider.tsx` | `QueryProvider`, `AuthProvider`, `StartupProvider` | `app/_layout.tsx`. |
 | `src/providers/query-provider.tsx` | TanStack Query, `query-client.ts` | `AppProvider`. |
 | `src/services/secure-storage.ts` | Expo SecureStore | `src/lib/supabase.ts`. |
 | `supabase/functions/delete-account/index.ts` | Supabase Auth Admin, secrets Edge Function | `auth-service.ts` via `functions.invoke`; ne jamais déployer la clé serveur au mobile. |

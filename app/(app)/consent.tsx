@@ -51,6 +51,8 @@ export default function ConsentScreen() {
         <AppText color="textSecondary">Lis ces informations importantes avant de continuer.</AppText>
       </View>
 
+      <Button label="Lire les informations de consentement" variant="secondary" onPress={() => router.push('/(auth)/legal')} />
+
       <ConsentCard control={control} name="termsAccepted" title="Conditions d’utilisation" label="J’ai lu et j’accepte les conditions d’utilisation." />
       <ConsentCard control={control} name="privacyAccepted" title="Confidentialité" label="J’ai lu et j’accepte la politique de confidentialité." />
       <ConsentCard control={control} name="communityAccepted" title="Charte communautaire" label="J’ai lu et j’accepte la charte communautaire." />
@@ -60,7 +62,7 @@ export default function ConsentScreen() {
         message="DRÉPA est un outil d’accompagnement. L’application ne remplace pas un médecin, un diagnostic ou un traitement."
       />
       <AppText variant="caption" color="textSecondary">Versions : {legalVersions.terms}, {legalVersions.privacy}, {legalVersions.communityGuidelines}.</AppText>
-      {formState.errors.root?.message && <AppText color="sos">{formState.errors.root.message}</AppText>}
+      {formState.errors.root?.message && <AppText accessibilityRole="alert" color="sos">{formState.errors.root.message}</AppText>}
       <Button label="Continuer" loading={formState.isSubmitting || mutation.isPending} onPress={handleSubmit(onSubmit)} />
     </ScreenContainer>
   );

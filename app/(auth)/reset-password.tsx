@@ -2,11 +2,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Redirect, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
 import { PasswordField } from '@/components/ui/PasswordField';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { StatusBanner } from '@/components/ui/StatusBanner';
 import { updatePasswordSchema, type UpdatePasswordValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
+import { spacing } from '@/theme/spacing';
 
 export default function ResetPasswordScreen() {
   // Les hooks initialisent la navigation, l’authentification et le formulaire validé.
@@ -19,7 +24,7 @@ export default function ResetPasswordScreen() {
 
   // Le lien sécurisé doit être vérifié avant d’afficher le formulaire.
   if (auth.status === 'loading') {
-    return <Text style={styles.message}>Vérification du lien...</Text>;
+    return <ScreenContainer style={styles.message}><AppText color="textSecondary" align="center">Vérification du lien...</AppText></ScreenContainer>;
   }
 
   // Un lien invalide ou absent renvoie vers la demande de récupération.
@@ -42,8 +47,11 @@ export default function ResetPasswordScreen() {
 
   // Le rendu principal affiche les champs et les erreurs de validation.
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Nouveau mot de passe</Text>
+    <ScreenContainer scroll contentContainerStyle={styles.container}>
+      <View style={styles.header}>
+        <AppText variant="title">Nouveau mot de passe</AppText>
+        <AppText color="textSecondary">Choisis au moins 8 caractères avec une majuscule, une minuscule et un chiffre.</AppText>
+      </View>
       <Controller
         control={control}
         name="password"
@@ -70,19 +78,14 @@ export default function ResetPasswordScreen() {
           />
         )}
       />
-      {formState.errors.root?.message && <Text style={styles.error}>{formState.errors.root.message}</Text>}
-      <Pressable disabled={formState.isSubmitting} onPress={handleSubmit(onSubmit)} style={styles.button}>
-        <Text style={styles.buttonText}>{formState.isSubmitting ? 'Modification...' : 'Modifier le mot de passe'}</Text>
-      </Pressable>
-    </View>
+      {formState.errors.root?.message && <StatusBanner message={formState.errors.root.message} tone="error" />}
+      <Button label="Modifier le mot de passe" loading={formState.isSubmitting} onPress={handleSubmit(onSubmit)} />
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', gap: 12, padding: 24 },
-  title: { fontSize: 28, fontWeight: '700', marginBottom: 12 },
-  button: { alignItems: 'center', backgroundColor: '#208AEF', borderRadius: 8, padding: 14 },
-  buttonText: { color: '#FFFFFF', fontWeight: '700' },
-  error: { color: '#B00020' },
-  message: { flex: 1, padding: 24, textAlign: 'center' },
+  container: { gap: spacing.xxl, justifyContent: 'center', minHeight: '100%' },
+  header: { gap: spacing.sm },
+  message: { alignItems: 'center', justifyContent: 'center' },
 });

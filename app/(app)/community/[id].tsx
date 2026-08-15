@@ -121,7 +121,7 @@ export default function CommunityPostDetailScreen() {
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <AppText variant="title">Publication</AppText>
-      <CommunitySafetyBanner />
+      <CommunitySafetyBanner onOpenCharter={() => router.push('/(auth)/legal')} />
       <PostCard
         post={post}
         onSupport={() => void handleSupport()}

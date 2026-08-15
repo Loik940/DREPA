@@ -8,6 +8,7 @@ import { spacing } from '@/theme/spacing';
 
 type ProfileSettingsListProps = {
   onLegal: () => void;
+  onConsent: () => void;
   onModeration?: () => void;
 };
 
@@ -18,7 +19,7 @@ const settings = [
   { label: 'À propos de DRÉPA', value: 'Bientôt disponible', enabled: false },
 ] as const;
 
-export function ProfileSettingsList({ onLegal, onModeration }: ProfileSettingsListProps) {
+export function ProfileSettingsList({ onConsent, onLegal, onModeration }: ProfileSettingsListProps) {
   return (
     <View style={styles.section}>
       <AppText variant="sectionTitle">Paramètres</AppText>
@@ -54,6 +55,12 @@ export function ProfileSettingsList({ onLegal, onModeration }: ProfileSettingsLi
               <View key={setting.label} style={styles.pressable}>{content}</View>
             );
           })}
+          <Pressable accessibilityRole="button" onPress={onConsent} style={styles.pressable}>
+            <View style={styles.row}>
+              <AppText>Gérer mes consentements</AppText>
+              <AppText variant="caption" color="textSecondary">→</AppText>
+            </View>
+          </Pressable>
         </View>
       </Card>
     </View>

@@ -1,5 +1,5 @@
 // Tests des statistiques descriptives calculées à partir des entrées du Journal.
-import { calculateHealthLogStatistics } from './statistics';
+import { calculateHealthLogStatistics, getStatisticsWindowStart } from './statistics';
 
 const entries = [
   {
@@ -9,7 +9,7 @@ const entries = [
     symptoms: ['fatigue', 'headache'],
     possible_triggers: ['stress'],
     medication_taken: true,
-    recorded_at: '2026-08-01T08:00:00.000Z',
+    recorded_at: new Date(2026, 7, 1, 8, 0, 0).toISOString(),
   },
   {
     id: 'entry-b',
@@ -18,7 +18,7 @@ const entries = [
     symptoms: ['fatigue'],
     possible_triggers: ['stress', 'cold'],
     medication_taken: false,
-    recorded_at: '2026-08-01T18:00:00.000Z',
+    recorded_at: new Date(2026, 7, 1, 18, 0, 0).toISOString(),
   },
   {
     id: 'entry-c',
@@ -27,7 +27,7 @@ const entries = [
     symptoms: null,
     possible_triggers: null,
     medication_taken: null,
-    recorded_at: '2026-08-02T09:00:00.000Z',
+    recorded_at: new Date(2026, 7, 2, 9, 0, 0).toISOString(),
   },
 ];
 
@@ -39,6 +39,21 @@ describe('health log statistics', () => {
     expect(result.trackedDays).toBe(2);
     expect(result.averagePain).toBe(3);
     expect(result.averageFatigue).toBe(5);
+  });
+
+  it('uses local calendar days for the window and tracked days', () => {
+    const now = new Date(2026, 7, 7, 18, 0, 0);
+    const start = new Date(getStatisticsWindowStart(7, now));
+    const localEntries = [
+      { ...entries[0], id: 'local-a', recorded_at: new Date(2026, 7, 1, 23, 30, 0).toISOString() },
+      { ...entries[1], id: 'local-b', recorded_at: new Date(2026, 7, 2, 0, 30, 0).toISOString() },
+    ];
+
+    expect(start.getFullYear()).toBe(2026);
+    expect(start.getMonth()).toBe(7);
+    expect(start.getDate()).toBe(1);
+    expect(start.getHours()).toBe(0);
+    expect(calculateHealthLogStatistics(localEntries).trackedDays).toBe(2);
   });
 
   it('counts declared medication answers without interpreting them', () => {

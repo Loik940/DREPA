@@ -97,6 +97,10 @@ export default function HealthEntryScreen() {
       </View>
 
       <StatusBanner message="Ces informations sont déclarées par toi et ne constituent pas un diagnostic médical." />
+      <StatusBanner
+        tone="warning"
+        message="En cas de douleur thoracique, difficulté à respirer, fièvre, malaise, douleur inhabituelle ou aggravation rapide, contacte sans attendre un professionnel de santé ou les urgences disponibles dans ton pays."
+      />
 
       <Card>
         <View style={styles.section}>
@@ -107,7 +111,7 @@ export default function HealthEntryScreen() {
             control={control}
             name="pain_location"
             render={({ field }) => (
-              <SingleChoiceChips choices={painLocationChoices} selected={field.value || null} onChange={field.onChange} />
+              <SingleChoiceChips accessibilityLabel="Localisation de la douleur" allowClear choices={painLocationChoices} selected={field.value || null} onChange={field.onChange} />
             )}
           />
         </View>
@@ -119,7 +123,7 @@ export default function HealthEntryScreen() {
           <Controller control={control} name="fatigue_level" render={({ field }) => <ScoreSelector label="Niveau de fatigue" value={field.value} onChange={field.onChange} />} />
           <View style={styles.subsection}>
             <AppText variant="label" color="textSecondary">Hydratation déclarée</AppText>
-            <Controller control={control} name="hydration_level" render={({ field }) => <SingleChoiceChips choices={hydrationChoices} selected={field.value} onChange={field.onChange} />} />
+            <Controller control={control} name="hydration_level" render={({ field }) => <SingleChoiceChips accessibilityLabel="Hydratation déclarée" allowClear choices={hydrationChoices} selected={field.value} onChange={field.onChange} />} />
           </View>
         </View>
       </Card>
@@ -160,7 +164,7 @@ export default function HealthEntryScreen() {
 
       <Controller control={control} name="notes" render={({ field, fieldState }) => <TextField label="Notes personnelles (facultatif)" multiline numberOfLines={5} placeholder="Ajoute une note si tu le souhaites" value={field.value ?? ''} onBlur={field.onBlur} onChangeText={field.onChange} error={fieldState.error?.message} style={styles.notes} />} />
 
-      {formState.errors.root?.message && <AppText color="sos">{formState.errors.root.message}</AppText>}
+      {formState.errors.root?.message && <AppText accessibilityRole="alert" color="sos">{formState.errors.root.message}</AppText>}
       <Button label={isEditing ? 'Enregistrer les modifications' : 'Enregistrer mon état'} loading={formState.isSubmitting || mutationPending} onPress={handleSubmit(onSubmit)} />
       <Button label="Annuler" variant="ghost" onPress={() => router.back()} />
     </ScreenContainer>

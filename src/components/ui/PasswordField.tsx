@@ -4,18 +4,16 @@
 // Son icône Android indique clairement l’action qui sera exécutée.
 // Les lecteurs d’écran reçoivent aussi un libellé complet et l’état courant.
 import { useState } from 'react';
-import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { sizes } from '@/theme/sizes';
-import { useAppTheme } from '@/theme/use-app-theme';
 import { TextField, type TextFieldProps } from './TextField';
+import { VisibilityIcon } from './VisibilityIcon';
 
 type PasswordFieldProps = Omit<TextFieldProps, 'secureTextEntry' | 'rightElement'>;
 
 export function PasswordField(props: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
-  const { colors } = useAppTheme();
 
   // Le bouton expose son rôle, son action et son état aux lecteurs d’écran.
   return (
@@ -28,16 +26,11 @@ export function PasswordField(props: PasswordFieldProps) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-          accessibilityState={{ expanded: visible }}
           hitSlop={8}
           onPress={() => setVisible((current) => !current)}
           style={styles.toggle}
         >
-          <SymbolView
-            name={{ android: visible ? 'visibility_off' : 'visibility' }}
-            size={sizes.icon}
-            tintColor={colors.textSecondary}
-          />
+          <VisibilityIcon hidden={visible} />
         </Pressable>
       }
     />

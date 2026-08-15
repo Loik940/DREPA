@@ -3,5 +3,5 @@ import { StatusBanner } from '@/components/ui/StatusBanner';
 
 // Composant de prudence : il rappelle que DRÉPA ne prescrit pas et ne modifie aucun dosage.
 export function MedicationInfoCard() {
-  return <StatusBanner tone="warning" message="Ajoute uniquement les traitements prescrits par ton professionnel de santé. DRÉPA ne prescrit aucun médicament et ne modifie aucun dosage." />;
+  return <StatusBanner tone="warning" message="Ajoute uniquement les traitements prescrits. Les rappels aident à l’organisation mais ne garantissent ni leur livraison ni la prise du traitement. DRÉPA ne prescrit et ne modifie aucun dosage." />;
 }

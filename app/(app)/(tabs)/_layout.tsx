@@ -1,16 +1,17 @@
 // Navigation principale : déclare les cinq onglets de l’espace authentifié.
 import { Tabs } from 'expo-router';
-import { SymbolView, type AndroidSymbol } from 'expo-symbols';
 
+import { DashboardIcon, type DashboardIconName } from '@/features/dashboard/DashboardIcon';
 import { useAppTheme } from '@/theme/use-app-theme';
+import { fontFamilies } from '@/theme/typography';
 
 const tabIcons = {
   index: 'home',
-  journal: 'edit_note',
+  journal: 'journal',
   medications: 'medication',
-  community: 'groups',
-  profile: 'person',
-} as const satisfies Record<string, AndroidSymbol>;
+  community: 'community',
+  profile: 'profile',
+} as const satisfies Record<string, DashboardIconName>;
 
 export default function TabsLayout() {
   // Le hook charge les couleurs utilisées par la barre de navigation.
@@ -24,8 +25,8 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarHideOnKeyboard: true,
-        tabBarLabelStyle: { fontFamily: 'Inter', fontSize: 12, fontWeight: '600' },
-        tabBarStyle: { backgroundColor: colors.backgroundSurface, borderTopColor: colors.border, height: 68 },
+        tabBarLabelStyle: { fontFamily: fontFamilies.semiBold, fontSize: 13 },
+        tabBarStyle: { backgroundColor: colors.backgroundSurface, borderTopColor: colors.borderStrong, minHeight: 74, paddingBottom: 8, paddingTop: 8 },
       }}
     >
       <Tabs.Screen
@@ -33,7 +34,7 @@ export default function TabsLayout() {
         options={{
           title: 'Accueil',
           tabBarLabel: 'Accueil',
-          tabBarIcon: ({ color, size }) => <SymbolView name={{ android: tabIcons.index }} size={size} tintColor={color} />,
+          tabBarIcon: ({ color }) => <DashboardIcon color={color} name={tabIcons.index} />,
         }}
       />
       <Tabs.Screen
@@ -41,7 +42,7 @@ export default function TabsLayout() {
         options={{
           title: 'Journal',
           tabBarLabel: 'Journal',
-          tabBarIcon: ({ color, size }) => <SymbolView name={{ android: tabIcons.journal }} size={size} tintColor={color} />,
+          tabBarIcon: ({ color }) => <DashboardIcon color={color} name={tabIcons.journal} />,
         }}
       />
       <Tabs.Screen
@@ -49,7 +50,7 @@ export default function TabsLayout() {
         options={{
           title: 'Médicaments',
           tabBarLabel: 'Médicaments',
-          tabBarIcon: ({ color, size }) => <SymbolView name={{ android: tabIcons.medications }} size={size} tintColor={color} />,
+          tabBarIcon: ({ color }) => <DashboardIcon color={color} name={tabIcons.medications} />,
         }}
       />
       <Tabs.Screen
@@ -57,7 +58,7 @@ export default function TabsLayout() {
         options={{
           title: 'Communauté',
           tabBarLabel: 'Communauté',
-          tabBarIcon: ({ color, size }) => <SymbolView name={{ android: tabIcons.community }} size={size} tintColor={color} />,
+          tabBarIcon: ({ color }) => <DashboardIcon color={color} name={tabIcons.community} />,
         }}
       />
       <Tabs.Screen
@@ -65,7 +66,7 @@ export default function TabsLayout() {
         options={{
           title: 'Profil',
           tabBarLabel: 'Profil',
-          tabBarIcon: ({ color, size }) => <SymbolView name={{ android: tabIcons.profile }} size={size} tintColor={color} />,
+          tabBarIcon: ({ color }) => <DashboardIcon color={color} name={tabIcons.profile} />,
         }}
       />
     </Tabs>

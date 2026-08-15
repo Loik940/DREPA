@@ -9,7 +9,7 @@ export function LoadingState({ message = 'Chargement...' }: { message?: string }
   const { colors } = useAppTheme();
 
   return (
-    <View style={styles.container}>
+    <View accessibilityLabel={message} accessibilityLiveRegion="polite" accessibilityRole="progressbar" style={styles.container}>
       <ActivityIndicator color={colors.brand} />
       <AppText color="textSecondary" align="center">{message}</AppText>
     </View>

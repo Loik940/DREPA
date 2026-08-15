@@ -1,4 +1,5 @@
 // Case à cocher accessible utilisée pour les consentements et choix booléens.
+import { useId } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -17,23 +18,27 @@ type CheckboxRowProps = {
 
 export function CheckboxRow({ checked, label, onChange, error, disabled = false }: CheckboxRowProps) {
   const { colors } = useAppTheme();
+  const errorId = `checkbox-error-${useId().replace(/:/g, '')}`;
 
   // Le rôle, la valeur cochée et l’état désactivé rendent le choix compréhensible sans repère visuel.
   return (
     <View style={styles.wrapper}>
       <Pressable
         accessibilityRole="checkbox"
+        aria-describedby={error ? errorId : undefined}
+        aria-invalid={Boolean(error)}
+        accessibilityHint={error}
         accessibilityState={{ checked, disabled }}
         disabled={disabled}
         onPress={() => onChange(!checked)}
         style={styles.row}
       >
-        <View style={[styles.box, { borderColor: checked ? colors.brand : colors.border, backgroundColor: checked ? colors.brand : colors.backgroundSurface }]}>
+        <View style={[styles.box, { borderColor: checked ? colors.brand : colors.borderStrong, backgroundColor: checked ? colors.brand : colors.backgroundSurface }]}>
           {checked && <AppText color="onBrand" variant="label">✓</AppText>}
         </View>
         <AppText style={styles.label}>{label}</AppText>
       </Pressable>
-      {error && <AppText variant="caption" color="sos">{error}</AppText>}
+      {error && <AppText accessibilityLiveRegion="polite" nativeID={errorId} variant="caption" color="sos">{error}</AppText>}
     </View>
   );
 }

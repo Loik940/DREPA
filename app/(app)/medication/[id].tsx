@@ -48,11 +48,11 @@ export default function MedicationDetailScreen() {
   // L’arrêt conserve le traitement mais désactive ses rappels après confirmation.
   const confirmStop = () => {
     Alert.alert(
-      'Arrêter ce traitement ?',
-      'Les rappels associés seront désactivés. Les informations resteront visibles.',
+      'Désactiver ce traitement dans DRÉPA ?',
+      'Cette action ne modifie pas la prescription. Seuls les rappels DRÉPA seront désactivés et les informations resteront visibles.',
       [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Arrêter', style: 'destructive', onPress: () => void handleMedicationAction(() => activeMutation.mutateAsync(false)) },
+        { text: 'Désactiver dans DRÉPA', style: 'destructive', onPress: () => void handleMedicationAction(() => activeMutation.mutateAsync(false)) },
       ],
     );
   };
@@ -118,11 +118,11 @@ export default function MedicationDetailScreen() {
         </View>
       </Card>
 
-      {activeMutation.isError ? <StatusBanner tone="error" message="L’état du traitement ne peut pas être modifié pour le moment." /> : null}
-      {deleteMutation.isError ? <StatusBanner tone="error" message="Le traitement ne peut pas être supprimé pour le moment." /> : null}
+      {activeMutation.isError ? <StatusBanner tone="error" message={activeMutation.error.message} /> : null}
+      {deleteMutation.isError ? <StatusBanner tone="error" message={deleteMutation.error.message} /> : null}
       <Button label="Modifier" disabled={isMutating} onPress={() => router.push(`/(app)/medication/${id}/edit` as Href)} />
       <Button
-        label={medication.is_active ? 'Arrêter' : 'Réactiver'}
+        label={medication.is_active ? 'Désactiver dans DRÉPA' : 'Réactiver dans DRÉPA'}
         variant="secondary"
         loading={activeMutation.isPending}
         disabled={deleteMutation.isPending}
@@ -147,6 +147,6 @@ const styles = StyleSheet.create({
   container: { gap: spacing.lg, paddingBottom: spacing.huge },
   header: { gap: spacing.sm },
   section: { gap: spacing.md },
-  row: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.lg, justifyContent: 'space-between' },
-  value: { flex: 1, textAlign: 'right' },
+  row: { alignItems: 'flex-start', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, justifyContent: 'space-between' },
+  value: { flex: 1, minWidth: 160, textAlign: 'right' },
 });

@@ -2,6 +2,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
+import { getPrivateCacheGeneration } from '@/lib/query-client';
 import { classifyHealthLogError, HealthLogDataError, type HealthLogOperation } from './errors';
 import { buildHealthLogPayload } from './payload';
 import { healthLogDetailQueryKey, healthLogsQueryKey, healthLogStatisticsQueryKey } from './queries';
@@ -25,6 +26,7 @@ async function invalidateHealthLogQueries(queryClient: ReturnType<typeof useQuer
 
 export function useCreateHealthLogMutation(userId: string | undefined) {
   const queryClient = useQueryClient();
+  const generation = getPrivateCacheGeneration();
 
   return useMutation({
     mutationFn: async (values: HealthLogValues) => {
@@ -44,13 +46,14 @@ export function useCreateHealthLogMutation(userId: string | undefined) {
       }
     },
     onSuccess: async () => {
-      if (userId) await invalidateHealthLogQueries(queryClient, userId);
+      if (userId && generation === getPrivateCacheGeneration()) await invalidateHealthLogQueries(queryClient, userId);
     },
   });
 }
 
 export function useUpdateHealthLogMutation(userId: string | undefined, entryId: string | undefined) {
   const queryClient = useQueryClient();
+  const generation = getPrivateCacheGeneration();
 
   return useMutation({
     mutationFn: async (values: HealthLogValues) => {
@@ -73,7 +76,7 @@ export function useUpdateHealthLogMutation(userId: string | undefined, entryId: 
       }
     },
     onSuccess: async (data) => {
-      if (!userId || !entryId) return;
+      if (!userId || !entryId || generation !== getPrivateCacheGeneration()) return;
       queryClient.setQueryData(healthLogDetailQueryKey(userId, entryId), data);
       await invalidateHealthLogQueries(queryClient, userId);
     },
@@ -82,6 +85,7 @@ export function useUpdateHealthLogMutation(userId: string | undefined, entryId: 
 
 export function useDeleteHealthLogMutation(userId: string | undefined, entryId: string | undefined) {
   const queryClient = useQueryClient();
+  const generation = getPrivateCacheGeneration();
 
   return useMutation({
     mutationFn: async () => {
@@ -104,7 +108,7 @@ export function useDeleteHealthLogMutation(userId: string | undefined, entryId: 
       }
     },
     onSuccess: async () => {
-      if (!userId || !entryId) return;
+      if (!userId || !entryId || generation !== getPrivateCacheGeneration()) return;
       queryClient.removeQueries({ queryKey: healthLogDetailQueryKey(userId, entryId) });
       await invalidateHealthLogQueries(queryClient, userId);
     },

@@ -37,7 +37,7 @@ export default function CommunityScreen() {
     <ScreenContainer scroll contentContainerStyle={styles.container}>
       <CommunityHeader onPublish={openNewPost} />
       <CommunityFilters value={filter} onChange={setFilter} />
-      <CommunitySafetyBanner />
+      <CommunitySafetyBanner onOpenCharter={() => router.push('/(auth)/legal')} />
 
       {postsQuery.isPending ? <LoadingState message="Chargement des publications..." /> : null}
       {postsQuery.isError && posts.length === 0 ? (

@@ -12,6 +12,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { useCurrentUserRoleQuery } from '@/features/moderation/queries';
 import { useAuth } from '@/providers/auth-provider';
+import { colors } from '@/theme/colors';
 
 const profileRoute = '/(app)/(tabs)/profile' as Href;
 
@@ -61,5 +62,5 @@ export default function AdminLayout() {
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return <Stack screenOptions={{ headerShadowVisible: false, headerStyle: { backgroundColor: colors.backgroundPrimary }, headerTintColor: colors.brand, headerTitle: '' }} />;
 }

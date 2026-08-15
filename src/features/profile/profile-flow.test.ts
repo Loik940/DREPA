@@ -7,6 +7,7 @@ import {
   hasCurrentConsent,
   ProfileDataError,
 } from './completion';
+import { profileSchema } from './schemas';
 
 const consent = {
   id: 'consent-test',
@@ -36,6 +37,13 @@ describe('profile onboarding flow', () => {
   it('recognizes the current non-revoked consent', () => {
     expect(hasCurrentConsent([consent])).toBe(true);
     expect(hasCurrentConsent([{ ...consent, revoked_at: '2026-07-23T01:00:00.000Z' }])).toBe(false);
+  });
+
+  it('accepts an empty birth date and rejects impossible or future dates', () => {
+    const baseProfile = { first_name: 'Test', country: 'BJ', date_of_birth: '' };
+    expect(profileSchema.safeParse(baseProfile).success).toBe(true);
+    expect(profileSchema.safeParse({ ...baseProfile, date_of_birth: '2026-02-31' }).success).toBe(false);
+    expect(profileSchema.safeParse({ ...baseProfile, date_of_birth: '2999-01-01' }).success).toBe(false);
   });
 
   it('requires consent before the profile', () => {

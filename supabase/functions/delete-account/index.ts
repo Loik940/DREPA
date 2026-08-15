@@ -1,5 +1,5 @@
 // Edge Function protégée : supprime uniquement le compte authentifié avec la clé serveur côté Supabase.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.110.8';
+import { createClient } from 'npm:@supabase/supabase-js@2.110.8';
 
 const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -13,6 +13,22 @@ function response(body: Record<string, string>, status: number) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     status,
   });
+}
+
+function hasRecentAuthentication(authorization: string) {
+  try {
+    const token = authorization.slice('Bearer '.length);
+    const payloadPart = token.split('.')[1];
+    if (!payloadPart) return false;
+    const normalized = payloadPart.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payloadPart.length / 4) * 4, '=');
+    const payload = JSON.parse(atob(normalized)) as { iat?: number; amr?: Array<{ method?: string }> };
+    const passwordAuthenticated = payload.amr?.some((entry) => entry.method === 'password') ?? false;
+    return passwordAuthenticated
+      && typeof payload.iat === 'number'
+      && Math.floor(Date.now() / 1000) - payload.iat <= 300;
+  } catch {
+    return false;
+  }
 }
 
 Deno.serve(async (request) => {
@@ -35,6 +51,10 @@ Deno.serve(async (request) => {
     return response({ error: 'Unauthorized' }, 401);
   }
 
+  if (!hasRecentAuthentication(authorization)) {
+    return response({ error: 'Recent authentication required' }, 401);
+  }
+
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
     return response({ error: 'Server configuration unavailable' }, 500);
   }
@@ -47,6 +67,11 @@ Deno.serve(async (request) => {
 
   if (userError || !userData.user) {
     return response({ error: 'Unauthorized' }, 401);
+  }
+
+  const lastSignInAt = userData.user.last_sign_in_at ? Date.parse(userData.user.last_sign_in_at) : Number.NaN;
+  if (!Number.isFinite(lastSignInAt) || Date.now() - lastSignInAt > 5 * 60 * 1000) {
+    return response({ error: 'Recent password authentication required' }, 401);
   }
 
   // Le client administrateur reste côté serveur et supprime uniquement cet utilisateur validé.

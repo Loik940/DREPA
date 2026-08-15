@@ -18,7 +18,7 @@ DRÉPA vise à aider les utilisateurs à :
 - consulter des ressources fiables ;
 - échanger avec une communauté de soutien.
 
-## Fonctionnalités prévues dans le MVP
+## Fonctionnalités actuellement implémentées
 
 - authentification ;
 - profil utilisateur ;
@@ -26,10 +26,9 @@ DRÉPA vise à aider les utilisateurs à :
 - historique et statistiques descriptives ;
 - gestion des médicaments prescrits ;
 - rappels locaux ;
-- contacts d'urgence ;
-- bouton SOS basique ;
-- ressources éducatives ;
 - communauté et modération de base.
+
+Les contacts d’urgence, le SOS et les ressources éducatives restent prévus mais ne sont pas encore livrés dans l’application actuelle.
 
 ## Stack prévue
 
@@ -45,13 +44,13 @@ DRÉPA vise à aider les utilisateurs à :
 - React Hook Form ;
 - Zod ;
 - Expo Notifications ;
-- Expo Location ;
+- Expo Screen Capture ;
 - Expo SecureStore ;
 - EAS Build.
 
 ## État actuel
 
-Le projet se trouve actuellement dans sa phase de conception et de documentation.
+Le projet contient désormais l’application Expo Android, les migrations Supabase, les tests automatisés, les workflows CI/EAS et les premiers lots fonctionnels. La validation juridique, la recette Android physique et certains modules du MVP restent à terminer.
 
 Les diagrammes fonctionnels, techniques et de séquence sont disponibles dans le dossier [`docs/`](./docs/).
 

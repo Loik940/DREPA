@@ -11,6 +11,7 @@ import {
   deleteAccount,
   updatePassword,
 } from '@/features/auth/auth-service';
+import { cancelAllDrepaNotifications } from '@/features/medications/notifications';
 import { invalidatePrivateQueries, removePrivateQueries } from '@/lib/query-client';
 import { supabase } from '../lib/supabase';
 
@@ -29,14 +30,18 @@ type AuthContextValue = {
   signUp: typeof signUp;
   signIn: typeof signIn;
   signOut: () => Promise<void>;
-  deleteAccount: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
   requestPasswordReset: typeof requestPasswordReset;
   updatePassword: typeof updatePassword;
   clearPasswordRecovery: () => void;
+  beginPasswordRecovery: () => void;
   clearError: () => void;
+  canRetrySessionRestore: boolean;
+  retrySessionRestore: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AUTH_INITIALIZATION_TIMEOUT_MS = 5_000;
 
 export function AuthProvider({ children }: PropsWithChildren) {
   // Ces états représentent la session courante, la fin de son initialisation et la récupération de mot de passe.
@@ -44,6 +49,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>(supabase ? 'loading' : 'error');
   const [sessionReady, setSessionReady] = useState(!supabase);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [initializationAttempt, setInitializationAttempt] = useState(0);
   const [error, setError] = useState<string | null>(
     supabase ? null : 'La configuration de l’authentification est indisponible.',
   );
@@ -59,6 +65,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     let mounted = true;
     let initializationComplete = false;
     let authEventReceived = false;
+    let authFallbackAvailable = false;
+    let initializationFailed = false;
+    let initializationTimedOut = false;
     let latestSession: Session | null = null;
     let activeUserId: string | null = null;
 
@@ -68,6 +77,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (activeUserId && activeUserId !== nextUserId) {
         removePrivateQueries(activeUserId);
+        void cancelAllDrepaNotifications().catch(() => undefined);
       }
 
       activeUserId = nextUserId;
@@ -82,7 +92,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return;
       }
 
+      // Un événement initial nul arrivé après un échec ne doit pas transformer cet échec en simple déconnexion.
+      if (initializationFailed && event === 'INITIAL_SESSION' && !nextSession) {
+        return;
+      }
+
       authEventReceived = true;
+      authFallbackAvailable = Boolean(nextSession) || event === 'SIGNED_OUT';
       latestSession = nextSession;
 
       if (initializationComplete) {
@@ -100,21 +116,47 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (event === 'SIGNED_OUT') {
         setIsPasswordRecovery(false);
         removePrivateQueries();
+        void cancelAllDrepaNotifications().catch(() => undefined);
       }
     });
 
-    // La lecture initiale attend la session persistée sans écraser un événement reçu entre-temps.
-    void client.auth.getSession().then(({ data: sessionData, error: sessionError }) => {
-      if (!mounted) {
+    // Un délai borné empêche une lecture SecureStore bloquée de conserver le splash indéfiniment.
+    const initializationTimeout = setTimeout(() => {
+      if (!mounted || initializationComplete) return;
+      initializationTimedOut = true;
+      initializationComplete = true;
+
+      if (authFallbackAvailable) {
+        applySession(latestSession);
+        setSessionReady(true);
         return;
       }
 
+      setSession(null);
+      initializationFailed = true;
+      setStatus('error');
+      setError('La session ne peut pas être restaurée.');
+      setSessionReady(true);
+    }, AUTH_INITIALIZATION_TIMEOUT_MS);
+
+    // La lecture initiale attend la session persistée sans écraser un événement reçu entre-temps.
+    void client.auth.getSession().then(({ data: sessionData, error: sessionError }) => {
+      if (!mounted || initializationTimedOut) {
+        return;
+      }
+
+      clearTimeout(initializationTimeout);
       initializationComplete = true;
 
-      if (sessionError && !authEventReceived) {
-        setSession(null);
-        setStatus('error');
-        setError('La session ne peut pas être restaurée.');
+      if (sessionError) {
+        if (authFallbackAvailable) {
+          applySession(latestSession);
+        } else {
+          setSession(null);
+          initializationFailed = true;
+          setStatus('error');
+          setError('La session ne peut pas être restaurée.');
+        }
         setSessionReady(true);
         return;
       }
@@ -126,6 +168,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (restoredSession) {
         void invalidatePrivateQueries(restoredSession.user.id);
       }
+    }).catch(() => {
+      if (!mounted || initializationTimedOut) return;
+      clearTimeout(initializationTimeout);
+      initializationComplete = true;
+
+      if (authFallbackAvailable) {
+        applySession(latestSession);
+      } else {
+        setSession(null);
+        initializationFailed = true;
+        setStatus('error');
+        setError('La session ne peut pas être restaurée.');
+      }
+      setSessionReady(true);
     });
 
     // Le rafraîchissement automatique ne reste actif que lorsque l’application est au premier plan.
@@ -139,21 +195,45 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     return () => {
       mounted = false;
+      clearTimeout(initializationTimeout);
       data.subscription.unsubscribe();
       appStateSubscription.remove();
     };
-  }, []);
+  }, [initializationAttempt]);
 
   // La déconnexion et la suppression de compte terminent aussi la présence des données privées en cache.
   const handleSignOut = async () => {
-    await signOut();
-    removePrivateQueries();
+    try {
+      await signOut();
+    } finally {
+      await supabase?.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      try {
+        await cancelAllDrepaNotifications();
+      } catch {
+        // Le nettoyage Auth local reste prioritaire ; une prochaine ouverture retentera la suspension.
+      }
+      setSession(null);
+      setStatus('unauthenticated');
+      removePrivateQueries();
+    }
   };
 
-  const handleDeleteAccount = async () => {
-    await deleteAccount();
-    await signOut();
-    removePrivateQueries();
+  const handleDeleteAccount = async (password: string) => {
+    const email = session?.user.email;
+    if (!email) throw new Error('Account email is unavailable.');
+    await deleteAccount(email, password);
+    try {
+      try {
+        await cancelAllDrepaNotifications();
+      } catch {
+        // La suppression distante reste prioritaire sur le nettoyage Android local.
+      }
+      await signOut();
+    } finally {
+      setSession(null);
+      setStatus('unauthenticated');
+      removePrivateQueries();
+    }
   };
 
   // Cette valeur forme l’API stable du provider pour ses composants descendants.
@@ -172,7 +252,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     requestPasswordReset,
     updatePassword,
     clearPasswordRecovery: () => setIsPasswordRecovery(false),
+    beginPasswordRecovery: () => setIsPasswordRecovery(true),
     clearError: () => setError(null),
+    canRetrySessionRestore: Boolean(supabase),
+    retrySessionRestore: () => {
+      setSession(null);
+      setStatus(supabase ? 'loading' : 'error');
+      setError(supabase ? null : 'La configuration de l’authentification est indisponible.');
+      setSessionReady(!supabase);
+      if (supabase) setInitializationAttempt((attempt) => attempt + 1);
+    },
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

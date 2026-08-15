@@ -7,7 +7,6 @@ import { colors } from '@/theme/colors';
 import { radii } from '@/theme/radii';
 import { sizes } from '@/theme/sizes';
 import { spacing } from '@/theme/spacing';
-import { getScoreTone } from './score';
 
 type ScoreSelectorProps = {
   label: string;
@@ -18,10 +17,8 @@ type ScoreSelectorProps = {
 // Composant déclaratif : le score choisi décrit un ressenti et ne constitue ni une mesure clinique ni un diagnostic.
 export function ScoreSelector({ label, value, onChange }: ScoreSelectorProps) {
   const [trackWidth, setTrackWidth] = useState(0);
-  const scoreTone = getScoreTone(value);
-  // Le niveau haut garde la couleur visuelle existante sans devenir un statut médical ou SOS.
-  const scoreColorKey = scoreTone === 'high' ? 'sos' : scoreTone;
-  const scoreHex = colors[scoreColorKey];
+  const scoreColorKey = 'brand' as const;
+  const scoreHex = colors.brand;
 
   const handleLayout = (event: LayoutChangeEvent) => {
     setTrackWidth(event.nativeEvent.layout.width);
@@ -40,15 +37,23 @@ export function ScoreSelector({ label, value, onChange }: ScoreSelectorProps) {
         <AppText variant="display" color={scoreColorKey}>{value ?? '—'}</AppText>
       </View>
       <Pressable
+        accessibilityActions={[{ name: 'increment', label: 'Augmenter' }, { name: 'decrement', label: 'Diminuer' }]}
         accessibilityLabel={`${label}. Curseur de 0 à 10`}
         accessibilityRole="adjustable"
         accessibilityValue={{ min: 0, max: 10, now: value ?? undefined, text: value === null ? 'Non renseigné' : `${value} sur 10` }}
         onLayout={handleLayout}
+        onAccessibilityAction={(event) => {
+          const current = value ?? 0;
+          if (event.nativeEvent.actionName === 'increment') onChange(Math.min(10, current + 1));
+          if (event.nativeEvent.actionName === 'decrement') onChange(Math.max(0, current - 1));
+        }}
         onPress={(event) => handleTrackPress(event.nativeEvent.locationX)}
-        style={styles.track}
+        style={styles.trackTarget}
       >
-        <View style={[styles.trackFill, { backgroundColor: scoreHex, width: value === null ? 0 : `${value * 10}%` }]} />
-        {value !== null && <View style={[styles.thumb, { backgroundColor: scoreHex, left: `${value * 10}%` }]} />}
+        <View style={[styles.track, { backgroundColor: colors.borderStrong }]}>
+          <View style={[styles.trackFill, { backgroundColor: scoreHex, width: value === null ? 0 : `${value * 10}%` }]} />
+          {value !== null && <View style={[styles.thumb, { backgroundColor: scoreHex, left: `${value * 10}%` }]} />}
+        </View>
       </Pressable>
       <View style={styles.scaleLabels}>
         <AppText variant="caption" color="textSecondary">Aucune</AppText>
@@ -64,7 +69,8 @@ export function ScoreSelector({ label, value, onChange }: ScoreSelectorProps) {
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
   valueRow: { alignItems: 'center', gap: spacing.xs },
-  track: { backgroundColor: colors.border, borderRadius: radii.full, height: 10, justifyContent: 'center', marginHorizontal: spacing.sm, overflow: 'visible' },
+  trackTarget: { justifyContent: 'center', minHeight: sizes.touchTarget, paddingHorizontal: spacing.sm },
+  track: { borderRadius: radii.full, height: 10, justifyContent: 'center', overflow: 'visible' },
   trackFill: { borderRadius: radii.full, height: '100%' },
   thumb: { borderColor: colors.backgroundSurface, borderRadius: radii.full, borderWidth: 3, height: 28, marginLeft: -14, position: 'absolute', width: 28 },
   scaleLabels: { flexDirection: 'row', justifyContent: 'space-between' },

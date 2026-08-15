@@ -15,6 +15,8 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { TextField } from '@/components/ui/TextField';
+import { DatePickerField } from '@/features/medications/components/DatePickerField';
+import { formatLocalDate } from '@/features/medications/date-time';
 import { useUpsertProfileMutation } from '@/features/profile/mutations';
 import { ProfileDataError, useProfileQuery } from '@/features/profile/queries';
 import { profileSchema, type ProfileValues } from '@/features/profile/schemas';
@@ -112,7 +114,20 @@ export function ProfileForm({ title, description, submitLabel, onSaved }: Profil
           <ProfileInput control={control} name="full_name" label="Nom complet (facultatif)" />
           <ProfileInput control={control} name="country" label="Pays" />
           <ProfileInput control={control} name="city" label="Ville (facultatif)" />
-          <ProfileInput control={control} name="date_of_birth" label="Date de naissance (facultatif)" placeholder="AAAA-MM-JJ" />
+          <Controller
+            control={control}
+            name="date_of_birth"
+            render={({ field, fieldState }) => (
+              <DatePickerField
+                allowClear
+                error={fieldState.error?.message}
+                label="Date de naissance (facultatif)"
+                maximumDate={formatLocalDate(new Date())}
+                onChange={field.onChange}
+                value={field.value ?? ''}
+              />
+            )}
+          />
         </View>
       </Card>
       <Card>
@@ -128,7 +143,7 @@ export function ProfileForm({ title, description, submitLabel, onSaved }: Profil
         </View>
       </Card>
       {/* L'erreur de sauvegarde n'est affichée que lorsqu'un message neutre a été produit par le formulaire. */}
-      {formState.errors.root?.message && <AppText color="sos">{formState.errors.root.message}</AppText>}
+      {formState.errors.root?.message && <AppText accessibilityRole="alert" color="sos">{formState.errors.root.message}</AppText>}
       <Button label={submitLabel} loading={formState.isSubmitting || mutation.isPending} onPress={handleSubmit(onSubmit)} />
       <AppText variant="caption" color="textSecondary" align="center">Les informations médicales facultatives sont déclarées par toi et ne constituent pas un document médical officiel.</AppText>
     </ScreenContainer>
