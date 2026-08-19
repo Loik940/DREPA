@@ -452,7 +452,7 @@ Le dossier contient actuellement sept composants partagés. Aucun huitième fich
 
 | Fichier | Rôle | Dépendances et précautions |
 |---|---|---|
-| `supabase/functions/delete-account/index.ts` | Vérifie le bearer token, récupère l’utilisateur authentifié puis supprime uniquement son compte avec la clé serveur côté Supabase. | Deno et Supabase JS distant. `SUPABASE_SERVICE_ROLE_KEY` reste un secret de fonction et n’est jamais envoyé au mobile. |
+| `supabase/functions/delete-account/index.ts` | Vérifie le bearer token et l’authentification récente avant de supprimer uniquement le compte courant. | Version distante 2 : `sub`, `iat`, `amr=password`, `last_sign_in_at`, réponses `no-store` et logs structurés sans identité. |
 
 ### `src/theme/`
 

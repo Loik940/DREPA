@@ -16,11 +16,9 @@ Ce document sépare les contrôles déjà exécutés des opérations qui exigent
 ### Supabase
 
 - un seul projet nommé `DREPA` est lié au dépôt ; aucun projet staging distinct n’existe dans l’organisation ;
-- les seize migrations historiques sont présentes côté distant ;
-- `20260815121000_anonymize_community_aliases.sql`, `20260815122000_harden_private_data_constraints.sql` et `20260819150000_harden_server_mutations.sql` sont en attente ;
-- `npx supabase db push --dry-run` doit confirmer que seules ces trois migrations seraient appliquées ;
-- la fonction distante `delete-account` est active en version 1 avec vérification JWT ;
-- le durcissement local récent de cette fonction n’est pas encore déployé ;
+- les dix-neuf migrations sont appliquées sur le projet actuel désigné staging ;
+- l’anonymisation des alias, les contraintes privées et les RPC transactionnelles sont actives ;
+- la fonction distante `delete-account` est active en version 2 avec vérification JWT et authentification récente ;
 - les sauvegardes physiques utilisent WAL-G, mais PITR n’est pas activé et la CLI ne retourne aucun point de restauration disponible ;
 - le lint distant nécessite `SUPABASE_DB_PASSWORD` sur ce poste ; les migrations sont néanmoins appliquées et lintées dans la CI Supabase locale.
 
