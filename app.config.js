@@ -10,7 +10,6 @@ module.exports = {
   icon: './assets/images/icon.png',
   android: {
     package: 'bj.drepa.app',
-    versionCode: 1,
     softwareKeyboardLayoutMode: 'resize',
     permissions: ['android.permission.SCHEDULE_EXACT_ALARM'],
     adaptiveIcon: {
