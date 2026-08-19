@@ -186,7 +186,7 @@ with ranked_active_consents as (
   where consents.revoked_at is null
 )
 update public.user_consents as consents
-set revoked_at = pg_catalog.greatest(consents.accepted_at, pg_catalog.statement_timestamp())
+set revoked_at = greatest(consents.accepted_at, pg_catalog.statement_timestamp())
 from ranked_active_consents as ranked
 where ranked.id = consents.id and ranked.position > 1;
 
