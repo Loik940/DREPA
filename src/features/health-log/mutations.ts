@@ -33,7 +33,7 @@ export function useCreateHealthLogMutation(userId: string | undefined) {
   return useMutation({
     mutationFn: async (values: HealthLogValues) => {
       if (!userId) throw new HealthLogDataError('create', 'session', 'La session utilisateur est indisponible.');
-      const operationId = await getOrCreateOperationId(operationKey);
+      const operationId = await getOrCreateOperationId(operationKey, values);
 
       try {
         const { data, error } = await requireClient('create')
@@ -43,7 +43,7 @@ export function useCreateHealthLogMutation(userId: string | undefined) {
           .single();
 
         if (!error) return data;
-        if ((error as { code?: string }).code === '23505') {
+      if (['23505', 'P0001'].includes((error as { code?: string }).code ?? '')) {
           const existing = await requireClient('create').from('health_logs').select('*')
           .eq('id', operationId).eq('user_id', userId).maybeSingle();
           if (!existing.error && existing.data) return existing.data;

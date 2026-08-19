@@ -6,6 +6,7 @@ import { clearOperationId, getOrCreateOperationId } from '@/services/operation-i
 import type { Database } from '@/types/database.types';
 import { classifyMedicationError, MedicationDataError, type MedicationOperation } from './errors';
 import { filterByNotificationIds } from './notification-ids';
+import { setMedicationNotificationHealth } from './notification-health';
 import {
   cancelNotificationIds,
   buildSnoozeNotificationId,
@@ -298,7 +299,7 @@ export function useCreateMedicationMutation(userId: string | undefined) {
   return useMutation({
     mutationFn: (values: MedicationValues) => runMedicationOperation(userId, async () => {
       if (!userId) throw new MedicationDataError('create', 'session', 'La session utilisateur est indisponible.');
-      const operationId = await getOrCreateOperationId(operationKey);
+      const operationId = await getOrCreateOperationId(operationKey, values);
       const times = values.reminders_enabled ? parseReminderTimes(values.reminder_times) : [];
       assertMedicationNotificationBudget('new-medication', times, values.start_date, values.end_date || null);
       if (times.length) await ensureMedicationNotificationPermission();
@@ -323,7 +324,9 @@ export function useCreateMedicationMutation(userId: string | undefined) {
       let medication = insertedMedication as Medication | null;
       const createdNow = !medicationError;
       if (medicationError) {
-        if ((medicationError as { code?: string }).code !== '23505') throw classifyMedicationError(medicationError, 'create');
+        if (!['23505', 'P0001'].includes((medicationError as { code?: string }).code ?? '')) {
+          throw classifyMedicationError(medicationError, 'create');
+        }
         const existing = await client.from('medications').select('*')
           .eq('id', operationId).eq('user_id', userId).maybeSingle();
         if (existing.error || !existing.data) throw classifyMedicationError(medicationError, 'create');
@@ -972,7 +975,17 @@ function useMedicationIntakeMutation(userId: string | undefined, action: Medicat
             .eq('user_id', userId)
             .eq('scheduled_at', payload.originalScheduledAt)
             .maybeSingle();
-        if (!verification.error && verification.data?.status === action) return verification.data;
+        if (!verification.error && verification.data?.status === action) {
+          if (action === 'snoozed') {
+            setMedicationNotificationHealth('error');
+            throw new MedicationDataError(
+              operation,
+              'supabase',
+              'Le report est enregistré mais sa notification n’est pas confirmée. Rouvre l’application pour la replanifier.',
+            );
+          }
+          return verification.data;
+        }
         if (verification.error) {
           throw new MedicationDataError(
             operation,

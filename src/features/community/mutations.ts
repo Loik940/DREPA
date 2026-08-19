@@ -64,7 +64,7 @@ export function useCreatePostMutation(userId: string | undefined) {
   return useMutation({
     mutationFn: async (values: PostValues): Promise<CreatedCommunityContent> => {
       const ownerId = requireUserId(sessionUserId, 'create');
-      const operationId = await getOrCreateOperationId(operationKey);
+      const operationId = await getOrCreateOperationId(operationKey, values);
       try {
         const { data, error } = await requireClient('create')
           .from('community_posts')
@@ -72,7 +72,7 @@ export function useCreatePostMutation(userId: string | undefined) {
           .select('id')
           .single();
         if (!error) return data;
-        if ((error as { code?: string }).code === '23505') {
+        if (['23505', 'P0001'].includes((error as { code?: string }).code ?? '')) {
           const existing = await requireClient('create').from('community_posts').select('id').eq('id', operationId).maybeSingle();
           if (!existing.error && existing.data) return existing.data;
         }
@@ -133,7 +133,7 @@ export function useCreateCommentMutation(
   return useMutation({
     mutationFn: async (values: CommentValues): Promise<CreatedCommunityContent> => {
       const ownerId = requireUserId(sessionUserId, 'comment');
-      const operationId = await getOrCreateOperationId(operationKey);
+      const operationId = await getOrCreateOperationId(operationKey, values);
       if (!postId) throw new CommunityDataError('comment', 'not_found', 'Ce contenu est introuvable.');
       try {
         const { data, error } = await requireClient('comment')
@@ -142,7 +142,7 @@ export function useCreateCommentMutation(
           .select('id')
           .single();
         if (!error) return data;
-        if ((error as { code?: string }).code === '23505') {
+        if (['23505', 'P0001'].includes((error as { code?: string }).code ?? '')) {
           const existing = await requireClient('comment').from('community_comments').select('id').eq('id', operationId).maybeSingle();
           if (!existing.error && existing.data) return existing.data;
         }
@@ -238,7 +238,7 @@ export function useReportMutation(userId: string | undefined) {
     }): Promise<CreatedCommunityContent> => {
       const ownerId = requireUserId(sessionUserId, 'report');
       const operationKey = `${operationKeyPrefix}:${target.type}:${target.type === 'post' ? target.postId : target.commentId}`;
-      const operationId = await getOrCreateOperationId(operationKey);
+      const operationId = await getOrCreateOperationId(operationKey, { target, values });
       try {
         const payload: Database['public']['Tables']['community_reports']['Insert'] = {
           id: operationId,
@@ -254,7 +254,7 @@ export function useReportMutation(userId: string | undefined) {
           .select('id')
           .single();
         if (!error) return data;
-        if ((error as { code?: string }).code === '23505') {
+        if (['23505', 'P0001'].includes((error as { code?: string }).code ?? '')) {
           const existing = await requireClient('report').from('community_reports').select('id').eq('id', operationId).maybeSingle();
           if (!existing.error && existing.data) return existing.data;
         }

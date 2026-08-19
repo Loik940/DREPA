@@ -79,6 +79,7 @@ jobs:
           npx supabase start || npx supabase status
           npx supabase db reset
           npx supabase db lint --local
+          npx supabase test db
 
       - name: Vérifier les espaces et fins de ligne
         run: git diff --check HEAD^ HEAD
