@@ -14,6 +14,8 @@ updates:
       time: "06:00"
       timezone: Africa/Porto-Novo
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
       - javascript
@@ -26,6 +28,8 @@ updates:
       time: "06:00"
       timezone: Africa/Porto-Novo
     open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
       - github-actions
