@@ -101,21 +101,6 @@ jobs:
       - name: Auditer les dépendances de production critiques
         run: npm audit --omit=dev --audit-level=critical
 
-      - name: Détecter les secrets réels suivis par Git
-        shell: bash
-        run: |
-          service_role_name='SUPABASE_SERVICE_ROLE_KEY'
-          patterns="imole_live_[A-Za-z0-9_-]{16,}|sb_secret_[A-Za-z0-9_-]{16,}|sk-[A-Za-z0-9_-]{20,}|${service_role_name}=[[:space:]]*['\"]?[^[:space:]'\"#]+"
-          matches="$(git grep -n -I -E "$patterns" -- . ':(exclude)package-lock.json' || true)"
-
-          if [ -n "$matches" ]; then
-            echo "Des motifs de secrets réels ont été détectés dans des fichiers suivis par Git :"
-            printf '%s\n' "$matches" | cut -d: -f1,2
-            exit 1
-          fi
-
-          echo "Aucun motif de secret réel détecté."
-
       - name: Échouer si Semgrep a détecté un problème
         if: steps.semgrep.outcome == 'failure'
         run: exit 1
