@@ -75,23 +75,10 @@ jobs:
           deno lint --config supabase/functions/deno.json supabase/functions/delete-account/index.ts
 
       - name: Démarrer et vérifier Supabase local
-        id: supabase
-        continue-on-error: true
         run: |
-          set -o pipefail
-          {
-            npx supabase start
-            npx supabase db reset
-            npx supabase db lint --local
-          } 2>&1 | tee supabase-output.txt
-
-      - name: Publier le rapport Supabase
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
-        with:
-          name: supabase-output
-          path: supabase-output.txt
-          if-no-files-found: warn
+          npx supabase start || npx supabase status
+          npx supabase db reset
+          npx supabase db lint --local
 
       - name: Vérifier les espaces et fins de ligne
         run: git diff --check HEAD^ HEAD
@@ -133,9 +120,6 @@ jobs:
         if: steps.semgrep.outcome == 'failure'
         run: exit 1
 
-      - name: Échouer si Supabase a détecté un problème
-        if: steps.supabase.outcome == 'failure'
-        run: exit 1
 
       - name: Arrêter Supabase local
         if: always()
