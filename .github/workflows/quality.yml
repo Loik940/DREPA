@@ -51,8 +51,11 @@ jobs:
 
       - name: Scanner le code avec Semgrep Community
         run: |
-          python -m pip install --disable-pip-version-check semgrep==1.173.0
-          semgrep scan --config auto --metrics=off --disable-version-check --error --exclude node_modules --exclude .expo .
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/src" \
+            -w /src \
+            semgrep/semgrep@sha256:67319956da3dcb58baf5b322899c15458e3963e7018a86aeeb5cd224e69cb77a \
+            semgrep scan --config auto --metrics=off --disable-version-check --error --exclude node_modules --exclude .expo .
 
       - name: Configurer Deno
         uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
