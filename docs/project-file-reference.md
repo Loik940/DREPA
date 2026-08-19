@@ -526,6 +526,8 @@ L’Edge Function `delete-account` est présente dans le dépôt et exige une au
 | `docs/data-flow.md` | Classification et circulation des données d’authentification, profil, données privées, communauté, SOS et suppression. |
 | `docs/database-schema.md` | Modèle relationnel PostgreSQL, relations, ordre théorique des migrations, contraintes, matrice RLS et suppression du compte. |
 | `docs/deployment.md` | Chaîne de livraison Android, environnements, configuration Expo, variables, development build, APK, déploiement Supabase et recette. |
+| `docs/production-readiness.md` | État vérifié de Supabase, npm, EAS et des portes staging/App Links/juridique/recette. Ne déclenche aucun déploiement. |
+| `docs/android-app-links.md` | Modèle `assetlinks.json`, intent filter Expo et commandes de recette. Les placeholders exigent un domaine réel et l’empreinte SHA-256 du certificat EAS. |
 | `docs/design-decisions.md` | Décisions validées sur rôles, consentements, complétude du profil, journal, réactions, ressources, suppression, plateforme et limites médicales. |
 | `docs/mvp-scope.md` | Périmètre inclus/exclus, planning de 30 jours, critères d’acceptation et sécurité minimale. |
 | `docs/navigation.md` | Décision d’entrée, routes publiques/protégées, carte de navigation, onglets, SOS, deep links et comportement Android. Certaines routes y sont encore prospectives. |

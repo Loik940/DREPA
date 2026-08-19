@@ -12,7 +12,7 @@ flowchart LR
     QUALITY["Lint, types et tests"]
     LOCAL["Développement Expo\nAppareil Android"]
     DEV_BUILD["EAS Development Build"]
-    INTEGRATION["Tests Auth, RLS, notifications,\nlocalisation et liens profonds"]
+    INTEGRATION["Tests Auth, RLS, notifications\net App Links"]
     PREVIEW["EAS Preview Build"]
     APK["APK de démonstration"]
     ACCEPTANCE["Recette sur appareil réel"]
@@ -46,9 +46,9 @@ La configuration Android doit définir :
 
 - le nom `DRÉPA` et le slug `drepa` ;
 - un identifiant de package Android stable avant le premier build distribué ;
-- le schéma de lien profond utilisé par l'authentification ;
+- le callback PKCE actuel puis l’App Link HTTPS vérifié avant Production ;
 - le plugin Expo Router ;
-- les plugins SecureStore, Notifications et Location ;
+- les plugins SecureStore, Notifications et Screen Capture ;
 - des messages français expliquant les permissions ;
 - une icône, un écran de démarrage et les métadonnées du MVP ;
 - une version applicative et un numéro de build Android incrémentés.
@@ -86,7 +86,7 @@ Il sert à vérifier :
 - la restauration de session SecureStore ;
 - les liens de confirmation et de récupération ;
 - les notifications locales ;
-- la demande ponctuelle de localisation ;
+- la protection des captures et de l’aperçu Android récent ;
 - l'ouverture de l'appel et du SMS ;
 - les redirections Expo Router ;
 - le comportement du bouton retour Android.
@@ -147,7 +147,7 @@ L'ordre des migrations suit `database-schema.md`. Une migration appliquée n'est
 - comportement explicite lorsque les notifications sont refusées ;
 - SOS testé avec localisation accordée, refusée et indisponible ;
 - appel et SMS ouverts manuellement ;
-- liens profonds d'authentification fonctionnels dans l'APK ;
+- App Links HTTPS d'authentification vérifiés dans l'APK ;
 - navigation retour sans contournement des protections.
 
 ### Parcours métier

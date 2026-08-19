@@ -10,6 +10,8 @@ Ce dossier rassemble la documentation de conception du MVP Android de DRÉPA. Le
 | [`plan-technique-initialisation.md`](plan-technique-initialisation.md) | Plan d'initialisation du socle Expo, de Supabase et de la première semaine. |
 | [`design-decisions.md`](design-decisions.md) | Décisions de conception validées pour le MVP. |
 | [`mvp-scope.md`](mvp-scope.md) | Périmètre, limites, planning et critères d'acceptation du MVP. |
+| [`production-readiness.md`](production-readiness.md) | État vérifié, portes de validation et opérations restant avant Production. |
+| [`android-app-links.md`](android-app-links.md) | Préparation du domaine, de `assetlinks.json`, du certificat EAS et des tests App Links. |
 
 ## Ordre de lecture recommandé
 
@@ -17,6 +19,7 @@ Ce dossier rassemble la documentation de conception du MVP Android de DRÉPA. Le
 2. Lire les décisions de conception pour connaître les règles qui précisent ou complètent le cahier des charges.
 3. Lire le périmètre du MVP pour distinguer les fonctionnalités livrées des fonctionnalités exclues.
 4. Lire le plan technique d'initialisation avant toute mise en œuvre.
+5. Utiliser les guides App Links et préparation Production avant toute diffusion externe.
 
 ## Socle technique du MVP
 
@@ -27,7 +30,7 @@ Ce dossier rassemble la documentation de conception du MVP Android de DRÉPA. Le
 - TanStack Query pour les données serveur ;
 - React Hook Form et Zod pour les formulaires et leur validation ;
 - Expo SecureStore pour la session locale ;
-- notifications locales et localisation utilisée uniquement avec consentement ;
+- notifications locales et protection des écrans privés ;
 - EAS Build pour produire l'APK Android.
 
 Android est la seule plateforme développée, testée et livrée dans le MVP.
