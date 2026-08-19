@@ -84,10 +84,18 @@ export function useRevokeConsentMutation(userId: string) {
 
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await requireSupabase()
-        .rpc('revoke_user_consents');
-      if (error) throw error;
-      return data;
+      const client = requireSupabase();
+      const { data, error } = await client.rpc('revoke_user_consents');
+      if (!error) return data;
+      const verification = await client.from('user_consents').select('id')
+        .eq('user_id', userId)
+        .eq('terms_version', legalVersions.terms)
+        .eq('privacy_version', legalVersions.privacy)
+        .eq('community_guidelines_version', legalVersions.communityGuidelines)
+        .is('revoked_at', null)
+        .maybeSingle();
+      if (!verification.error && !verification.data) return 0;
+      throw error;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: consentQueryKey(userId) });

@@ -514,8 +514,9 @@ Le dossier contient actuellement sept composants partagés. Aucun huitième fich
 | `supabase/migrations/20260819190000_fix_security_regressions.sql` | Corrige tombstones commentaires, modération propriétaire, restauration, champs système de signalement, retraits de soutien, quotas et validation des contraintes. | Migration corrective à appliquer après la 19 ; vérifiée par reset et lint Supabase local avant staging. | 20 |
 | `supabase/migrations/20260819210000_close_security_edge_cases.sql` | Ferme les cas limites de visibilité tombstone, suppression admin, restauration verrouillée, retraits journalisés, quotas idempotents et intégrité profil/prises. | Migration corrective 21, couverte par pgTAP et à appliquer après la 20. | 21 |
 | `supabase/migrations/20260819230000_enforce_moderation_context.sql` | Réserve la visibilité au contexte RPC, refuse les tombstones et renforce la cohérence des reports. | Migration corrective 22 à appliquer après validation pgTAP. | 22 |
+| `supabase/migrations/20260819233000_enforce_consent_and_identity.sql` | Impose consentement courant, identité soumise, gel des contenus pending et restauration liée au dernier masquage. | Migration 23 à appliquer après tests pgTAP comportementaux. | 23 |
 
-L’ordre 10 à 22 est obligatoire. Les migrations 19 à 22 imposent un déploiement coordonné avec l’APK qui utilise les nouvelles RPC. Les migrations déjà appliquées ne doivent jamais être modifiées.
+L’ordre 10 à 23 est obligatoire. Les migrations 19 à 23 imposent un déploiement coordonné avec l’APK qui utilise les nouvelles RPC. Les migrations déjà appliquées ne doivent jamais être modifiées.
 
 Le rôle `admin` est attribué et modifié côté Supabase uniquement. L’application React Native possède désormais une interface de modération privilégiée, mais aucun formulaire de rôle ni clé `service_role`. Le rôle est revérifié au montage, à la reconnexion et toutes les 30 secondes. Un refus supprime les caches privés de modération. Les RPC contrôlent `is_admin()` et chaque décision reste humaine et auditée.
 

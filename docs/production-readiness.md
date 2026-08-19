@@ -16,8 +16,9 @@ Ce document sépare les contrôles déjà exécutés des opérations qui exigent
 ### Supabase
 
 - un seul projet nommé `DREPA` est lié au dépôt ; aucun projet staging distinct n’existe dans l’organisation ;
-- les vingt et une migrations sont appliquées sur le projet actuel désigné staging ;
-- `20260819230000_enforce_moderation_context.sql` reste à valider puis appliquer ;
+- les vingt-deux migrations sont appliquées sur le projet actuel désigné staging ;
+- les tests pgTAP, Semgrep, Deno et le lint Supabase sont verts en CI ;
+- `20260819233000_enforce_consent_and_identity.sql` reste à valider puis appliquer ;
 - les tests pgTAP, le reset et le lint Supabase local sont verts en CI ;
 - l’anonymisation des alias, les contraintes privées et les RPC transactionnelles sont actives ;
 - la fonction distante `delete-account` est active en version 2 avec vérification JWT et authentification récente ;

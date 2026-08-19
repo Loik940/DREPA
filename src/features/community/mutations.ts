@@ -6,6 +6,7 @@
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
+import { getPrivateCacheGeneration } from '@/lib/query-client';
 import { useAuth } from '@/providers/auth-provider';
 import { clearOperationId, getOrCreateOperationId } from '@/services/operation-id';
 import type { Database } from '@/types/database.types';
@@ -36,6 +37,12 @@ function requireUserId(userId: string | undefined, operation: CommunityOperation
   return userId;
 }
 
+function assertMutationGeneration(generation: number, operation: CommunityOperation) {
+  if (generation !== getPrivateCacheGeneration()) {
+    throw new CommunityDataError(operation, 'session', 'Cette opération appartient à une ancienne session.');
+  }
+}
+
 async function invalidateFeed(queryClient: QueryClient, userId: string) {
   await queryClient.invalidateQueries({ queryKey: ['community-posts', userId] });
 }
@@ -59,12 +66,14 @@ async function invalidatePost(
 export function useCreatePostMutation(userId: string | undefined) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
+  const generation = getPrivateCacheGeneration();
   const operationKey = `community-post:${sessionUserId ?? 'anonymous'}`;
 
   return useMutation({
     mutationFn: async (values: PostValues): Promise<CreatedCommunityContent> => {
       const ownerId = requireUserId(sessionUserId, 'create');
       const operationId = await getOrCreateOperationId(operationKey, values);
+      assertMutationGeneration(generation, 'create');
       try {
         const { data, error } = await requireClient('create')
           .from('community_posts')
@@ -94,10 +103,12 @@ export function useDeletePostMutation(
 ) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
+  const generation = getPrivateCacheGeneration();
 
   return useMutation({
     mutationFn: async (): Promise<string> => {
       requireUserId(sessionUserId, 'delete');
+      assertMutationGeneration(generation, 'delete');
       if (!postId) throw new CommunityDataError('delete', 'not_found', 'Ce contenu est introuvable.');
       try {
         const { data, error } = await requireClient('delete')
@@ -128,12 +139,14 @@ export function useCreateCommentMutation(
 ) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
+  const generation = getPrivateCacheGeneration();
   const operationKey = `community-comment:${sessionUserId ?? 'anonymous'}:${postId ?? 'missing'}`;
 
   return useMutation({
     mutationFn: async (values: CommentValues): Promise<CreatedCommunityContent> => {
       const ownerId = requireUserId(sessionUserId, 'comment');
       const operationId = await getOrCreateOperationId(operationKey, values);
+      assertMutationGeneration(generation, 'comment');
       if (!postId) throw new CommunityDataError('comment', 'not_found', 'Ce contenu est introuvable.');
       try {
         const { data, error } = await requireClient('comment')
@@ -165,10 +178,12 @@ export function useDeleteCommentMutation(
 ) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
+  const generation = getPrivateCacheGeneration();
 
   return useMutation({
     mutationFn: async (): Promise<string> => {
       requireUserId(sessionUserId, 'comment');
+      assertMutationGeneration(generation, 'comment');
       if (!postId || !commentId) {
         throw new CommunityDataError('comment', 'not_found', 'Ce commentaire est introuvable.');
       }
@@ -199,10 +214,12 @@ export function useToggleSupportMutation(
 ) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
+  const generation = getPrivateCacheGeneration();
 
   return useMutation({
     mutationFn: async (desiredState: boolean): Promise<{ hasSupported: boolean }> => {
       requireUserId(sessionUserId, 'reaction');
+      assertMutationGeneration(generation, 'reaction');
       if (!postId) throw new CommunityDataError('reaction', 'not_found', 'Ce contenu est introuvable.');
       const client = requireClient('reaction');
 
@@ -226,6 +243,7 @@ export function useToggleSupportMutation(
 export function useReportMutation(userId: string | undefined) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
+  const generation = getPrivateCacheGeneration();
   const operationKeyPrefix = `community-report:${sessionUserId ?? 'anonymous'}`;
 
   return useMutation({
@@ -239,6 +257,7 @@ export function useReportMutation(userId: string | undefined) {
       const ownerId = requireUserId(sessionUserId, 'report');
       const operationKey = `${operationKeyPrefix}:${target.type}:${target.type === 'post' ? target.postId : target.commentId}`;
       const operationId = await getOrCreateOperationId(operationKey, { target, values });
+      assertMutationGeneration(generation, 'report');
       try {
         const payload: Database['public']['Tables']['community_reports']['Insert'] = {
           id: operationId,
