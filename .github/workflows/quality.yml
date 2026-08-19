@@ -28,13 +28,13 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Configurer Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: npm
@@ -44,8 +44,10 @@ jobs:
 
       - name: Scanner les secrets dans tout l'historique
         run: |
-          go install github.com/gitleaks/gitleaks/v8@v8.28.0
-          "$(go env GOPATH)/bin/gitleaks" detect --source . --redact --no-banner
+          curl -sSLo /tmp/gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz
+          echo "a65b5253807a68ac0cafa4414031fd740aeb55f54fb7e55f386acb52e6a840eb  /tmp/gitleaks.tar.gz" | sha256sum --check
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks detect --source . --redact --no-banner
 
       - name: Scanner le code avec Semgrep Community
         run: |
