@@ -4,11 +4,10 @@
 // Invalide seulement les listes et détails concernés.
 // Traite un soutien concurrent déjà créé comme un succès.
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import * as Crypto from 'expo-crypto';
-import { useRef } from 'react';
 
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
+import { clearOperationId, getOrCreateOperationId } from '@/services/operation-id';
 import type { Database } from '@/types/database.types';
 import { classifyCommunityError, CommunityDataError, type CommunityOperation } from './errors';
 import { buildCommunityCommentPayload, buildCommunityPostPayload } from './payload';
@@ -60,20 +59,21 @@ async function invalidatePost(
 export function useCreatePostMutation(userId: string | undefined) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
-  const operationId = useRef(Crypto.randomUUID());
+  const operationKey = `community-post:${sessionUserId ?? 'anonymous'}`;
 
   return useMutation({
     mutationFn: async (values: PostValues): Promise<CreatedCommunityContent> => {
       const ownerId = requireUserId(sessionUserId, 'create');
+      const operationId = await getOrCreateOperationId(operationKey);
       try {
         const { data, error } = await requireClient('create')
           .from('community_posts')
-          .insert({ id: operationId.current, ...buildCommunityPostPayload(ownerId, values) })
+          .insert({ id: operationId, ...buildCommunityPostPayload(ownerId, values) })
           .select('id')
           .single();
         if (!error) return data;
         if ((error as { code?: string }).code === '23505') {
-          const existing = await requireClient('create').from('community_posts').select('id').eq('id', operationId.current).maybeSingle();
+          const existing = await requireClient('create').from('community_posts').select('id').eq('id', operationId).maybeSingle();
           if (!existing.error && existing.data) return existing.data;
         }
         throw error;
@@ -82,7 +82,7 @@ export function useCreatePostMutation(userId: string | undefined) {
       }
     },
     onSuccess: async () => {
-      operationId.current = Crypto.randomUUID();
+      await clearOperationId(operationKey);
       if (sessionUserId) await invalidateFeed(queryClient, sessionUserId);
     },
   });
@@ -128,21 +128,22 @@ export function useCreateCommentMutation(
 ) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
-  const operationId = useRef(Crypto.randomUUID());
+  const operationKey = `community-comment:${sessionUserId ?? 'anonymous'}:${postId ?? 'missing'}`;
 
   return useMutation({
     mutationFn: async (values: CommentValues): Promise<CreatedCommunityContent> => {
       const ownerId = requireUserId(sessionUserId, 'comment');
+      const operationId = await getOrCreateOperationId(operationKey);
       if (!postId) throw new CommunityDataError('comment', 'not_found', 'Ce contenu est introuvable.');
       try {
         const { data, error } = await requireClient('comment')
           .from('community_comments')
-          .insert({ id: operationId.current, ...buildCommunityCommentPayload(ownerId, postId, values) })
+          .insert({ id: operationId, ...buildCommunityCommentPayload(ownerId, postId, values) })
           .select('id')
           .single();
         if (!error) return data;
         if ((error as { code?: string }).code === '23505') {
-          const existing = await requireClient('comment').from('community_comments').select('id').eq('id', operationId.current).maybeSingle();
+          const existing = await requireClient('comment').from('community_comments').select('id').eq('id', operationId).maybeSingle();
           if (!existing.error && existing.data) return existing.data;
         }
         throw error;
@@ -151,7 +152,7 @@ export function useCreateCommentMutation(
       }
     },
     onSuccess: async () => {
-      operationId.current = Crypto.randomUUID();
+      await clearOperationId(operationKey);
       if (sessionUserId && postId) await invalidatePost(queryClient, sessionUserId, postId, true);
     },
   });
@@ -225,7 +226,7 @@ export function useToggleSupportMutation(
 export function useReportMutation(userId: string | undefined) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
-  const operationId = useRef(Crypto.randomUUID());
+  const operationKeyPrefix = `community-report:${sessionUserId ?? 'anonymous'}`;
 
   return useMutation({
     mutationFn: async ({
@@ -236,9 +237,11 @@ export function useReportMutation(userId: string | undefined) {
       values: ReportValues;
     }): Promise<CreatedCommunityContent> => {
       const ownerId = requireUserId(sessionUserId, 'report');
+      const operationKey = `${operationKeyPrefix}:${target.type}:${target.type === 'post' ? target.postId : target.commentId}`;
+      const operationId = await getOrCreateOperationId(operationKey);
       try {
         const payload: Database['public']['Tables']['community_reports']['Insert'] = {
-          id: operationId.current,
+          id: operationId,
           reporter_id: ownerId,
           post_id: target.type === 'post' ? target.postId : null,
           comment_id: target.type === 'comment' ? target.commentId : null,
@@ -252,7 +255,7 @@ export function useReportMutation(userId: string | undefined) {
           .single();
         if (!error) return data;
         if ((error as { code?: string }).code === '23505') {
-          const existing = await requireClient('report').from('community_reports').select('id').eq('id', operationId.current).maybeSingle();
+          const existing = await requireClient('report').from('community_reports').select('id').eq('id', operationId).maybeSingle();
           if (!existing.error && existing.data) return existing.data;
         }
         throw error;
@@ -261,7 +264,8 @@ export function useReportMutation(userId: string | undefined) {
       }
     },
     onSuccess: async (_data, variables) => {
-      operationId.current = Crypto.randomUUID();
+      const target = variables.target;
+      await clearOperationId(`${operationKeyPrefix}:${target.type}:${target.type === 'post' ? target.postId : target.commentId}`);
       if (!sessionUserId) return;
       await invalidatePost(
         queryClient,

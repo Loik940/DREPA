@@ -24,6 +24,7 @@ import { useProfileQuery } from '@/features/profile/queries';
 import { useRevokeConsentMutation } from '@/features/profile/mutations';
 import { cancelAllDrepaNotifications, resumeMedicationNotificationScheduling } from '@/features/medications/notifications';
 import { reconcileMedicationNotifications } from '@/features/medications/reconciliation';
+import { runMedicationOperation } from '@/features/medications/operation-lock';
 import { useAuth } from '@/providers/auth-provider';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
@@ -62,7 +63,7 @@ export default function ProfileScreen() {
             .then(() => router.replace('/(app)/consent'))
             .catch(async () => {
               if (await resumeMedicationNotificationScheduling() && user?.id) {
-                await reconcileMedicationNotifications(user.id).catch(() => undefined);
+                await runMedicationOperation(user.id, () => reconcileMedicationNotifications(user.id)).catch(() => undefined);
               }
               setDeleteError('Les consentements ne peuvent pas être retirés pour le moment.');
             }),
@@ -109,8 +110,8 @@ export default function ProfileScreen() {
       await deleteAccount(deletePassword);
       setDeleteModalVisible(false);
       setDeletePassword('');
-    } catch {
-      setDeleteError('Le compte ne peut pas être supprimé pour le moment.');
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Le compte ne peut pas être supprimé pour le moment.');
     } finally {
       setIsDeleting(false);
     }

@@ -172,15 +172,16 @@ export function cancelAllDrepaNotifications() {
   // Toutes les notifications planifiées appartiennent à cette application Android, y compris les anciens IDs aléatoires.
   schedulingSuspended = true;
   if (cleanupPromise) return cleanupPromise;
-  cleanupPromise = runWithSchedulingLock(async () => {
+  cleanupPromise = (async () => {
     try {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      await AsyncStorage.setItem(CLEANUP_PENDING_KEY, 'true');
+      await runWithSchedulingLock(() => Notifications.cancelAllScheduledNotificationsAsync());
       await AsyncStorage.removeItem(CLEANUP_PENDING_KEY);
     } catch (error) {
       await AsyncStorage.setItem(CLEANUP_PENDING_KEY, 'true').catch(() => undefined);
       throw error;
     }
-  }).finally(() => {
+  })().finally(() => {
     cleanupPromise = null;
   });
   return cleanupPromise;

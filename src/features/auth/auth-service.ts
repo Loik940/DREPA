@@ -14,6 +14,15 @@ export class AuthOperationError extends Error {
   }
 }
 
+export class AccountDeletionError extends AuthOperationError {
+  constructor(public readonly outcomeUnknown: boolean) {
+    super(outcomeUnknown
+      ? 'Le résultat de la suppression ne peut pas être confirmé. La session locale a été fermée.'
+      : 'Le compte n’a pas été supprimé. Réessayez après avoir vérifié votre session.');
+    this.name = 'AccountDeletionError';
+  }
+}
+
 function requireSupabase() {
   if (!supabase) {
     throw new AuthOperationError('La configuration de l’authentification est indisponible.');
@@ -89,10 +98,9 @@ export async function invokeDeleteAccount() {
     // La suppression est confiée à la fonction sécurisée qui contrôle la session côté serveur.
     const { error } = await requireSupabase().functions.invoke('delete-account', { body: {} });
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw new AccountDeletionError(error.name !== 'FunctionsHttpError');
   } catch (error) {
+    if (error instanceof AccountDeletionError) throw error;
     throw toAuthOperationError(error);
   }
 }

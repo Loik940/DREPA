@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 
 import {
+  AccountDeletionError,
   requestPasswordReset,
   reauthenticateForAccountDeletion,
   signIn,
@@ -206,6 +207,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   // La déconnexion et la suppression de compte terminent aussi la présence des données privées en cache.
   const handleSignOut = async () => {
+    setActiveMedicationOwner(null);
     try {
       await signOut();
     } finally {
@@ -225,14 +227,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const email = session?.user.email;
     if (!email) throw new Error('Account email is unavailable.');
     await reauthenticateForAccountDeletion(email, password);
+    let shouldClearLocalSession = false;
     try {
       await invokeDeleteAccount();
+      shouldClearLocalSession = true;
+    } catch (error) {
+      shouldClearLocalSession = error instanceof AccountDeletionError && error.outcomeUnknown;
+      throw error;
     } finally {
-      await supabase?.auth.signOut({ scope: 'local' }).catch(() => undefined);
-      await cancelAllDrepaNotifications().catch(() => undefined);
-      setSession(null);
-      setStatus('unauthenticated');
-      removePrivateQueries();
+      if (shouldClearLocalSession) {
+        setActiveMedicationOwner(null);
+        await supabase?.auth.signOut({ scope: 'local' }).catch(() => undefined);
+        await cancelAllDrepaNotifications().catch(() => undefined);
+        setSession(null);
+        setStatus('unauthenticated');
+        removePrivateQueries();
+      }
     }
   };
 

@@ -1,9 +1,8 @@
 // Mutations Médicaments : gère le cycle des traitements, rappels et prises déclarées.
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import * as Crypto from 'expo-crypto';
-import { useRef } from 'react';
 
 import { supabase } from '@/lib/supabase';
+import { clearOperationId, getOrCreateOperationId } from '@/services/operation-id';
 import type { Database } from '@/types/database.types';
 import { classifyMedicationError, MedicationDataError, type MedicationOperation } from './errors';
 import { filterByNotificationIds } from './notification-ids';
@@ -14,7 +13,6 @@ import {
   NotificationCancellationError,
   NotificationSchedulingError,
   scheduleMedicationReminder,
-  scheduleMedicationSnooze,
   scheduleMedicationSnoozeAt,
 } from './notifications';
 import {
@@ -237,13 +235,10 @@ async function restoreSnoozeNotifications(
       }
       continue;
     }
-    const remainingMinutes = Math.ceil((new Date(intake.snoozed_until).getTime() - Date.now()) / 60_000);
-    if (remainingMinutes <= 0) {
+    const snoozedUntil = new Date(intake.snoozed_until);
+    if (snoozedUntil.getTime() <= Date.now()) {
       try {
         const { error } = await client.from('medication_intakes').update({
-          status: 'pending',
-          taken_at: null,
-          snoozed_until: null,
           snooze_notification_id: null,
         })
           .eq('id', intake.id)
@@ -256,7 +251,7 @@ async function restoreSnoozeNotifications(
     }
     let replacementId: string | null = null;
     try {
-      replacementId = await scheduleMedicationSnooze(remainingMinutes, intake.snooze_notification_id);
+      replacementId = await scheduleMedicationSnoozeAt(snoozedUntil, intake.snooze_notification_id);
       const { data, error } = await client.from('medication_intakes').update({
         status: intake.status,
         taken_at: intake.taken_at,
@@ -298,11 +293,12 @@ async function restoreCancelledSnapshots(
 
 export function useCreateMedicationMutation(userId: string | undefined) {
   const queryClient = useQueryClient();
-  const operationId = useRef(Crypto.randomUUID());
+  const operationKey = `medication:${userId ?? 'anonymous'}`;
 
   return useMutation({
     mutationFn: (values: MedicationValues) => runMedicationOperation(userId, async () => {
       if (!userId) throw new MedicationDataError('create', 'session', 'La session utilisateur est indisponible.');
+      const operationId = await getOrCreateOperationId(operationKey);
       const times = values.reminders_enabled ? parseReminderTimes(values.reminder_times) : [];
       assertMedicationNotificationBudget('new-medication', times, values.start_date, values.end_date || null);
       if (times.length) await ensureMedicationNotificationPermission();
@@ -311,7 +307,7 @@ export function useCreateMedicationMutation(userId: string | undefined) {
       const { data: insertedMedication, error: medicationError } = await client
         .from('medications')
         .insert({
-          id: operationId.current,
+          id: operationId,
           user_id: userId,
           name: values.name,
           dosage: values.dosage,
@@ -329,7 +325,7 @@ export function useCreateMedicationMutation(userId: string | undefined) {
       if (medicationError) {
         if ((medicationError as { code?: string }).code !== '23505') throw classifyMedicationError(medicationError, 'create');
         const existing = await client.from('medications').select('*')
-          .eq('id', operationId.current).eq('user_id', userId).maybeSingle();
+          .eq('id', operationId).eq('user_id', userId).maybeSingle();
         if (existing.error || !existing.data) throw classifyMedicationError(medicationError, 'create');
         medication = existing.data as Medication;
       }
@@ -380,7 +376,7 @@ export function useCreateMedicationMutation(userId: string | undefined) {
       }
     }),
     onSuccess: async () => {
-      operationId.current = Crypto.randomUUID();
+      await clearOperationId(operationKey);
       if (userId) await invalidateMedicationQueries(queryClient, userId);
     },
   });
@@ -968,6 +964,22 @@ function useMedicationIntakeMutation(userId: string | undefined, action: Medicat
         }
         return result.data;
       } catch (error) {
+        const verification = payload.intakeId
+          ? await client.from('medication_intakes').select('*')
+            .eq('id', payload.intakeId).eq('user_id', userId).maybeSingle()
+          : await client.from('medication_intakes').select('*')
+            .eq('medication_id', payload.medicationId)
+            .eq('user_id', userId)
+            .eq('scheduled_at', payload.originalScheduledAt)
+            .maybeSingle();
+        if (!verification.error && verification.data?.status === action) return verification.data;
+        if (verification.error) {
+          throw new MedicationDataError(
+            operation,
+            'supabase',
+            'Le résultat de la déclaration ne peut pas être confirmé. Aucun ancien rappel ne sera recréé automatiquement.',
+          );
+        }
         // Si l’écriture échoue, la nouvelle notification est annulée avant de perdre son identifiant local.
         let compensationFailed = false;
         if (newSnoozeNotificationId) {

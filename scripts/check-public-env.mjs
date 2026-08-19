@@ -43,6 +43,18 @@ if (!publishable && !key.startsWith('sb_secret_')) {
 }
 if (!publishable && !legacyAnon) errors.push('EXPO_PUBLIC_SUPABASE_ANON_KEY');
 
+if (!errors.length) {
+  try {
+    const response = await fetch(`${url.origin}/auth/v1/settings`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) errors.push('EXPO_PUBLIC_SUPABASE_ANON_KEY');
+  } catch {
+    errors.push('EXPO_PUBLIC_SUPABASE_URL');
+  }
+}
+
 if (errors.length) {
   console.error(`Configuration publique invalide: ${[...new Set(errors)].join(', ')}`);
   process.exit(1);

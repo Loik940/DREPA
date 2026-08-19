@@ -1,10 +1,9 @@
 // Mutations Journal : crée, modifie et supprime les entrées privées avec invalidation du cache.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Crypto from 'expo-crypto';
-import { useRef } from 'react';
 
 import { supabase } from '@/lib/supabase';
 import { getPrivateCacheGeneration } from '@/lib/query-client';
+import { clearOperationId, getOrCreateOperationId } from '@/services/operation-id';
 import { classifyHealthLogError, HealthLogDataError, type HealthLogOperation } from './errors';
 import { buildHealthLogPayload } from './payload';
 import { healthLogDetailQueryKey, healthLogsQueryKey, healthLogStatisticsQueryKey } from './queries';
@@ -29,23 +28,24 @@ async function invalidateHealthLogQueries(queryClient: ReturnType<typeof useQuer
 export function useCreateHealthLogMutation(userId: string | undefined) {
   const queryClient = useQueryClient();
   const generation = getPrivateCacheGeneration();
-  const operationId = useRef(Crypto.randomUUID());
+  const operationKey = `health-log:${userId ?? 'anonymous'}`;
 
   return useMutation({
     mutationFn: async (values: HealthLogValues) => {
       if (!userId) throw new HealthLogDataError('create', 'session', 'La session utilisateur est indisponible.');
+      const operationId = await getOrCreateOperationId(operationKey);
 
       try {
         const { data, error } = await requireClient('create')
           .from('health_logs')
-          .insert({ id: operationId.current, user_id: userId, ...buildHealthLogPayload(values) })
+          .insert({ id: operationId, user_id: userId, ...buildHealthLogPayload(values) })
           .select()
           .single();
 
         if (!error) return data;
         if ((error as { code?: string }).code === '23505') {
           const existing = await requireClient('create').from('health_logs').select('*')
-            .eq('id', operationId.current).eq('user_id', userId).maybeSingle();
+          .eq('id', operationId).eq('user_id', userId).maybeSingle();
           if (!existing.error && existing.data) return existing.data;
         }
         throw error;
@@ -54,7 +54,7 @@ export function useCreateHealthLogMutation(userId: string | undefined) {
       }
     },
     onSuccess: async () => {
-      operationId.current = Crypto.randomUUID();
+      await clearOperationId(operationKey);
       if (userId && generation === getPrivateCacheGeneration()) await invalidateHealthLogQueries(queryClient, userId);
     },
   });
