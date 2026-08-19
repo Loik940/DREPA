@@ -16,6 +16,19 @@ web-build/
 *.key
 *.pem
 *.p12
+*.pfx
+*.jks
+*.keystore
+*.der
+*.csr
+*.apk
+*.aab
+eas-build-*.tar.gz
+google-services.json
+GoogleService-Info.plist
+*.sarif
+gitleaks-report.*
+semgrep-report.*
 secrets/
 credentials/
 

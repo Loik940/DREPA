@@ -8,6 +8,6 @@ import type { Database } from '@/types/database.types';
 export type ModerationStatus = 'pending' | 'reviewed' | 'dismissed';
 export type ModerationDecision = 'hide' | 'dismiss' | 'restore';
 export type ModerationReport =
-  Database['public']['Functions']['get_community_moderation_queue']['Returns'][number];
+  Database['public']['Functions']['get_community_moderation_queue']['Returns'][number] & { can_restore?: boolean };
 export type ModerationHistoryItem =
   Database['public']['Functions']['get_community_moderation_history']['Returns'][number];

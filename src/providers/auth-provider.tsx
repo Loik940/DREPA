@@ -5,13 +5,15 @@ import { createContext, useContext, useEffect, useState, type PropsWithChildren 
 
 import {
   requestPasswordReset,
+  reauthenticateForAccountDeletion,
   signIn,
   signOut,
   signUp,
-  deleteAccount,
+  invokeDeleteAccount,
   updatePassword,
 } from '@/features/auth/auth-service';
 import { cancelAllDrepaNotifications } from '@/features/medications/notifications';
+import { setActiveMedicationOwner } from '@/features/medications/operation-lock';
 import { invalidatePrivateQueries, removePrivateQueries } from '@/lib/query-client';
 import { supabase } from '../lib/supabase';
 
@@ -74,6 +76,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     // Un changement de compte purge d’abord le cache privé de l’utilisateur précédent.
     const applySession = (nextSession: Session | null) => {
       const nextUserId = nextSession?.user.id ?? null;
+      setActiveMedicationOwner(nextUserId);
 
       if (activeUserId && activeUserId !== nextUserId) {
         removePrivateQueries(activeUserId);
@@ -221,15 +224,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const handleDeleteAccount = async (password: string) => {
     const email = session?.user.email;
     if (!email) throw new Error('Account email is unavailable.');
-    await deleteAccount(email, password);
+    await reauthenticateForAccountDeletion(email, password);
     try {
-      try {
-        await cancelAllDrepaNotifications();
-      } catch {
-        // La suppression distante reste prioritaire sur le nettoyage Android local.
-      }
-      await signOut();
+      await invokeDeleteAccount();
     } finally {
+      await supabase?.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      await cancelAllDrepaNotifications().catch(() => undefined);
       setSession(null);
       setStatus('unauthenticated');
       removePrivateQueries();

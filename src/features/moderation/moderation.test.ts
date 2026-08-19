@@ -41,8 +41,9 @@ describe('moderation contracts', () => {
     ).toBe(false);
   });
 
-  it('masque la restauration tant que le RPC ne fournit pas toutes les garanties', () => {
-    expect(canRestore(report)).toBe(false);
+  it('autorise uniquement une restauration confirmée par le serveur', () => {
+    expect(canRestore({ ...report, can_restore: true })).toBe(true);
+    expect(canRestore({ ...report, can_restore: false })).toBe(false);
     expect(canRestore({ ...report, is_hidden: false })).toBe(false);
     expect(canRestore({ ...report, status: 'pending' })).toBe(false);
     expect(canRestore({ ...report, content: null })).toBe(false);

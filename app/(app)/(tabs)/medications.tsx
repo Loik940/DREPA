@@ -110,7 +110,7 @@ export default function MedicationsScreen() {
             {reminders.map((item) => (
               <ReminderCard
                 item={item}
-                key={item.reminder.id}
+                key={item.displayId}
                 loading={actionLoading}
                 onTaken={() => void handleReminderAction(() => markTaken.mutateAsync({ medicationId: item.medication.id, intakeId: item.intakeId, originalScheduledAt: item.originalScheduledAt, snoozeNotificationId: item.snoozeNotificationId, snoozedUntil: item.snoozedUntil }))}
                 onSnooze={() => void handleReminderAction(() => snooze.mutateAsync({ medicationId: item.medication.id, intakeId: item.intakeId, originalScheduledAt: item.originalScheduledAt, snoozeNotificationId: item.snoozeNotificationId, snoozedUntil: item.snoozedUntil }))}

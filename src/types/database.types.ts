@@ -182,7 +182,7 @@ export type Database = {
       community_posts: {
         Row: {
           id: string;
-          user_id: string;
+          user_id: string | null;
           author_alias: string;
           category: 'testimony' | 'question' | 'motivation' | 'daily_life' | 'resources';
           content: string;
@@ -208,7 +208,7 @@ export type Database = {
         Row: {
           id: string;
           post_id: string;
-          user_id: string;
+          user_id: string | null;
           author_alias: string;
           content: string;
           is_hidden: boolean;
@@ -355,6 +355,26 @@ export type Database = {
       };
     };
     Functions: {
+      accept_user_consents: {
+        Args: {
+          target_terms_version: string;
+          target_privacy_version: string;
+          target_community_guidelines_version: string;
+        };
+        Returns: string;
+      };
+      can_restore_community_report: {
+        Args: { target_report_id: string };
+        Returns: boolean;
+      };
+      revoke_user_consents: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      set_community_post_support: {
+        Args: { target_post_id: string; desired_state: boolean };
+        Returns: { has_supported: boolean; support_count: number }[];
+      };
       is_admin: {
         Args: Record<string, never>;
         Returns: boolean;

@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.ns", "dom"]
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-window"]
+    }
+  }
+}

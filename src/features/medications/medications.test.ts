@@ -90,14 +90,33 @@ describe('medication contracts', () => {
     expect(rolling.mode).toBe('dated');
     expect(rolling.occurrences).toHaveLength(30);
     expect(buildMedicationNotificationSchedule('medication-a', '08:00', '2026-08-08', null, now).occurrences).toHaveLength(29);
-    expect(() => buildMedicationNotificationSchedule('medication-a', '08:00', '2026-08-07', '2027-08-08', now)).toThrow();
+    expect(buildMedicationNotificationSchedule('medication-a', '08:00', '2026-08-07', '2027-08-08', now).occurrences).toHaveLength(30);
     expect(() => assertMedicationNotificationBudget(
       'medication-a',
-      ['08:00', '20:00'],
+      Array.from({ length: 13 }, (_, index) => `${String(index + 1).padStart(2, '0')}:00`),
       '2026-08-07',
       '2027-02-07',
       now,
     )).toThrow();
+  });
+
+  it('keeps a snoozed reminder visible after midnight', () => {
+    const now = new Date(2026, 7, 8, 0, 5, 0);
+    const intake: MedicationIntake = {
+      id: 'carryover-intake',
+      user_id: 'user-a',
+      medication_id: medication.id,
+      scheduled_at: new Date(2026, 7, 7, 23, 55, 0).toISOString(),
+      status: 'snoozed',
+      taken_at: null,
+      snoozed_until: new Date(2026, 7, 8, 0, 10, 0).toISOString(),
+      snooze_notification_id: 'snooze-a',
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    };
+    const lateReminder = { ...reminder, reminder_time: '23:55:00' };
+    const result = buildTodayReminders([medication], [lateReminder], [intake], now);
+    expect(result.some((item) => item.displayId === intake.id && item.status === 'snoozed')).toBe(true);
   });
 
   it('classifies 403 as an RLS error', () => {

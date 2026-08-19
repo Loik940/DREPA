@@ -41,7 +41,6 @@ function requireClient(operation: CommunityOperation): CommunityClient {
 // La seconde lecture ne récupère que les réactions du membre pour les publications de la page.
 async function addOwnSupport(
   client: CommunityClient,
-  userId: string,
   posts: readonly CommunityPost[],
 ): Promise<CommunityPostFeedItem[]> {
   const postIds = posts.map((post) => post.id);
@@ -50,7 +49,6 @@ async function addOwnSupport(
   const { data, error } = await client
     .from('community_post_reactions')
     .select('post_id')
-    .eq('user_id', userId)
     .in('post_id', postIds);
 
   if (error) throw error;
@@ -81,7 +79,7 @@ async function fetchCommunityPostsPage(
 
     const { data, error } = await query.limit(COMMUNITY_POSTS_PAGE_SIZE);
     if (error) throw error;
-    return await addOwnSupport(client, userId, data ?? []);
+    return await addOwnSupport(client, data ?? []);
   } catch (error) {
     throw classifyCommunityError(error, 'list');
   }
@@ -94,9 +92,8 @@ async function fetchCommunityPostDetail(userId: string, id: string): Promise<Com
       client.from('community_posts_feed').select('*').eq('id', id).maybeSingle(),
       client
         .from('community_post_reactions')
-        .select('id')
+        .select('post_id')
         .eq('post_id', id)
-        .eq('user_id', userId)
         .maybeSingle(),
     ]);
 

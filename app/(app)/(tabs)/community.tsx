@@ -91,7 +91,7 @@ function FeedPostCard({ post, userId, onOpen, onReport }: FeedPostCardProps) {
     supportLockRef.current = true;
     setSupportError(false);
     try {
-      await supportMutation.mutateAsync();
+      await supportMutation.mutateAsync(!post.has_supported);
     } catch {
       setSupportError(true);
     } finally {

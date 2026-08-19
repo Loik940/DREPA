@@ -103,17 +103,17 @@ export function PostCard({ post, onOpen, onSupport, onReport, supportLoading }: 
             </AppText>
           </View>
         )}
-        <Pressable
-          accessibilityHint="Ouvre le formulaire de signalement."
-          accessibilityLabel="Signaler cette publication"
-          accessibilityRole="button"
-          onPress={onReport}
-          style={({ pressed }) => [styles.textAction, { opacity: pressed ? 0.72 : 1 }]}
-        >
-          <AppText variant="label" color="sos">
-            Signaler
-          </AppText>
-        </Pressable>
+        {!post.is_own ? (
+          <Pressable
+            accessibilityHint="Ouvre le formulaire de signalement."
+            accessibilityLabel="Signaler cette publication"
+            accessibilityRole="button"
+            onPress={onReport}
+            style={({ pressed }) => [styles.textAction, { opacity: pressed ? 0.72 : 1 }]}
+          >
+            <AppText variant="label" color="sos">Signaler</AppText>
+          </Pressable>
+        ) : null}
       </View>
     </Card>
   );

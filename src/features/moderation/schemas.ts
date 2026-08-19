@@ -15,8 +15,5 @@ export const moderationDecisionSchema = z.object({
 export type ModerationDecisionValues = z.infer<typeof moderationDecisionSchema>;
 
 export function canRestore(report: ModerationReport): boolean {
-  // Le contrat RPC actuel n’expose pas deleted_at ni la visibilité du parent d’un commentaire.
-  // La restauration reste donc masquée plutôt que de proposer une action potentiellement incohérente.
-  void report;
-  return false;
+  return report.can_restore === true && report.status === 'reviewed';
 }

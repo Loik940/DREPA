@@ -32,11 +32,11 @@ export function StartupProvider({ children }: PropsWithChildren) {
     };
     const timeout = setTimeout(() => finish(false), STARTUP_STORAGE_TIMEOUT_MS);
 
-    void Promise.all([
+    void Promise.allSettled([
       AsyncStorage.getItem(WELCOME_SEEN_KEY),
       retryPendingNotificationCleanup(),
     ])
-      .then(([value]) => finish(value === 'true'))
+      .then(([welcomeResult]) => finish(welcomeResult.status === 'fulfilled' && welcomeResult.value === 'true'))
       .catch(() => finish(false))
       .finally(() => clearTimeout(timeout));
 

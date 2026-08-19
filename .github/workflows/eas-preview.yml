@@ -25,7 +25,7 @@ jobs:
       - name: Récupérer le dépôt
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Configurer Node.js
@@ -68,6 +68,9 @@ jobs:
         with:
           eas-version: 22.0.0
           token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Vérifier les variables publiques EAS
+        run: eas env:exec preview "npm run env:check -- --expected=preview" --non-interactive
 
       - name: Lancer le build Android Preview
         run: eas build --platform android --profile preview --non-interactive

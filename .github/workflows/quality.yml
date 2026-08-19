@@ -30,7 +30,7 @@ jobs:
       - name: Récupérer le dépôt
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Configurer Node.js
@@ -41,6 +41,26 @@ jobs:
 
       - name: Installer les dépendances
         run: npm ci
+
+      - name: Scanner les secrets dans tout l'historique
+        run: |
+          go install github.com/gitleaks/gitleaks/v8@v8.28.0
+          "$(go env GOPATH)/bin/gitleaks" detect --source . --redact --no-banner
+
+      - name: Scanner le code avec Semgrep Community
+        run: |
+          python -m pip install --disable-pip-version-check semgrep==1.173.0
+          semgrep scan --config auto --metrics=off --disable-version-check --error --exclude node_modules --exclude .expo .
+
+      - name: Configurer Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.5.0
+
+      - name: Vérifier l'Edge Function
+        run: |
+          deno check --config supabase/functions/deno.json supabase/functions/delete-account/index.ts
+          deno lint --config supabase/functions/deno.json supabase/functions/delete-account/index.ts
 
       - name: Démarrer et vérifier Supabase local
         run: |

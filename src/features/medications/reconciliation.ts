@@ -25,17 +25,23 @@ type ScheduledNotification = Awaited<ReturnType<typeof getScheduledNotifications
 export function useMedicationNotificationReconciliation(userId: string | undefined, enabled: boolean) {
   useEffect(() => {
     if (!userId || !enabled) return undefined;
-    resumeMedicationNotificationScheduling();
     let active = true;
     let running = false;
+    let rerunRequested = false;
     let retry: ReturnType<typeof setTimeout> | undefined;
+    let timeSignature = getLocalTimeSignature();
 
     const run = async (attempt = 0) => {
-      if (!active || running) return;
+      if (!active) return;
+      if (running) {
+        rerunRequested = true;
+        return;
+      }
       running = true;
       setMedicationNotificationHealth('checking');
       try {
-        const result = await runMedicationOperation(() => reconcileMedicationNotifications(userId, () => active));
+        if (!await resumeMedicationNotificationScheduling()) throw new Error('Le nettoyage des notifications est incomplet.');
+        const result = await runMedicationOperation(userId, () => reconcileMedicationNotifications(userId, () => active));
         if (active && result) setMedicationNotificationHealth(result);
       } catch {
         if (active && attempt < 2) {
@@ -45,6 +51,10 @@ export function useMedicationNotificationReconciliation(userId: string | undefin
         }
       } finally {
         running = false;
+        if (active && rerunRequested) {
+          rerunRequested = false;
+          void run();
+        }
       }
     };
 
@@ -52,11 +62,19 @@ export function useMedicationNotificationReconciliation(userId: string | undefin
     const appStateSubscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') void run();
     });
+    const timeSubscription = setInterval(() => {
+      const nextSignature = getLocalTimeSignature();
+      if (nextSignature !== timeSignature) {
+        timeSignature = nextSignature;
+        void run();
+      }
+    }, 60_000);
 
     return () => {
       active = false;
       setMedicationNotificationHealth('unknown');
       clearTimeout(retry);
+      clearInterval(timeSubscription);
       appStateSubscription.remove();
     };
   }, [enabled, userId]);
@@ -189,8 +207,6 @@ export async function reconcileMedicationNotifications(userId: string, shouldCon
         continue;
       }
       const { data, error } = await client.from('medication_intakes').update({
-        status: 'pending',
-        snoozed_until: null,
         snooze_notification_id: null,
       }).eq('id', intake.id)
         .eq('user_id', userId)
@@ -223,6 +239,10 @@ export async function reconcileMedicationNotifications(userId: string, shouldCon
 
   if (repairFailed) throw new Error('La réconciliation des notifications doit être relancée.');
   return permissionGranted ? 'scheduled' as const : 'permission-denied' as const;
+}
+
+function getLocalTimeSignature(date = new Date()) {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}:${date.getTimezoneOffset()}:${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
 }
 
 function buildKnownMedicationSeries(medications: ReconciliationMedication[], reminders: ReconciliationReminder[]) {

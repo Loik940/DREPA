@@ -4,6 +4,7 @@ import type { Medication, MedicationIntake, MedicationReminder } from './queries
 export type ReminderDisplayStatus = 'late' | 'pending' | 'taken' | 'snoozed' | 'skipped';
 
 export type TodayReminder = {
+  displayId: string;
   medication: Medication;
   reminder: MedicationReminder;
   intakeId: string | null;
@@ -25,8 +26,10 @@ export function getTodayBounds(date = new Date()) {
 
 export function buildTodayReminders(medications: Medication[], reminders: MedicationReminder[], intakes: MedicationIntake[], now = new Date()): TodayReminder[] {
   const localDay = formatLocalDay(now);
+  const dayStart = new Date(now);
+  dayStart.setHours(0, 0, 0, 0);
 
-  return reminders
+  const currentReminders = reminders
     .filter((reminder) => reminder.is_enabled)
     .flatMap((reminder) => {
       const medication = medications.find((item) => item.id === reminder.medication_id
@@ -47,6 +50,7 @@ export function buildTodayReminders(medications: Medication[], reminders: Medica
         ? effectiveSchedule.getTime() > now.getTime() ? 'snoozed' : 'late'
         : intake?.status ?? (scheduled.getTime() < now.getTime() ? 'late' : 'pending');
       return [{
+        displayId: `${reminder.id}:${originalScheduledAt}`,
         medication,
         reminder,
         intakeId: intake?.id ?? null,
@@ -56,7 +60,35 @@ export function buildTodayReminders(medications: Medication[], reminders: Medica
         snoozedUntil: intake?.snoozed_until ?? null,
         status,
       }];
-    })
+    });
+
+  const carryoverReminders = intakes.flatMap((intake) => {
+    if (intake.status !== 'snoozed' || !intake.snoozed_until) return [];
+    const original = new Date(intake.scheduled_at);
+    if (original.getTime() >= dayStart.getTime() || new Date(intake.snoozed_until).getTime() < dayStart.getTime()) return [];
+    const medication = medications.find((item) => item.id === intake.medication_id && item.is_active);
+    if (!medication) return [];
+    const reminder = reminders.find((item) => {
+      if (item.medication_id !== intake.medication_id || !item.is_enabled) return false;
+      const [hour, minute] = item.reminder_time.slice(0, 5).split(':').map(Number);
+      return original.getHours() === hour && original.getMinutes() === minute;
+    });
+    if (!reminder) return [];
+    const effectiveSchedule = new Date(intake.snoozed_until);
+    return [{
+      displayId: intake.id,
+      medication,
+      reminder,
+      intakeId: intake.id,
+      originalScheduledAt: intake.scheduled_at,
+      scheduledAt: effectiveSchedule.toISOString(),
+      snoozeNotificationId: intake.snooze_notification_id,
+      snoozedUntil: intake.snoozed_until,
+      status: effectiveSchedule.getTime() > now.getTime() ? 'snoozed' as const : 'late' as const,
+    }];
+  });
+
+  return [...currentReminders, ...carryoverReminders]
     .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
 }
 

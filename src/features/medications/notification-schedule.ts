@@ -26,7 +26,8 @@ export function buildMedicationNotificationSchedule(
 
   const rollingEnd = new Date(today);
   rollingEnd.setDate(rollingEnd.getDate() + ROLLING_REMINDER_WINDOW_DAYS - 1);
-  const end = endDate ? parseLocalDate(endDate) : rollingEnd;
+  const declaredEnd = endDate ? parseLocalDate(endDate) : rollingEnd;
+  const end = new Date(Math.min(declaredEnd.getTime(), rollingEnd.getTime()));
   const cursor = new Date(Math.max(start.getTime(), today.getTime()));
   const occurrences: MedicationNotificationSchedule['occurrences'] = [];
   const occurrenceCount = countLocalDays(cursor, end);

@@ -1,7 +1,7 @@
 // Schéma Zod des traitements prescrits saisis par l’utilisateur et de leurs horaires de rappel.
 import { z } from 'zod';
 import { formatLocalDate, parseLocalDate } from './date-time';
-import { countLocalDays, MAX_SCHEDULED_MEDICATION_NOTIFICATIONS } from './notification-schedule';
+import { countLocalDays, MAX_SCHEDULED_MEDICATION_NOTIFICATIONS, ROLLING_REMINDER_WINDOW_DAYS } from './notification-schedule';
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -36,7 +36,10 @@ export const medicationSchema = z
 
     if (values.reminders_enabled && parsedStart && parsedEnd) {
       const today = parseLocalDate(formatLocalDate(new Date()));
-      const remainingDays = countLocalDays(new Date(Math.max(today.getTime(), parsedStart.getTime())), parsedEnd);
+      const remainingDays = Math.min(
+        countLocalDays(new Date(Math.max(today.getTime(), parsedStart.getTime())), parsedEnd),
+        ROLLING_REMINDER_WINDOW_DAYS,
+      );
       const totalOccurrences = remainingDays * parseReminderTimes(values.reminder_times).length;
       if (totalOccurrences > MAX_SCHEDULED_MEDICATION_NOTIFICATIONS) {
         context.addIssue({

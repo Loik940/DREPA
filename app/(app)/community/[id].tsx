@@ -60,7 +60,7 @@ export default function CommunityPostDetailScreen() {
     supportLockRef.current = true;
     setSupportError(false);
     try {
-      await supportMutation.mutateAsync();
+      await supportMutation.mutateAsync(!postQuery.data?.has_supported);
     } catch {
       setSupportError(true);
     } finally {

@@ -4,6 +4,8 @@
 // Invalide seulement les listes et détails concernés.
 // Traite un soutien concurrent déjà créé comme un succès.
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import * as Crypto from 'expo-crypto';
+import { useRef } from 'react';
 
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
@@ -55,13 +57,10 @@ async function invalidatePost(
   await Promise.all(invalidations);
 }
 
-function isDuplicateError(error: unknown): boolean {
-  return (error as { code?: string } | null)?.code === '23505';
-}
-
 export function useCreatePostMutation(userId: string | undefined) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
+  const operationId = useRef(Crypto.randomUUID());
 
   return useMutation({
     mutationFn: async (values: PostValues): Promise<CreatedCommunityContent> => {
@@ -69,16 +68,21 @@ export function useCreatePostMutation(userId: string | undefined) {
       try {
         const { data, error } = await requireClient('create')
           .from('community_posts')
-          .insert(buildCommunityPostPayload(ownerId, values))
+          .insert({ id: operationId.current, ...buildCommunityPostPayload(ownerId, values) })
           .select('id')
           .single();
-        if (error) throw error;
-        return data;
+        if (!error) return data;
+        if ((error as { code?: string }).code === '23505') {
+          const existing = await requireClient('create').from('community_posts').select('id').eq('id', operationId.current).maybeSingle();
+          if (!existing.error && existing.data) return existing.data;
+        }
+        throw error;
       } catch (error) {
         throw classifyCommunityError(error, 'create');
       }
     },
     onSuccess: async () => {
+      operationId.current = Crypto.randomUUID();
       if (sessionUserId) await invalidateFeed(queryClient, sessionUserId);
     },
   });
@@ -124,6 +128,7 @@ export function useCreateCommentMutation(
 ) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
+  const operationId = useRef(Crypto.randomUUID());
 
   return useMutation({
     mutationFn: async (values: CommentValues): Promise<CreatedCommunityContent> => {
@@ -132,16 +137,21 @@ export function useCreateCommentMutation(
       try {
         const { data, error } = await requireClient('comment')
           .from('community_comments')
-          .insert(buildCommunityCommentPayload(ownerId, postId, values))
+          .insert({ id: operationId.current, ...buildCommunityCommentPayload(ownerId, postId, values) })
           .select('id')
           .single();
-        if (error) throw error;
-        return data;
+        if (!error) return data;
+        if ((error as { code?: string }).code === '23505') {
+          const existing = await requireClient('comment').from('community_comments').select('id').eq('id', operationId.current).maybeSingle();
+          if (!existing.error && existing.data) return existing.data;
+        }
+        throw error;
       } catch (error) {
         throw classifyCommunityError(error, 'comment');
       }
     },
     onSuccess: async () => {
+      operationId.current = Crypto.randomUUID();
       if (sessionUserId && postId) await invalidatePost(queryClient, sessionUserId, postId, true);
     },
   });
@@ -190,36 +200,18 @@ export function useToggleSupportMutation(
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (): Promise<{ hasSupported: boolean }> => {
-      const ownerId = requireUserId(sessionUserId, 'reaction');
+    mutationFn: async (desiredState: boolean): Promise<{ hasSupported: boolean }> => {
+      requireUserId(sessionUserId, 'reaction');
       if (!postId) throw new CommunityDataError('reaction', 'not_found', 'Ce contenu est introuvable.');
       const client = requireClient('reaction');
 
       try {
-        const { data: existing, error: selectError } = await client
-          .from('community_post_reactions')
-          .select('id')
-          .eq('post_id', postId)
-          .eq('user_id', ownerId)
-          .maybeSingle();
-        if (selectError) throw selectError;
-
-        if (existing) {
-          const { error } = await client
-            .from('community_post_reactions')
-            .delete()
-            .eq('id', existing.id)
-            .eq('post_id', postId)
-            .eq('user_id', ownerId);
-          if (error) throw error;
-          return { hasSupported: false };
-        }
-
-        const { error } = await client
-          .from('community_post_reactions')
-          .insert({ post_id: postId, user_id: ownerId, reaction_type: 'support' });
-        if (error && !isDuplicateError(error)) throw error;
-        return { hasSupported: true };
+        const { data, error } = await client.rpc('set_community_post_support', {
+          target_post_id: postId,
+          desired_state: desiredState,
+        });
+        if (error) throw error;
+        return { hasSupported: data?.[0]?.has_supported ?? desiredState };
       } catch (error) {
         throw classifyCommunityError(error, 'reaction');
       }
@@ -233,6 +225,7 @@ export function useToggleSupportMutation(
 export function useReportMutation(userId: string | undefined) {
   const sessionUserId = useSessionUserId(userId);
   const queryClient = useQueryClient();
+  const operationId = useRef(Crypto.randomUUID());
 
   return useMutation({
     mutationFn: async ({
@@ -245,6 +238,7 @@ export function useReportMutation(userId: string | undefined) {
       const ownerId = requireUserId(sessionUserId, 'report');
       try {
         const payload: Database['public']['Tables']['community_reports']['Insert'] = {
+          id: operationId.current,
           reporter_id: ownerId,
           post_id: target.type === 'post' ? target.postId : null,
           comment_id: target.type === 'comment' ? target.commentId : null,
@@ -256,13 +250,18 @@ export function useReportMutation(userId: string | undefined) {
           .insert(payload)
           .select('id')
           .single();
-        if (error) throw error;
-        return data;
+        if (!error) return data;
+        if ((error as { code?: string }).code === '23505') {
+          const existing = await requireClient('report').from('community_reports').select('id').eq('id', operationId.current).maybeSingle();
+          if (!existing.error && existing.data) return existing.data;
+        }
+        throw error;
       } catch (error) {
         throw classifyCommunityError(error, 'report');
       }
     },
     onSuccess: async (_data, variables) => {
+      operationId.current = Crypto.randomUUID();
       if (!sessionUserId) return;
       await invalidatePost(
         queryClient,

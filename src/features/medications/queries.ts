@@ -27,7 +27,9 @@ async function fetchMedicationDashboard(userId: string) {
     const [medicationsResult, remindersResult, intakesResult] = await Promise.all([
       client.from('medications').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       client.from('medication_reminders').select('*').eq('user_id', userId).order('reminder_time'),
-      client.from('medication_intakes').select('*').eq('user_id', userId).gte('scheduled_at', start).lt('scheduled_at', end),
+      client.from('medication_intakes').select('*').eq('user_id', userId).or(
+        `and(scheduled_at.gte.${start},scheduled_at.lt.${end}),and(status.eq.snoozed,snoozed_until.gte.${start})`,
+      ),
     ]);
 
     if (medicationsResult.error) throw medicationsResult.error;

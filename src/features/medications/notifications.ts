@@ -5,6 +5,8 @@ import { Platform } from 'react-native';
 
 import { NotificationCancellationError, uniqueNotificationIds } from './notification-ids';
 import { buildMedicationNotificationSchedule, MAX_SCHEDULED_MEDICATION_NOTIFICATIONS } from './notification-schedule';
+import { setMedicationNotificationHealth } from './notification-health';
+import { assertCurrentMedicationOperation } from './operation-lock';
 
 export { NotificationCancellationError } from './notification-ids';
 
@@ -12,6 +14,7 @@ const CHANNEL_ID = 'medication-reminders';
 const CLEANUP_PENDING_KEY = '@drepa/notification-cleanup-pending';
 let schedulingQueue: Promise<void> = Promise.resolve();
 let schedulingSuspended = false;
+let cleanupPromise: Promise<void> | null = null;
 
 export class NotificationPermissionError extends Error {}
 export class NotificationSchedulingError extends Error {
@@ -81,6 +84,7 @@ async function scheduleMedicationReminderUnlocked(
   endDate: string | null,
 ) {
   if (schedulingSuspended) throw new Error('La programmation est suspendue pendant le changement de session.');
+  assertCurrentMedicationOperation();
   const schedule = buildMedicationNotificationSchedule(medicationId, time, startDate, endDate);
   const content = { title: 'Rappel DRÉPA', body: 'Vous avez un rappel dans DRÉPA.', data: { route: 'medications' }, sound: true } as const;
   const scheduledIds: string[] = [];
@@ -89,6 +93,7 @@ async function scheduleMedicationReminderUnlocked(
   try {
     await ensureNotificationCapacity(requestedCount, schedule.seriesId);
     for (const occurrence of schedule.occurrences) {
+      assertCurrentMedicationOperation();
       await Notifications.scheduleNotificationAsync({
         identifier: occurrence.identifier,
         content,
@@ -116,6 +121,7 @@ export async function scheduleMedicationReminderTest() {
   await ensureMedicationNotificationPermission();
   return runWithSchedulingLock(async () => {
     if (schedulingSuspended) throw new Error('La programmation est suspendue pendant le changement de session.');
+    assertCurrentMedicationOperation();
     await ensureNotificationCapacity(1);
     return Notifications.scheduleNotificationAsync({
       content: { title: 'Test DRÉPA', body: 'Les notifications DRÉPA fonctionnent sur cet appareil.', sound: true },
@@ -135,6 +141,7 @@ export async function scheduleMedicationSnooze(minutes = 10, identifier?: string
 export function scheduleMedicationSnoozeAt(date: Date, identifier: string) {
   return runWithSchedulingLock(async () => {
     if (schedulingSuspended) throw new Error('La programmation est suspendue pendant le changement de session.');
+    assertCurrentMedicationOperation();
     await ensureNotificationCapacity(1, identifier);
     return Notifications.scheduleNotificationAsync({
       identifier,
@@ -164,7 +171,8 @@ export async function hasMedicationNotificationPermission() {
 export function cancelAllDrepaNotifications() {
   // Toutes les notifications planifiées appartiennent à cette application Android, y compris les anciens IDs aléatoires.
   schedulingSuspended = true;
-  return runWithSchedulingLock(async () => {
+  if (cleanupPromise) return cleanupPromise;
+  cleanupPromise = runWithSchedulingLock(async () => {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
       await AsyncStorage.removeItem(CLEANUP_PENDING_KEY);
@@ -172,16 +180,42 @@ export function cancelAllDrepaNotifications() {
       await AsyncStorage.setItem(CLEANUP_PENDING_KEY, 'true').catch(() => undefined);
       throw error;
     }
+  }).finally(() => {
+    cleanupPromise = null;
   });
+  return cleanupPromise;
 }
 
-export function resumeMedicationNotificationScheduling() {
+export async function resumeMedicationNotificationScheduling() {
+  const cleaned = await retryPendingNotificationCleanup();
+  if (!cleaned) {
+    schedulingSuspended = true;
+    setMedicationNotificationHealth('error');
+    return false;
+  }
   schedulingSuspended = false;
+  return true;
 }
 
 export async function retryPendingNotificationCleanup() {
-  const pending = await AsyncStorage.getItem(CLEANUP_PENDING_KEY).catch(() => null);
-  if (pending === 'true') await cancelAllDrepaNotifications();
+  let pending: string | null;
+  try {
+    pending = await AsyncStorage.getItem(CLEANUP_PENDING_KEY);
+  } catch {
+    schedulingSuspended = true;
+    return false;
+  }
+  if (pending !== 'true') {
+    if (cleanupPromise) await cleanupPromise;
+    return true;
+  }
+  try {
+    await cancelAllDrepaNotifications();
+    return true;
+  } catch {
+    schedulingSuspended = true;
+    return false;
+  }
 }
 
 // L’ordre séquentiel permet de connaître exactement les identifiants annulés avant un éventuel échec.

@@ -9,7 +9,7 @@ Ce document sépare les contrôles déjà exécutés des opérations qui exigent
 - branche `main` synchronisée au moment du contrôle ;
 - workflow GitHub « Qualité et sécurité » réussi ;
 - TypeScript, ESLint, Jest, Expo Doctor et export Android réussis ;
-- 81 tests réussis avec seuils de couverture actifs ;
+- 86 tests réussis avec seuils de couverture actifs ;
 - APK EAS Preview terminé pour `bj.drepa.app`, version `1.0.0 (1)` ;
 - aucun téléphone Android détecté par ADB sur le poste de validation.
 
@@ -17,8 +17,8 @@ Ce document sépare les contrôles déjà exécutés des opérations qui exigent
 
 - un seul projet nommé `DREPA` est lié au dépôt ; aucun projet staging distinct n’existe dans l’organisation ;
 - les seize migrations historiques sont présentes côté distant ;
-- `20260815121000_anonymize_community_aliases.sql` et `20260815122000_harden_private_data_constraints.sql` sont en attente ;
-- `npx supabase db push --dry-run` confirme que seules ces deux migrations seraient appliquées ;
+- `20260815121000_anonymize_community_aliases.sql`, `20260815122000_harden_private_data_constraints.sql` et `20260819150000_harden_server_mutations.sql` sont en attente ;
+- `npx supabase db push --dry-run` doit confirmer que seules ces trois migrations seraient appliquées ;
 - la fonction distante `delete-account` est active en version 1 avec vérification JWT ;
 - le durcissement local récent de cette fonction n’est pas encore déployé ;
 - les sauvegardes physiques utilisent WAL-G, mais PITR n’est pas activé et la CLI ne retourne aucun point de restauration disponible ;

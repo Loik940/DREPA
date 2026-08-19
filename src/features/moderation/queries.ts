@@ -91,11 +91,16 @@ async function fetchModerationQueuePage(
 
 async function fetchModerationReport(reportId: string): Promise<ModerationReport | null> {
   try {
-    const { data, error } = await requireClient('detail').rpc('get_community_moderation_report', {
-      target_report_id: reportId,
-    });
-    if (error) throw error;
-    return data?.[0] ?? null;
+    const client = requireClient('detail');
+    const [reportResult, restoreResult] = await Promise.all([
+      client.rpc('get_community_moderation_report', { target_report_id: reportId }),
+      client.rpc('can_restore_community_report', { target_report_id: reportId }),
+    ]);
+    if (reportResult.error) throw reportResult.error;
+    if (restoreResult.error) throw restoreResult.error;
+    return reportResult.data?.[0]
+      ? { ...reportResult.data[0], can_restore: restoreResult.data }
+      : null;
   } catch (error) {
     throw classifyModerationError(error, 'detail');
   }

@@ -1,5 +1,7 @@
 // Mutations Médicaments : gère le cycle des traitements, rappels et prises déclarées.
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import * as Crypto from 'expo-crypto';
+import { useRef } from 'react';
 
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database.types';
@@ -296,18 +298,20 @@ async function restoreCancelledSnapshots(
 
 export function useCreateMedicationMutation(userId: string | undefined) {
   const queryClient = useQueryClient();
+  const operationId = useRef(Crypto.randomUUID());
 
   return useMutation({
-    mutationFn: (values: MedicationValues) => runMedicationOperation(async () => {
+    mutationFn: (values: MedicationValues) => runMedicationOperation(userId, async () => {
       if (!userId) throw new MedicationDataError('create', 'session', 'La session utilisateur est indisponible.');
       const times = values.reminders_enabled ? parseReminderTimes(values.reminder_times) : [];
       assertMedicationNotificationBudget('new-medication', times, values.start_date, values.end_date || null);
       if (times.length) await ensureMedicationNotificationPermission();
 
       const client = requireClient('create');
-      const { data: medication, error: medicationError } = await client
+      const { data: insertedMedication, error: medicationError } = await client
         .from('medications')
         .insert({
+          id: operationId.current,
           user_id: userId,
           name: values.name,
           dosage: values.dosage,
@@ -320,13 +324,22 @@ export function useCreateMedicationMutation(userId: string | undefined) {
         .select()
         .single();
 
-      if (medicationError) throw classifyMedicationError(medicationError, 'create');
+      let medication = insertedMedication as Medication | null;
+      const createdNow = !medicationError;
+      if (medicationError) {
+        if ((medicationError as { code?: string }).code !== '23505') throw classifyMedicationError(medicationError, 'create');
+        const existing = await client.from('medications').select('*')
+          .eq('id', operationId.current).eq('user_id', userId).maybeSingle();
+        if (existing.error || !existing.data) throw classifyMedicationError(medicationError, 'create');
+        medication = existing.data as Medication;
+      }
+      if (!medication) throw new MedicationDataError('create', 'supabase', 'Le traitement ne peut pas être créé.');
 
       // Compensation locale : tout rappel créé est annulé si la base refuse la suite de la création.
       const scheduledIds: string[] = [];
       try {
         if (times.length) {
-          const { error } = await client.from('medication_reminders').insert(times.map((time) => ({
+          const { error } = await client.from('medication_reminders').upsert(times.map((time) => ({
             user_id: userId,
             medication_id: medication.id,
             reminder_time: time,
@@ -337,7 +350,7 @@ export function useCreateMedicationMutation(userId: string | undefined) {
               medication.start_date,
               medication.end_date,
             ).seriesId,
-          })));
+          })), { onConflict: 'medication_id,reminder_time', ignoreDuplicates: true });
           if (error) throw error;
         }
         for (const time of times) {
@@ -359,7 +372,7 @@ export function useCreateMedicationMutation(userId: string | undefined) {
         }
 
         // La ligne reste visible si une notification n’a pas pu être annulée, afin de ne pas perdre sa trace locale.
-        if (!compensationFailed) {
+        if (!compensationFailed && createdNow) {
           const { error: cleanupError } = await client.from('medications').delete().eq('id', medication.id).eq('user_id', userId);
           compensationFailed = Boolean(cleanupError);
         }
@@ -367,6 +380,7 @@ export function useCreateMedicationMutation(userId: string | undefined) {
       }
     }),
     onSuccess: async () => {
+      operationId.current = Crypto.randomUUID();
       if (userId) await invalidateMedicationQueries(queryClient, userId);
     },
   });
@@ -376,7 +390,7 @@ export function useUpdateMedicationMutation(userId: string | undefined, medicati
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (values: MedicationValues) => runMedicationOperation(async () => {
+    mutationFn: (values: MedicationValues) => runMedicationOperation(userId, async () => {
       if (!userId || !medicationId) throw new MedicationDataError('update', 'session', 'La session utilisateur est indisponible.');
       const client = requireClient('update');
       const [medicationResult, remindersResult, intakesResult] = await Promise.all([
@@ -616,7 +630,7 @@ export function useSetMedicationActiveMutation(userId: string | undefined, medic
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (active: boolean) => runMedicationOperation(async () => {
+    mutationFn: (active: boolean) => runMedicationOperation(userId, async () => {
       if (!userId || !medicationId) throw new MedicationDataError('activate', 'session', 'La session utilisateur est indisponible.');
       const client = requireClient('activate');
       const [medicationResult, remindersResult, intakesResult] = await Promise.all([
@@ -822,7 +836,7 @@ export function useDeleteMedicationMutation(userId: string | undefined, medicati
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => runMedicationOperation(async () => {
+    mutationFn: () => runMedicationOperation(userId, async () => {
       if (!userId || !medicationId) throw new MedicationDataError('delete', 'session', 'La session utilisateur est indisponible.');
       const client = requireClient('delete');
       const [medicationResult, remindersResult, intakesResult] = await Promise.all([
@@ -862,7 +876,17 @@ export function useDeleteMedicationMutation(userId: string | undefined, medicati
         if (!data) throw new MedicationDataError('delete', 'not_found', 'Ce traitement est introuvable.');
         return data;
       } catch (error) {
-        // Si la suppression serveur échoue, les notifications annulées sont recréées sans masquer l’échec initial.
+        // Une réponse perdue après suppression ne doit jamais recréer des alarmes pour une ligne disparue.
+        const verification = await client.from('medications').select('id')
+          .eq('id', medicationId).eq('user_id', userId).maybeSingle();
+        if (!verification.error && !verification.data) return { id: medicationId };
+        if (verification.error) {
+          throw new MedicationDataError(
+            'delete',
+            'supabase',
+            'Le résultat de la suppression ne peut pas être confirmé. Les rappels restent désactivés jusqu’à la prochaine synchronisation.',
+          );
+        }
         const compensationFailed = await runCompensationSteps([
           () => restoreCancelledSnapshots(client, userId, medication, reminders, snoozeIntakes, cancelledIds),
         ]);
@@ -874,7 +898,7 @@ export function useDeleteMedicationMutation(userId: string | undefined, medicati
         );
       }
     }),
-    onSuccess: async () => {
+    onSettled: async () => {
       if (userId) await invalidateMedicationQueries(queryClient, userId);
     },
   });
@@ -885,7 +909,7 @@ function useMedicationIntakeMutation(userId: string | undefined, action: Medicat
   const operation: MedicationOperation = action === 'snoozed' ? 'snooze' : action === 'skipped' ? 'skip' : 'intake';
 
   return useMutation({
-    mutationFn: (payload: MedicationIntakePayload) => runMedicationOperation(async () => {
+    mutationFn: (payload: MedicationIntakePayload) => runMedicationOperation(userId, async () => {
       if (!userId) throw new MedicationDataError(operation, 'session', 'La session utilisateur est indisponible.');
       const client = requireClient(operation);
       let newSnoozeNotificationId: string | null = null;

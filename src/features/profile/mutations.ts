@@ -60,15 +60,11 @@ export function useAcceptConsentMutation(userId: string) {
   return useMutation({
     mutationFn: async (_values: ConsentValues) => {
       const { data, error } = await requireSupabase()
-        .from('user_consents')
-        .insert({
-          user_id: userId,
-          terms_version: legalVersions.terms,
-          privacy_version: legalVersions.privacy,
-          community_guidelines_version: legalVersions.communityGuidelines,
-        })
-        .select()
-        .single();
+        .rpc('accept_user_consents', {
+          target_terms_version: legalVersions.terms,
+          target_privacy_version: legalVersions.privacy,
+          target_community_guidelines_version: legalVersions.communityGuidelines,
+        });
 
       if (error) {
         throw error;
@@ -89,11 +85,7 @@ export function useRevokeConsentMutation(userId: string) {
   return useMutation({
     mutationFn: async () => {
       const { data, error } = await requireSupabase()
-        .from('user_consents')
-        .update({ revoked_at: new Date().toISOString() })
-        .eq('user_id', userId)
-        .is('revoked_at', null)
-        .select('id');
+        .rpc('revoke_user_consents');
       if (error) throw error;
       return data;
     },

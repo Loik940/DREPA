@@ -61,8 +61,9 @@ export default function ProfileScreen() {
             .then(() => revokeConsent.mutateAsync())
             .then(() => router.replace('/(app)/consent'))
             .catch(async () => {
-              resumeMedicationNotificationScheduling();
-              if (user?.id) await reconcileMedicationNotifications(user.id).catch(() => undefined);
+              if (await resumeMedicationNotificationScheduling() && user?.id) {
+                await reconcileMedicationNotifications(user.id).catch(() => undefined);
+              }
               setDeleteError('Les consentements ne peuvent pas être retirés pour le moment.');
             }),
         },

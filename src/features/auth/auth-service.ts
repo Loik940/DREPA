@@ -65,7 +65,7 @@ export async function signIn(email: string, password: string) {
 
 export async function signOut() {
   try {
-    const { error } = await requireSupabase().auth.signOut();
+    const { error } = await requireSupabase().auth.signOut({ scope: 'local' });
 
     if (error) {
       throw error;
@@ -75,10 +75,17 @@ export async function signOut() {
   }
 }
 
-export async function deleteAccount(email: string, password: string) {
+export async function reauthenticateForAccountDeletion(email: string, password: string) {
   try {
     const { error: reauthenticationError } = await requireSupabase().auth.signInWithPassword({ email, password });
     if (reauthenticationError) throw reauthenticationError;
+  } catch (error) {
+    throw toAuthOperationError(error);
+  }
+}
+
+export async function invokeDeleteAccount() {
+  try {
     // La suppression est confiée à la fonction sécurisée qui contrôle la session côté serveur.
     const { error } = await requireSupabase().functions.invoke('delete-account', { body: {} });
 
