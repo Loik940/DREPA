@@ -1,5 +1,5 @@
 // Edge Function protégée : supprime uniquement le compte authentifié avec la clé serveur côté Supabase.
-import { createClient } from 'npm:@supabase/supabase-js@2.112.3';
+import { createClient } from '@supabase/supabase-js';
 
 const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
