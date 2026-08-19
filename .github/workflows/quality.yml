@@ -73,6 +73,7 @@ jobs:
         run: |
           deno check --config supabase/functions/delete-account/deno.json supabase/functions/delete-account/index.ts
           deno lint --config supabase/functions/delete-account/deno.json supabase/functions/delete-account/index.ts
+          deno test --config supabase/functions/delete-account/deno.json supabase/functions/delete-account/security_test.ts
 
       - name: Démarrer et vérifier Supabase local
         run: |

@@ -513,8 +513,9 @@ Le dossier contient actuellement sept composants partagés. Aucun huitième fich
 | `supabase/migrations/20260819150000_harden_server_mutations.sql` | Ferme les updates admin directs, ajoute RPC support/consentement, tombstones de compte, auto-signalement interdit, quotas et droit de restauration serveur. | Migration de cutover à tester avec deux membres et un admin avant application ; les anciennes versions mobiles deviennent incompatibles avec les écritures révoquées. | 19 |
 | `supabase/migrations/20260819190000_fix_security_regressions.sql` | Corrige tombstones commentaires, modération propriétaire, restauration, champs système de signalement, retraits de soutien, quotas et validation des contraintes. | Migration corrective à appliquer après la 19 ; vérifiée par reset et lint Supabase local avant staging. | 20 |
 | `supabase/migrations/20260819210000_close_security_edge_cases.sql` | Ferme les cas limites de visibilité tombstone, suppression admin, restauration verrouillée, retraits journalisés, quotas idempotents et intégrité profil/prises. | Migration corrective 21, couverte par pgTAP et à appliquer après la 20. | 21 |
+| `supabase/migrations/20260819230000_enforce_moderation_context.sql` | Réserve la visibilité au contexte RPC, refuse les tombstones et renforce la cohérence des reports. | Migration corrective 22 à appliquer après validation pgTAP. | 22 |
 
-L’ordre 10 à 21 est obligatoire. Les migrations 19 à 21 imposent un déploiement coordonné avec l’APK qui utilise les nouvelles RPC. Les migrations déjà appliquées ne doivent jamais être modifiées.
+L’ordre 10 à 22 est obligatoire. Les migrations 19 à 22 imposent un déploiement coordonné avec l’APK qui utilise les nouvelles RPC. Les migrations déjà appliquées ne doivent jamais être modifiées.
 
 Le rôle `admin` est attribué et modifié côté Supabase uniquement. L’application React Native possède désormais une interface de modération privilégiée, mais aucun formulaire de rôle ni clé `service_role`. Le rôle est revérifié au montage, à la reconnexion et toutes les 30 secondes. Un refus supprime les caches privés de modération. Les RPC contrôlent `is_admin()` et chaque décision reste humaine et auditée.
 
@@ -782,6 +783,8 @@ Les publications et commentaires restent textuels et communautaires. Les lecture
 | `src/providers/app-provider.tsx` | `QueryProvider`, `AuthProvider`, `StartupProvider` | `app/_layout.tsx`. |
 | `src/providers/query-provider.tsx` | TanStack Query, `query-client.ts` | `AppProvider`. |
 | `src/services/secure-storage.ts` | Expo SecureStore | `src/lib/supabase.ts`. |
+| `src/services/operation-id.ts` | Expo SecureStore et Crypto | UUID de création durable lié à l’empreinte du payload, purgé à la sortie du compte. |
+| `src/services/operation-id.test.ts` | Jest et mocks SecureStore/Crypto | Vérifie rejeu identique, remplacement sur payload différent et purge globale. |
 | `supabase/functions/delete-account/index.ts` | Supabase Auth Admin, secrets Edge Function | `auth-service.ts` via `functions.invoke`; ne jamais déployer la clé serveur au mobile. |
 | `src/types/database.types.ts` | Schéma des migrations existantes, dont tables Communauté, audit de modération et RPC administrateur | Client Supabase, code profil, journal, médicaments, Communauté et Modération. |
 | `supabase/migrations/20260811181000_create_user_roles.sql` | PostgreSQL, `auth.users`, `set_updated_at()` | Policies RLS Communauté et contrôle administratif côté Supabase. |

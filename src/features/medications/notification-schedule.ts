@@ -62,6 +62,9 @@ export function assertMedicationNotificationBudget(
   endDate: string | null,
   now = new Date(),
 ) {
+  if (times.length * ROLLING_REMINDER_WINDOW_DAYS > MAX_SCHEDULED_MEDICATION_NOTIFICATIONS) {
+    throw new RangeError(`Le traitement ne peut pas dépasser ${MAX_SCHEDULED_MEDICATION_NOTIFICATIONS} notifications planifiées.`);
+  }
   let total = 0;
   for (const time of times) {
     const schedule = buildMedicationNotificationSchedule(medicationId, time, startDate, endDate, now);

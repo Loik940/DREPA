@@ -1,9 +1,25 @@
 // Identifiants d'opération durables : survivent à un redémarrage jusqu'à confirmation du serveur.
 // Ils ne contiennent aucune donnée personnelle et servent uniquement à rejouer une création sans doublon.
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
+import { secureStorage } from './secure-storage';
+
 const prefix = '@drepa/operation-id/';
+const indexKey = '@drepa/operation-id-index';
+
+async function readIndex() {
+  try {
+    const value = await secureStorage.getItem(indexKey);
+    return value ? JSON.parse(value) as string[] : [];
+  } catch {
+    return [];
+  }
+}
+
+async function registerKey(storageKey: string) {
+  const keys = await readIndex();
+  if (!keys.includes(storageKey)) await secureStorage.setItem(indexKey, JSON.stringify([...keys, storageKey]));
+}
 
 function serializePayload(payload: unknown) {
   const normalize = (value: unknown): unknown => {
@@ -17,7 +33,7 @@ function serializePayload(payload: unknown) {
 
 export async function getOrCreateOperationId(key: string, payload: unknown) {
   const storageKey = `${prefix}${key}`;
-  const existing = await AsyncStorage.getItem(storageKey);
+  const existing = await secureStorage.getItem(storageKey);
   const payloadHash = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
     serializePayload(payload),
@@ -31,10 +47,17 @@ export async function getOrCreateOperationId(key: string, payload: unknown) {
     }
   }
   const created = Crypto.randomUUID();
-  await AsyncStorage.setItem(storageKey, JSON.stringify({ id: created, payloadHash }));
+  await secureStorage.setItem(storageKey, JSON.stringify({ id: created, payloadHash }));
+  await registerKey(storageKey);
   return created;
 }
 
 export function clearOperationId(key: string) {
-  return AsyncStorage.removeItem(`${prefix}${key}`);
+  return secureStorage.removeItem(`${prefix}${key}`);
+}
+
+export async function clearAllOperationIds() {
+  const keys = await readIndex();
+  await Promise.all(keys.map((key) => secureStorage.removeItem(key).catch(() => undefined)));
+  await secureStorage.removeItem(indexKey).catch(() => undefined);
 }

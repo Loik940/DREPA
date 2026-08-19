@@ -16,6 +16,7 @@ import {
 import { cancelAllDrepaNotifications } from '@/features/medications/notifications';
 import { setActiveMedicationOwner } from '@/features/medications/operation-lock';
 import { invalidatePrivateQueries, removePrivateQueries } from '@/lib/query-client';
+import { clearAllOperationIds } from '@/services/operation-id';
 import { supabase } from '../lib/supabase';
 
 // Ces états distinguent clairement la restauration, la présence, l’absence et l’échec de session.
@@ -81,6 +82,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (activeUserId && activeUserId !== nextUserId) {
         removePrivateQueries(activeUserId);
+        void clearAllOperationIds();
         void cancelAllDrepaNotifications().catch(() => undefined);
       }
 
@@ -219,6 +221,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
       setSession(null);
       setStatus('unauthenticated');
+      await clearAllOperationIds();
       removePrivateQueries();
     }
   };
@@ -241,6 +244,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         await cancelAllDrepaNotifications().catch(() => undefined);
         setSession(null);
         setStatus('unauthenticated');
+        await clearAllOperationIds();
         removePrivateQueries();
       }
     }

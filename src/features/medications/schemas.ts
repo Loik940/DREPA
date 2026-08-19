@@ -49,6 +49,14 @@ export const medicationSchema = z
         });
       }
     }
+    if (values.reminders_enabled
+      && parseReminderTimes(values.reminder_times).length * ROLLING_REMINDER_WINDOW_DAYS > MAX_SCHEDULED_MEDICATION_NOTIFICATIONS) {
+      context.addIssue({
+        code: 'custom',
+        path: ['reminder_times'],
+        message: `Limitez les horaires à ${Math.floor(MAX_SCHEDULED_MEDICATION_NOTIFICATIONS / ROLLING_REMINDER_WINDOW_DAYS)} par traitement.`,
+      });
+    }
 
     if (values.reminder_times && values.reminder_times.split(',').some((time) => !timePattern.test(time.trim()))) {
       context.addIssue({ code: 'custom', path: ['reminder_times'], message: 'Utilisez des heures HH:MM séparées par des virgules.' });

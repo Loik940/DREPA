@@ -912,6 +912,7 @@ function useMedicationIntakeMutation(userId: string | undefined, action: Medicat
       if (!userId) throw new MedicationDataError(operation, 'session', 'La session utilisateur est indisponible.');
       const client = requireClient(operation);
       let newSnoozeNotificationId: string | null = null;
+      let requestedSnoozedUntil: string | null = null;
       let oldSnoozeCancelled = false;
 
       try {
@@ -936,6 +937,7 @@ function useMedicationIntakeMutation(userId: string | undefined, action: Medicat
         );
         const actionAt = new Date();
         const snoozedUntil = action === 'snoozed' ? new Date(actionAt.getTime() + 10 * 60 * 1000).toISOString() : null;
+        requestedSnoozedUntil = snoozedUntil;
         const plannedSnoozeId = action === 'snoozed'
           ? buildSnoozeNotificationId(payload.medicationId, payload.originalScheduledAt, snoozedUntil as string)
           : null;
@@ -975,7 +977,11 @@ function useMedicationIntakeMutation(userId: string | undefined, action: Medicat
             .eq('user_id', userId)
             .eq('scheduled_at', payload.originalScheduledAt)
             .maybeSingle();
-        if (!verification.error && verification.data?.status === action) {
+        const verifiedState = verification.data?.status === action
+          && (action !== 'snoozed'
+            || (verification.data.snoozed_until === requestedSnoozedUntil
+              && verification.data.snooze_notification_id === newSnoozeNotificationId));
+        if (!verification.error && verifiedState) {
           if (action === 'snoozed') {
             setMedicationNotificationHealth('error');
             throw new MedicationDataError(
@@ -1041,7 +1047,7 @@ function useMedicationIntakeMutation(userId: string | undefined, action: Medicat
         throw classifyWithCompensation(error, operation, compensationFailed);
       }
     }),
-    onSuccess: async () => {
+    onSettled: async () => {
       if (userId) await invalidateMedicationQueries(queryClient, userId);
     },
   });

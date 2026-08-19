@@ -1,5 +1,6 @@
 // Edge Function protégée : supprime uniquement le compte authentifié avec la clé serveur côté Supabase.
 import { createClient } from '@supabase/supabase-js';
+import { hasRecentAuthentication } from './security.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -13,23 +14,6 @@ function response(body: Record<string, string>, status: number) {
     headers: { ...corsHeaders, 'Cache-Control': 'no-store', 'Content-Type': 'application/json' },
     status,
   });
-}
-
-function hasRecentAuthentication(authorization: string, expectedUserId: string) {
-  try {
-    const token = authorization.slice('Bearer '.length);
-    const payloadPart = token.split('.')[1];
-    if (!payloadPart) return false;
-    const normalized = payloadPart.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payloadPart.length / 4) * 4, '=');
-    const payload = JSON.parse(atob(normalized)) as { sub?: string; iat?: number; amr?: { method?: string }[] };
-    const passwordAuthenticated = payload.amr?.some((entry) => entry.method === 'password') ?? false;
-    return payload.sub === expectedUserId
-      && passwordAuthenticated
-      && typeof payload.iat === 'number'
-      && Math.floor(Date.now() / 1000) - payload.iat <= 300;
-  } catch {
-    return false;
-  }
 }
 
 Deno.serve(async (request) => {

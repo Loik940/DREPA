@@ -9,15 +9,16 @@ Ce document sépare les contrôles déjà exécutés des opérations qui exigent
 - branche `main` synchronisée au moment du contrôle ;
 - workflow GitHub « Qualité et sécurité » réussi ;
 - TypeScript, ESLint, Jest, Expo Doctor et export Android réussis ;
-- 86 tests réussis avec seuils de couverture actifs ;
+- 89 tests réussis avec couverture globale réelle et seuils actifs ;
 - APK EAS Preview terminé pour `bj.drepa.app`, version `1.0.0 (1)` ;
 - aucun téléphone Android détecté par ADB sur le poste de validation.
 
 ### Supabase
 
 - un seul projet nommé `DREPA` est lié au dépôt ; aucun projet staging distinct n’existe dans l’organisation ;
-- les vingt premières migrations sont appliquées sur le projet actuel désigné staging ;
-- `20260819210000_close_security_edge_cases.sql` reste à valider puis appliquer ;
+- les vingt et une migrations sont appliquées sur le projet actuel désigné staging ;
+- `20260819230000_enforce_moderation_context.sql` reste à valider puis appliquer ;
+- les tests pgTAP, le reset et le lint Supabase local sont verts en CI ;
 - l’anonymisation des alias, les contraintes privées et les RPC transactionnelles sont actives ;
 - la fonction distante `delete-account` est active en version 2 avec vérification JWT et authentification récente ;
 - les sauvegardes physiques utilisent WAL-G, mais PITR n’est pas activé et la CLI ne retourne aucun point de restauration disponible ;

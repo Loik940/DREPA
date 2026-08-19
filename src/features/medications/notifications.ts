@@ -173,10 +173,16 @@ export function cancelAllDrepaNotifications() {
   schedulingSuspended = true;
   if (cleanupPromise) return cleanupPromise;
   cleanupPromise = (async () => {
+    let markerWritten = false;
     try {
-      await AsyncStorage.setItem(CLEANUP_PENDING_KEY, 'true');
+      try {
+        await AsyncStorage.setItem(CLEANUP_PENDING_KEY, 'true');
+        markerWritten = true;
+      } catch {
+        schedulingSuspended = true;
+      }
       await runWithSchedulingLock(() => Notifications.cancelAllScheduledNotificationsAsync());
-      await AsyncStorage.removeItem(CLEANUP_PENDING_KEY);
+      if (markerWritten) await AsyncStorage.removeItem(CLEANUP_PENDING_KEY);
     } catch (error) {
       await AsyncStorage.setItem(CLEANUP_PENDING_KEY, 'true').catch(() => undefined);
       throw error;

@@ -1,6 +1,7 @@
 {
   "imports": {
-    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.112.3"
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.112.3",
+    "@std/assert": "jsr:@std/assert@1.0.14"
   },
   "compilerOptions": {
     "lib": ["deno.ns", "dom"]
