@@ -50,9 +50,19 @@ jobs:
           /tmp/gitleaks detect --source . --redact --no-banner
 
       - name: Scanner le code avec Semgrep Community
+        id: semgrep
+        continue-on-error: true
         run: |
           python -m pip install --disable-pip-version-check semgrep==1.173.0
-          semgrep scan --config=auto --error --metrics=off --exclude=node_modules --exclude=.expo .
+          semgrep scan --config=auto --error --metrics=off --exclude=node_modules --exclude=.expo . > semgrep-output.txt 2>&1
+
+      - name: Publier le rapport Semgrep
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: semgrep-output
+          path: semgrep-output.txt
+          if-no-files-found: warn
 
       - name: Configurer Deno
         uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
@@ -105,6 +115,10 @@ jobs:
           fi
 
           echo "Aucun motif de secret réel détecté."
+
+      - name: Échouer si Semgrep a détecté un problème
+        if: steps.semgrep.outcome == 'failure'
+        run: exit 1
 
       - name: Arrêter Supabase local
         if: always()
