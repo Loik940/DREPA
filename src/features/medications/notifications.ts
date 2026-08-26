@@ -12,6 +12,11 @@ export { NotificationCancellationError } from './notification-ids';
 
 const CHANNEL_ID = 'medication-reminders';
 const CLEANUP_PENDING_KEY = '@drepa/notification-cleanup-pending';
+
+function isNotificationPermissionGranted(permission: unknown) {
+  const candidate = permission as { granted?: boolean; status?: string };
+  return candidate.granted === true || candidate.status === 'granted';
+}
 let schedulingQueue: Promise<void> = Promise.resolve();
 let schedulingSuspended = false;
 let cleanupPromise: Promise<void> | null = null;
@@ -62,8 +67,12 @@ export async function ensureMedicationNotificationPermission() {
   }
 
   const current = await Notifications.getPermissionsAsync();
-  const permission = current.granted ? current : await Notifications.requestPermissionsAsync();
-  if (!permission.granted) throw new NotificationPermissionError('Les notifications ne sont pas autorisées.');
+  const permission = isNotificationPermissionGranted(current)
+    ? current
+    : await Notifications.requestPermissionsAsync();
+  if (!isNotificationPermissionGranted(permission)) {
+    throw new NotificationPermissionError('Les notifications ne sont pas autorisées.');
+  }
 }
 
 // Un rappel planifié ne garantit pas que le traitement a été pris et ne remplace aucune consigne médicale.
@@ -165,7 +174,7 @@ export function getScheduledNotifications() {
 
 export async function hasMedicationNotificationPermission() {
   const permission = await Notifications.getPermissionsAsync();
-  return permission.granted;
+  return isNotificationPermissionGranted(permission);
 }
 
 export function cancelAllDrepaNotifications() {

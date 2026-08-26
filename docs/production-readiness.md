@@ -25,6 +25,8 @@ Ce document sépare les contrôles déjà exécutés des opérations qui exigent
 
 ### Dépendances npm
 
+Six patchs Expo SDK 57 publiés après le verrouillage local sont temporairement exclus de `expo install --check` car le registre npm du poste ne résout pas de manière cohérente leurs sous-dépendances `expo-dev-menu`/`expo-dev-launcher`. Les versions lockées sont conservées jusqu’à une mise à jour déterministe vérifiée dans une campagne séparée.
+
 Les quatorze alertes de production remontent toutes à la chaîne Expo/Metro/React Native et aux deux advisories transitifs suivants :
 
 - `GHSA-w3rx-r6r6-pgpr` : boucle infinie du parseur ICNS de `image-size` ;

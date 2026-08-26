@@ -44,7 +44,10 @@ export default function MedicationsScreen() {
     const refresh = () => {
       setNow(new Date());
       void refetch();
-      void Notifications.getPermissionsAsync().then(({ granted }) => setNotificationsGranted(granted));
+      void Notifications.getPermissionsAsync().then((permission) => {
+        const candidate = permission as { granted?: boolean; status?: string };
+        setNotificationsGranted(candidate.granted === true || candidate.status === 'granted');
+      });
     };
     refresh();
     const interval = setInterval(() => setNow(new Date()), 60_000);

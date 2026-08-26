@@ -71,6 +71,18 @@
     "build:android:development": "npx eas-cli@22.0.0 build --platform android --profile development",
     "build:android:preview": "npx eas-cli@22.0.0 build --platform android --profile preview"
   },
+  "expo": {
+    "install": {
+      "exclude": [
+        "expo-crypto",
+        "expo-dev-client",
+        "expo-linking",
+        "expo-notifications",
+        "expo-router",
+        "expo-splash-screen"
+      ]
+    }
+  },
   "jest": {
     "testEnvironment": "node",
     "transform": {
