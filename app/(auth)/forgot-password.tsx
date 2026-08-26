@@ -13,6 +13,7 @@ import { TextField } from '@/components/ui/TextField';
 import { passwordResetRequestSchema, type PasswordResetRequestValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
+import { getUserErrorMessage } from '@/lib/user-error';
 
 export default function ForgotPasswordScreen() {
   // Les hooks initialisent l’authentification, l’état d’envoi et le formulaire validé.
@@ -29,7 +30,7 @@ export default function ForgotPasswordScreen() {
       await auth.requestPasswordReset(email);
       setSent(true);
     } catch (error) {
-      setError('root', { message: error instanceof Error ? error.message : 'Demande impossible.' });
+      setError('root', { message: getUserErrorMessage(error, 'Demande impossible.') });
     }
   };
 

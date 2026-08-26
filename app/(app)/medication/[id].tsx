@@ -20,6 +20,7 @@ import { useDeleteMedicationMutation, useSetMedicationActiveMutation } from '@/f
 import { useMedicationDetailQuery } from '@/features/medications/queries';
 import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
+import { getUserErrorMessage } from '@/lib/user-error';
 
 const dateFormatter = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' });
 
@@ -118,8 +119,8 @@ export default function MedicationDetailScreen() {
         </View>
       </Card>
 
-      {activeMutation.isError ? <StatusBanner tone="error" message={activeMutation.error.message} /> : null}
-      {deleteMutation.isError ? <StatusBanner tone="error" message={deleteMutation.error.message} /> : null}
+      {activeMutation.isError ? <StatusBanner tone="error" message={getUserErrorMessage(activeMutation.error, 'L’état du traitement ne peut pas être modifié pour le moment.')} /> : null}
+      {deleteMutation.isError ? <StatusBanner tone="error" message={getUserErrorMessage(deleteMutation.error, 'Le traitement ne peut pas être supprimé pour le moment.')} /> : null}
       <Button label="Modifier" disabled={isMutating} onPress={() => router.push(`/(app)/medication/${id}/edit` as Href)} />
       <Button
         label={medication.is_active ? 'Désactiver dans DRÉPA' : 'Réactiver dans DRÉPA'}

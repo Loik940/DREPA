@@ -13,6 +13,7 @@ import { useUpdateMedicationMutation } from '@/features/medications/mutations';
 import { useMedicationDetailQuery } from '@/features/medications/queries';
 import type { MedicationValues } from '@/features/medications/schemas';
 import { useAuth } from '@/providers/auth-provider';
+import { getUserErrorMessage } from '@/lib/user-error';
 
 export default function MedicationEditScreen() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function MedicationEditScreen() {
   if (query.isPending) return <LoadingState message="Chargement du traitement..." />;
   if (query.isError) {
     const notFound = query.error instanceof MedicationDataError && query.error.kind === 'not_found';
-    return <ErrorState title={notFound ? 'Traitement introuvable' : undefined} description={query.error.message} onRetry={notFound ? undefined : () => void query.refetch()} />;
+    return <ErrorState title={notFound ? 'Traitement introuvable' : undefined} description={getUserErrorMessage(query.error, 'Le traitement ne peut pas être chargé.')} onRetry={notFound ? undefined : () => void query.refetch()} />;
   }
 
   const { medication, reminders } = query.data;

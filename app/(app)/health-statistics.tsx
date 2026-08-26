@@ -16,6 +16,7 @@ import { colors } from '@/theme/colors';
 import { useAppTheme } from '@/theme/use-app-theme';
 import { radii } from '@/theme/radii';
 import { spacing } from '@/theme/spacing';
+import { getUserErrorMessage } from '@/lib/user-error';
 
 export default function HealthStatisticsScreen() {
   // Les hooks préparent l’utilisateur, le thème et les données des trente derniers jours.
@@ -25,7 +26,7 @@ export default function HealthStatisticsScreen() {
 
   // Le chargement, l’erreur et l’absence de données ont chacun un rendu dédié.
   if (query.isPending) return <LoadingState message="Calcul des statistiques..." />;
-  if (query.isError) return <ErrorState description={query.error.message} onRetry={() => void query.refetch()} />;
+  if (query.isError) return <ErrorState description={getUserErrorMessage(query.error, 'Les statistiques ne peuvent pas être chargées.')} onRetry={() => void query.refetch()} />;
   if (!query.data?.length) return <EmptyState title="Pas encore de statistiques" description="Ajoute des entrées au journal pour obtenir un résumé descriptif." />;
 
   // Les agrégats descriptifs sont calculés seulement après un chargement réussi.

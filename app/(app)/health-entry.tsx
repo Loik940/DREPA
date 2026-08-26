@@ -21,6 +21,7 @@ import { useHealthLogQuery } from '@/features/health-log/queries';
 import { healthLogDefaults, healthLogSchema, type HealthLogValues } from '@/features/health-log/schemas';
 import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
+import { getUserErrorMessage } from '@/lib/user-error';
 
 const painLocationChoices = [
   { label: 'Dos', value: 'back' },
@@ -73,7 +74,7 @@ export default function HealthEntryScreen() {
       // Une sauvegarde réussie ouvre le détail de l’entrée enregistrée.
       router.replace({ pathname: '/(app)/health-log/[id]', params: { id: savedEntry.id } });
     } catch (error) {
-      setError('root', { message: error instanceof Error ? error.message : 'L’entrée ne peut pas être enregistrée.' });
+      setError('root', { message: getUserErrorMessage(error, 'L’entrée ne peut pas être enregistrée.') });
     }
   };
 
@@ -83,7 +84,7 @@ export default function HealthEntryScreen() {
   }
 
   if (isEditing && entryQuery.isError) {
-    return <ErrorState description={entryQuery.error.message} onRetry={() => void entryQuery.refetch()} />;
+    return <ErrorState description={getUserErrorMessage(entryQuery.error, 'Cette entrée ne peut pas être chargée.')} onRetry={() => void entryQuery.refetch()} />;
   }
 
   const mutationPending = createMutation.isPending || updateMutation.isPending;

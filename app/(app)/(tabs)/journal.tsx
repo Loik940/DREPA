@@ -13,6 +13,7 @@ import { StatusBanner } from '@/components/ui/StatusBanner';
 import { useHealthLogsQuery, type HealthLog } from '@/features/health-log/queries';
 import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
+import { getUserErrorMessage } from '@/lib/user-error';
 
 export default function JournalScreen() {
   // Les hooks préparent la navigation, l’utilisateur et la liste paginée privée.
@@ -27,7 +28,7 @@ export default function JournalScreen() {
   }
 
   if (query.isError && !query.data) {
-    return <ErrorState description={query.error.message} onRetry={() => void query.refetch()} />;
+    return <ErrorState description={getUserErrorMessage(query.error, 'Le journal ne peut pas être chargé.')} onRetry={() => void query.refetch()} />;
   }
 
   if (!entries.length) {

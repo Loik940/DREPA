@@ -12,6 +12,7 @@ import { StatusBanner } from '@/components/ui/StatusBanner';
 import { updatePasswordSchema, type UpdatePasswordValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
+import { getUserErrorMessage } from '@/lib/user-error';
 
 export default function ResetPasswordScreen() {
   // Les hooks initialisent la navigation, l’authentification et le formulaire validé.
@@ -41,7 +42,7 @@ export default function ResetPasswordScreen() {
       // Une modification réussie ramène vers la connexion.
       router.replace('/(auth)/login');
     } catch (error) {
-      setError('root', { message: error instanceof Error ? error.message : 'Modification impossible.' });
+      setError('root', { message: getUserErrorMessage(error, 'Modification impossible.') });
     }
   };
 

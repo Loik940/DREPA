@@ -13,6 +13,7 @@ import { signInSchema, type SignInValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
 import { useAppTheme } from '@/theme/use-app-theme';
 import { spacing } from '@/theme/spacing';
+import { getUserErrorMessage } from '@/lib/user-error';
 import { fontFamilies } from '@/theme/typography';
 
 export default function LoginScreen() {
@@ -34,7 +35,7 @@ export default function LoginScreen() {
       // Une connexion réussie relance l’orientation depuis la route d’entrée.
       router.replace('/');
     } catch (error) {
-      setError('root', { message: error instanceof Error ? error.message : 'Connexion impossible.' });
+        setError('root', { message: getUserErrorMessage(error, 'Connexion impossible.') });
     }
   };
 

@@ -20,6 +20,7 @@ import { formatLocalDate } from '@/features/medications/date-time';
 import { useUpsertProfileMutation } from '@/features/profile/mutations';
 import { ProfileDataError, useProfileQuery } from '@/features/profile/queries';
 import { profileSchema, type ProfileValues } from '@/features/profile/schemas';
+import { getUserErrorMessage } from '@/lib/user-error';
 import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
 
@@ -98,7 +99,7 @@ export function ProfileForm({ title, description, submitLabel, onSaved }: Profil
       ? profileQuery.error
       : new ProfileDataError('profiles', 'unknown', 'Le profil ne peut pas être chargé.');
 
-    return <ErrorState description={error.message} onRetry={() => void profileQuery.refetch()} />;
+    return <ErrorState description={getUserErrorMessage(error, 'Le profil ne peut pas être chargé.')} onRetry={() => void profileQuery.refetch()} />;
   }
 
   return (

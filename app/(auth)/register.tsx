@@ -13,6 +13,7 @@ import { signUpSchema, type SignUpValues } from '@/features/auth/schemas';
 import { useAuth } from '@/providers/auth-provider';
 import { useAppTheme } from '@/theme/use-app-theme';
 import { spacing } from '@/theme/spacing';
+import { getUserErrorMessage } from '@/lib/user-error';
 import { fontFamilies } from '@/theme/typography';
 
 export default function RegisterScreen() {
@@ -37,7 +38,7 @@ export default function RegisterScreen() {
         setError('root', { message: 'Consulte ta messagerie pour confirmer ton adresse e-mail.' });
       }
     } catch (error) {
-      setError('root', { message: error instanceof Error ? error.message : 'Inscription impossible.' });
+        setError('root', { message: getUserErrorMessage(error, 'Inscription impossible.') });
     }
   };
 

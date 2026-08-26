@@ -14,6 +14,7 @@ import { getChoiceLabel, hydrationChoices, symptomChoices, triggerChoices } from
 import { useHealthLogQuery } from '@/features/health-log/queries';
 import { useAuth } from '@/providers/auth-provider';
 import { spacing } from '@/theme/spacing';
+import { getUserErrorMessage } from '@/lib/user-error';
 
 export default function HealthLogDetailScreen() {
   // Les hooks chargent l’entrée demandée et préparent sa suppression éventuelle.
@@ -43,7 +44,7 @@ export default function HealthLogDetailScreen() {
 
   // Le chargement, l’erreur et l’entrée absente ont chacun un rendu dédié.
   if (query.isPending) return <LoadingState message="Chargement de l’entrée..." />;
-  if (query.isError) return <ErrorState description={query.error.message} onRetry={() => void query.refetch()} />;
+  if (query.isError) return <ErrorState description={getUserErrorMessage(query.error, 'Cette entrée ne peut pas être chargée.')} onRetry={() => void query.refetch()} />;
   if (!query.data) return <ErrorState description="Cette entrée est introuvable." />;
 
   const entry = query.data;
@@ -80,7 +81,7 @@ export default function HealthLogDetailScreen() {
         </View>
       </Card>
 
-      {deleteMutation.isError && <AppText accessibilityRole="alert" color="sos">{deleteMutation.error.message}</AppText>}
+      {deleteMutation.isError && <AppText accessibilityRole="alert" color="sos">{getUserErrorMessage(deleteMutation.error, 'L’entrée ne peut pas être supprimée pour le moment.')}</AppText>}
       <Button label="Modifier" onPress={() => router.push({ pathname: '/(app)/health-entry', params: { id } })} />
       <Button label="Supprimer" variant="danger" loading={deleteMutation.isPending} onPress={confirmDelete} />
       <Button label="Retour au journal" variant="ghost" onPress={() => router.replace('/(app)/(tabs)/journal')} />

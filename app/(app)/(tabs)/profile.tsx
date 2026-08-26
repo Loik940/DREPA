@@ -27,6 +27,7 @@ import { reconcileMedicationNotifications } from '@/features/medications/reconci
 import { runMedicationOperation } from '@/features/medications/operation-lock';
 import { useAuth } from '@/providers/auth-provider';
 import { colors } from '@/theme/colors';
+import { getUserErrorMessage } from '@/lib/user-error';
 import { spacing } from '@/theme/spacing';
 
 const profileEditRoute = '/(app)/profile-edit' as Href;
@@ -111,7 +112,7 @@ export default function ProfileScreen() {
       setDeleteModalVisible(false);
       setDeletePassword('');
     } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : 'Le compte ne peut pas être supprimé pour le moment.');
+      setDeleteError(getUserErrorMessage(error, 'Le compte ne peut pas être supprimé pour le moment.'));
     } finally {
       setIsDeleting(false);
     }

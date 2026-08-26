@@ -19,6 +19,7 @@ import { useMarkMedicationTakenMutation, useSkipMedicationMutation, useSnoozeMed
 import { useMedicationDashboardQuery } from '@/features/medications/queries';
 import { buildTodayReminders } from '@/features/medications/status';
 import { useMedicationNotificationHealth } from '@/features/medications/notification-health';
+import { getUserErrorMessage } from '@/lib/user-error';
 import { useAuth } from '@/providers/auth-provider';
 import { colors } from '@/theme/colors';
 import { radii } from '@/theme/radii';
@@ -126,9 +127,9 @@ export default function MedicationsScreen() {
       {reminders.length === 0 && query.data.medications.length > 0 && (
         <AppText color="textSecondary">Aucun rappel actif aujourd’hui.</AppText>
       )}
-      {markTaken.isError && <AppText accessibilityRole="alert" color="sos">{markTaken.error.message}</AppText>}
-      {snooze.isError && <AppText accessibilityRole="alert" color="sos">{snooze.error.message}</AppText>}
-      {skip.isError && <AppText accessibilityRole="alert" color="sos">{skip.error.message}</AppText>}
+      {markTaken.isError && <AppText accessibilityRole="alert" color="sos">{getUserErrorMessage(markTaken.error, 'La prise ne peut pas être enregistrée pour le moment.')}</AppText>}
+      {snooze.isError && <AppText accessibilityRole="alert" color="sos">{getUserErrorMessage(snooze.error, 'Le rappel ne peut pas être reporté pour le moment.')}</AppText>}
+      {skip.isError && <AppText accessibilityRole="alert" color="sos">{getUserErrorMessage(skip.error, 'Le rappel ne peut pas être ignoré pour le moment.')}</AppText>}
 
       <View style={styles.section}>
         <AppText variant="sectionTitle">Mes traitements</AppText>
