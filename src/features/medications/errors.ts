@@ -15,7 +15,7 @@ export function classifyMedicationError(error: unknown, operation: MedicationOpe
   const message = candidate?.message?.toLowerCase() ?? '';
 
   if (candidate?.status === 401) return new MedicationDataError(operation, 'session', 'Ta session doit être renouvelée.');
-  if (candidate?.status === 403 || candidate?.code === '42501') return new MedicationDataError(operation, 'rls', 'L’accès aux traitements est refusé.');
+  if (candidate?.status === 403 || candidate?.code === '42501') return new MedicationDataError(operation, 'rls', 'Un consentement courant ou une autorisation serveur est requis pour enregistrer ce traitement.');
   if (candidate?.code === 'PGRST116') return new MedicationDataError(operation, 'not_found', 'Ce traitement est introuvable.');
   if (message.includes('network') || message.includes('fetch') || message.includes('offline')) return new MedicationDataError(operation, 'network', 'La connexion réseau est indisponible.');
   return new MedicationDataError(operation, 'supabase', 'Les traitements sont temporairement indisponibles.');

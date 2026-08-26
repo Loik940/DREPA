@@ -51,7 +51,7 @@ export function classifyCommunityError(error: unknown, operation: CommunityOpera
     return new CommunityDataError(operation, 'session', 'La session doit être renouvelée.');
   }
   if (candidate?.status === 403 || candidate?.code === '42501') {
-    return new CommunityDataError(operation, 'rls', 'Cette action n’est pas autorisée.');
+    return new CommunityDataError(operation, 'rls', 'Un consentement courant ou une autorisation serveur est requis pour cette action.');
   }
   if (candidate?.code === 'PGRST116') {
     return new CommunityDataError(operation, 'not_found', 'Ce contenu est introuvable.');
