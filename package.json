@@ -74,6 +74,8 @@
   "expo": {
     "install": {
       "exclude": [
+        "expo",
+        "expo-constants",
         "expo-crypto",
         "expo-dev-client",
         "expo-linking",
