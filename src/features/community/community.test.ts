@@ -68,6 +68,13 @@ describe('community contracts', () => {
     expect(postSchema.safeParse({ ...validPost, content: 'a'.repeat(2001) }).success).toBe(false);
   });
 
+  it('laisse le serveur décider du soutien, y compris pour sa propre publication', () => {
+    const payload = buildCommunityPostPayload('user-test', validPost);
+    expect(payload).not.toHaveProperty('support_count');
+    expect(payload).not.toHaveProperty('has_supported');
+    expect(payload.user_id).toBe('user-test');
+  });
+
   it('limite un commentaire à 1000 caractères', () => {
     expect(commentSchema.safeParse({ content: 'b'.repeat(1000) }).success).toBe(true);
     expect(commentSchema.safeParse({ content: 'b'.repeat(1001) }).success).toBe(false);

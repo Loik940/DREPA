@@ -515,6 +515,7 @@ Le dossier contient actuellement sept composants partagés. Aucun huitième fich
 | `supabase/migrations/20260819210000_close_security_edge_cases.sql` | Ferme les cas limites de visibilité tombstone, suppression admin, restauration verrouillée, retraits journalisés, quotas idempotents et intégrité profil/prises. | Migration corrective 21, couverte par pgTAP et à appliquer après la 20. | 21 |
 | `supabase/migrations/20260819230000_enforce_moderation_context.sql` | Réserve la visibilité au contexte RPC, refuse les tombstones et renforce la cohérence des reports. | Migration corrective 22 à appliquer après validation pgTAP. | 22 |
 | `supabase/migrations/20260819233000_enforce_consent_and_identity.sql` | Impose consentement courant, identité soumise, gel des contenus pending et restauration liée au dernier masquage. | Migration 23 à appliquer après tests pgTAP comportementaux. | 23 |
+| `supabase/migrations/20260826160000_allow_self_support.sql` | Autorise le soutien de sa propre publication via la RPC serveur avec les mêmes quotas et la même idempotence. | Migration corrective à appliquer après les 23 migrations déjà déployées. |
 
 L’ordre 10 à 23 est obligatoire. Les migrations 19 à 23 imposent un déploiement coordonné avec l’APK qui utilise les nouvelles RPC. Les migrations déjà appliquées ne doivent jamais être modifiées.
 
