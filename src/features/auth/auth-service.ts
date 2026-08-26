@@ -4,7 +4,7 @@ import { secureStorage } from '@/services/secure-storage';
 
 export const authCallbackUrl = 'drepa://auth/callback';
 export const passwordResetUrl = authCallbackUrl;
-const PASSWORD_RECOVERY_INTENT_KEY = '@drepa/password-recovery-intent';
+const PASSWORD_RECOVERY_INTENT_KEY = 'drepa.password-recovery-intent';
 const PASSWORD_RECOVERY_INTENT_MAX_AGE_MS = 15 * 60 * 1000;
 
 export class AuthOperationError extends Error {

@@ -4,8 +4,13 @@ import * as Crypto from 'expo-crypto';
 
 import { secureStorage } from './secure-storage';
 
-const prefix = '@drepa/operation-id/';
-const indexKey = '@drepa/operation-id-index';
+const prefix = 'drepa.operation-id.';
+const indexKey = 'drepa.operation-id.index';
+
+async function getStorageKey(key: string) {
+  const digest = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, key);
+  return `${prefix}${digest}`;
+}
 
 async function readIndex() {
   try {
@@ -32,7 +37,7 @@ function serializePayload(payload: unknown) {
 }
 
 export async function getOrCreateOperationId(key: string, payload: unknown) {
-  const storageKey = `${prefix}${key}`;
+  const storageKey = await getStorageKey(key);
   const existing = await secureStorage.getItem(storageKey);
   const payloadHash = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
@@ -52,8 +57,8 @@ export async function getOrCreateOperationId(key: string, payload: unknown) {
   return created;
 }
 
-export function clearOperationId(key: string) {
-  return secureStorage.removeItem(`${prefix}${key}`);
+export async function clearOperationId(key: string) {
+  await secureStorage.removeItem(await getStorageKey(key));
 }
 
 export async function clearAllOperationIds() {

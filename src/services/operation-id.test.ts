@@ -12,7 +12,10 @@ jest.mock('./secure-storage', () => ({ secureStorage: {
 
 jest.mock('expo-crypto', () => ({
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
-  digestStringAsync: async (_algorithm: string, value: string) => `hash:${value}`,
+  digestStringAsync: async (_algorithm: string, value: string) => Array.from(value).reduce(
+    (hash, character) => `${hash}${character.charCodeAt(0).toString(16).padStart(2, '0')}`,
+    '',
+  ).padEnd(64, '0').slice(0, 64),
   randomUUID: () => `00000000-0000-4000-8000-${String(++mockUuidIndex).padStart(12, '0')}`,
 }));
 
@@ -38,5 +41,11 @@ describe('durable operation ids', () => {
     await getOrCreateOperationId('medication:user-a', { name: 'A' });
     await clearAllOperationIds();
     expect([...mockValues.keys()]).toHaveLength(0);
+  });
+
+  it('uses only SecureStore-safe key characters', async () => {
+    await getOrCreateOperationId('community-post:user-a:with/slash', { content: 'test' });
+    const storedKeys = [...mockValues.keys()].filter((key) => key !== 'drepa.operation-id.index');
+    expect(storedKeys.every((key) => /^[A-Za-z0-9._-]+$/.test(key))).toBe(true);
   });
 });
